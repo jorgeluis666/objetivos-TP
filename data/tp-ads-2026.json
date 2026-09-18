@@ -1,0 +1,116 @@
+{
+  "account": "Terminal Pesquero",
+  "year": 2026,
+  "cutoff": null,
+  "source": "Sin datos cargados",
+  "months": [
+    {
+      "name": "Enero",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Febrero",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Marzo",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Abril",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Mayo",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Junio",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Julio",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Agosto",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Septiembre",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Octubre",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Noviembre",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    },
+    {
+      "name": "Diciembre",
+      "spend": 0,
+      "spendBreakdown": {
+        "sales": 0,
+        "branding": 0
+      },
+      "campaigns": []
+    }
+  ]
+}
