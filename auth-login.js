@@ -4,10 +4,10 @@
 (function (global) {
   'use strict';
   const CSS = `
-    #rb-auth-overlay{position:fixed;inset:0;z-index:9999;display:flex;width:100vw;height:100vh}
+    #rb-auth-overlay{position:fixed;inset:0;z-index:99999;display:flex;overflow:hidden;background:#0f172a}
     #rb-auth-overlay.rb-auth-hidden{display:none}
-    #rb-auth-panel{width:400px;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;padding:48px 44px}
-    #rb-auth-inner{width:100%}
+    #rb-auth-panel{width:400px;max-width:100%;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;padding:48px 44px;box-sizing:border-box;overflow-y:auto}
+    #rb-auth-inner{width:100%;max-width:312px}
     #rb-auth-brand{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--rb-accent,#b91c1c);margin-bottom:16px;font-family:inherit}
     #rb-auth-title{font-size:38px;font-weight:700;line-height:1.1;letter-spacing:-.02em;color:#0f172a;margin-bottom:28px;white-space:pre-line;font-family:inherit}
     #rb-auth-divider{width:40px;height:3px;background:var(--rb-accent,#b91c1c);border-radius:2px;margin-bottom:36px}
@@ -17,7 +17,21 @@
     #rb-auth-btn{width:100%;padding:12px;border-radius:8px;border:none;background:var(--rb-accent,#b91c1c);color:#fff;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.02em;transition:background .15s;font-family:inherit}
     #rb-auth-btn:hover{background:var(--rb-accent-dark,#991b1b)}
     #rb-auth-error{display:none;margin-top:12px;font-size:12px;color:#dc2626;font-family:inherit}
-    #rb-auth-bg{flex:1;height:100%;background-size:cover;background-position:center;background-repeat:no-repeat;filter:grayscale(20%)}
+    /* El degradado es la capa de respaldo: si la imagen falta o falla, el panel
+       derecho sigue siendo opaco y nunca deja ver el dashboard detras. */
+    #rb-auth-bg{flex:1;min-width:0;align-self:stretch;background-color:#0f172a;background-image:linear-gradient(140deg,var(--rb-accent,#b91c1c) 0%,var(--rb-accent-dark,#991b1b) 38%,#0f172a 100%);background-size:cover;background-position:center;background-repeat:no-repeat;filter:grayscale(20%)}
+    @media (max-width:768px){
+      #rb-auth-panel{width:100%;padding:32px 24px}
+      #rb-auth-inner{max-width:360px}
+      #rb-auth-title{font-size:30px;margin-bottom:22px}
+      #rb-auth-divider{margin-bottom:26px}
+      #rb-auth-bg{display:none}
+    }
+    @media (max-height:520px){
+      #rb-auth-panel{align-items:flex-start;padding:24px}
+      #rb-auth-title{font-size:26px;margin-bottom:18px}
+      #rb-auth-divider{margin-bottom:20px}
+    }
   `;
   // Oscurece un hex #rrggbb el porcentaje indicado; se usa para el hover del boton.
   function darken(hex, amount) {
@@ -41,13 +55,24 @@
     document.head.appendChild(style);
     const overlay = document.createElement('div');
     overlay.id = 'rb-auth-overlay';
-    overlay.innerHTML = `<div id="rb-auth-panel"><div id="rb-auth-inner"><div id="rb-auth-brand">${BRAND}</div><div id="rb-auth-title">${TITLE}</div><div id="rb-auth-divider"></div><form id="rb-auth-form" autocomplete="off"><input id="rb-auth-input" type="password" placeholder="Contraseña" autocomplete="new-password" autofocus /><button type="submit" id="rb-auth-btn">Ingresar</button></form><div id="rb-auth-error">Contraseña incorrecta</div></div></div><div id="rb-auth-bg"></div>`;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Acceso');
+    overlay.innerHTML = `<div id="rb-auth-panel"><div id="rb-auth-inner"><div id="rb-auth-brand">${BRAND}</div><div id="rb-auth-title">${TITLE}</div><div id="rb-auth-divider"></div><form id="rb-auth-form" autocomplete="off"><input id="rb-auth-input" type="password" placeholder="Contraseña" aria-label="Contraseña" autocomplete="new-password" autofocus /><button type="submit" id="rb-auth-btn">Ingresar</button></form><div id="rb-auth-error" role="alert">Contraseña incorrecta</div></div></div><div id="rb-auth-bg"></div>`;
     overlay.style.setProperty('--rb-accent', ACCENT);
     overlay.style.setProperty('--rb-accent-dark', ACCENT_DARK);
     document.body.insertBefore(overlay, document.body.firstChild);
-    document.getElementById('rb-auth-bg').style.backgroundImage = `url('${BG_IMAGE}')`;
+    // La imagen solo se aplica cuando termino de cargar; si da 404 queda el degradado.
+    const background = new Image();
+    background.onload = function () {
+      document.getElementById('rb-auth-bg').style.backgroundImage = `url('${BG_IMAGE}')`;
+    };
+    background.src = BG_IMAGE;
+    const previousOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
     function unlock() {
       overlay.classList.add('rb-auth-hidden');
+      document.documentElement.style.overflow = previousOverflow;
       sessionStorage.setItem(SESSION_KEY, '1');
     }
     if (sessionStorage.getItem(SESSION_KEY) === '1') { unlock(); return; }

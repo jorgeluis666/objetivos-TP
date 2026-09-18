@@ -3,8 +3,8 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.9.2`. El tablero es un clon del proyecto de Amador; comparte codigo base y
-numeracion de version.
+Version actual: `v1.9.2`. El tablero comparte codigo base y numeracion de version con los
+demas tableros de la agencia.
 
 ## Versionado
 
