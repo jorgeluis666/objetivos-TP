@@ -26,7 +26,7 @@
   const SERIES = {
     investment: { label: 'Inversion', unit: 'money', color: '#2563eb', fill: 'rgba(37,99,235,.11)' },
     messages: { label: 'Mensajes', unit: 'count', color: '#16a34a', fill: 'rgba(22,163,74,.10)' },
-    reservations: { label: 'Reservas', unit: 'count', color: '#ea580c', fill: 'rgba(234,88,12,.10)' },
+    reservations: { label: 'Resultados', unit: 'count', color: '#ea580c', fill: 'rgba(234,88,12,.10)' },
   };
   const CHART_SERIES_KEY = 'tp-chart-series-v1';
   const state = { data: null, types: readChartSeries(), month: 'Septiembre', chart: null, syncTimer: null, goals: readGoals(), chartCollapsed: readChartCollapsed(), lastSync: null };
@@ -324,8 +324,8 @@
       ['Inversión', fmtMoney(investment), 'Gasto total'],
       ['Mensajes', fmtCount(messages), 'Conversaciones iniciadas'],
       ['Costo por mensaje', fmtMoney(costMessage), 'Inversión / mensajes'],
-      ['Reservas', fmtCount(reservations), 'Conversiones de reserva'],
-      ['Costo por reserva', fmtMoney(costReservation), 'Inversión / reservas']
+      ['Resultados', fmtCount(reservations), 'Resultado de cada campana'],
+      ['Costo por resultado', fmtMoney(costReservation), 'Inversión / resultados']
     ];
     host.innerHTML = cards.map(([label, value, meta]) => `<div class="kpi-pill"><span>${label}</span><strong>${value}</strong><small>${meta}</small></div>`).join('');
   }
@@ -578,7 +578,7 @@
       kpis.innerHTML = [
         ['Campañas', fmtCount(rows.length), 'Finalizadas'],
         ['Inversión', fmtMoney(totals.spend), 'Gasto acumulado'],
-        ['Reservas', fmtCount(totals.reservas), 'Total historico'],
+        ['Resultados', fmtCount(totals.reservas), 'Total historico'],
         ['Mensajes', fmtCount(totals.messages), 'Conversaciones'],
         ['Saldo', fmtMoney(totals.budget - totals.spend), 'Presupuesto no usado']
       ].map(([label, value, meta]) => `<div class="kpi-pill"><span>${label}</span><strong>${value}</strong><small>${meta}</small></div>`).join('');
