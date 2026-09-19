@@ -2,7 +2,11 @@
   const DATA_URL = 'data/tp-ads-2026.json';
   // Los meses cerrados se archivan uno a uno en data/ y se enganchan aqui, igual que en el
   // proyecto de origen. Terminal Pesquero arranca sin historico.
-  const CLOSED_MONTH_URLS = [];
+  const CLOSED_MONTH_URLS = [
+    'data/tp-junio-sheet-2026.json',
+    'data/tp-julio-sheet-2026.json',
+    'data/tp-agosto-sheet-2026.json',
+  ];
   // PENDIENTE: ID del Google Sheet de Terminal Pesquero. Vacio = sin sincronizacion en vivo.
   const SHEET_ID = '';
   const SHEET_MONTH = 'Septiembre';

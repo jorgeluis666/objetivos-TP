@@ -91,15 +91,11 @@ function main() {
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(path.join(DIST_DIR, 'data'), { recursive: true });
   fs.writeFileSync(DIST_HTML, html, 'utf8');
-  fs.copyFileSync(
-    path.join(ROOT, 'data', 'tp-ads-2026.json'),
-    path.join(DIST_DIR, 'data', 'tp-ads-2026.json')
-  );
-
-  fs.copyFileSync(
-    path.join(ROOT, 'data', 'tp-drive-reports.json'),
-    path.join(DIST_DIR, 'data', 'tp-drive-reports.json')
-  );
+  // Los meses cerrados de CLOSED_MONTH_URLS se piden por fetch en tiempo de
+  // ejecucion, asi que dist/ necesita todo data/, no solo los dos inlineados.
+  for (const file of fs.readdirSync(path.join(ROOT, 'data')).filter(name => name.endsWith('.json'))) {
+    fs.copyFileSync(path.join(ROOT, 'data', file), path.join(DIST_DIR, 'data', file));
+  }
 
   copyLoginAssets();
   copyBrandAssets();
