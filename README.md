@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.9.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.10.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -23,6 +23,9 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Proyecciones: cierre de mes estimado con los datos reales y calculadora de inversion por CPL.
 - Historico de Campanas finalizadas.
 - Archivo de Reportes: catalogo de los documentos guardados en la carpeta de Google Drive.
+- Navegacion de la tabla de campanas: cabecera fija, columnas Tipo / Campana / Anuncio ancladas
+  a la izquierda, modo pantalla completa (boton o `Esc` para salir) y densidad compacta
+  recordada en `localStorage`.
 
 Los modulos Comparativo YoY, Distribucion, Productos Web y Usuarios y Claves se muestran
 deshabilitados hasta su futura implementacion.

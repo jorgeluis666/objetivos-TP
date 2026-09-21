@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.9.2">
+<link rel="stylesheet" href="css/dashboard.css?v=1.10.0">
 <style>
   .reservations-total-row td { height: auto !important; padding: 10px 12px !important; border-top: 2px solid #cbd5e1 !important; color: #0f172a !important; background: #f8fafc; font-size: 13px; font-weight: 800; vertical-align: middle; }
   .reservations-total-row .total-label { text-align: right; }
@@ -41,7 +41,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="tp-sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.9.2</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.10.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -90,7 +90,7 @@
           <div class="chart-wrap h-360" id="monthly-chart-body"><canvas id="chart-monthly"></canvas></div>
         </div>
         <div class="month-tabs" id="month-tabs"></div>
-        <div class="panel campaigns-panel"><div class="panel-head campaigns-panel-head"><div><div class="panel-title" id="campaigns-title">Campanas de Junio 2026</div><div class="panel-sub" id="campaigns-sub"></div></div><button type="button" class="refresh-sheet-btn" id="campaigns-refresh-btn" title="Actualizar datos desde Google Sheets">Actualizar</button></div><div class="campaigns-note" id="campaigns-note"></div><div class="table-scroll"><table class="data-table campaigns-table"><thead><tr><th>Tipo</th><th>Campana</th><th>Anuncio</th><th>Objetivo</th><th>Resultados</th><th>Objetivo Reservas</th><th>Mensajes</th><th class="num">Costo por mensaje</th><th class="num">Costo por resultado</th><th class="num">Ratio de reservas</th><th>Estado</th><th>Fecha inicio</th><th>Fecha fin / dias restantes</th><th class="num">Duracion</th><th class="num">Importe diario</th><th class="num">Presupuesto x anuncio</th><th class="num">Gasto x anuncio</th><th class="num">Presupuesto x campana</th><th class="num">Gasto x campana</th><th class="num">Saldo x anuncio</th><th class="num">Saldo por campana</th><th class="num">Nuevo ppto diario</th><th>Observaciones</th></tr></thead><tbody id="campaigns-body"></tbody></table></div></div>
+        <div class="panel campaigns-panel"><div class="panel-head campaigns-panel-head"><div><div class="panel-title" id="campaigns-title">Campanas de Junio 2026</div><div class="panel-sub" id="campaigns-sub"></div></div><div class="table-tools"><button type="button" class="table-tool-btn" id="campaigns-density-btn" aria-pressed="false" title="Alternar densidad de las filas">Compacto</button><button type="button" class="table-tool-btn" id="campaigns-expand-btn" aria-pressed="false" title="Ver la tabla en pantalla completa (Esc para salir)">&#10530; Pantalla completa</button><button type="button" class="refresh-sheet-btn" id="campaigns-refresh-btn" title="Actualizar datos desde Google Sheets">Actualizar</button></div></div><div class="campaigns-note" id="campaigns-note"></div><div class="table-scroll"><table class="data-table campaigns-table"><thead><tr><th>Tipo</th><th>Campana</th><th>Anuncio</th><th>Objetivo</th><th>Resultados</th><th>Objetivo Reservas</th><th>Mensajes</th><th class="num">Costo por mensaje</th><th class="num">Costo por resultado</th><th class="num">Ratio de reservas</th><th>Estado</th><th>Fecha inicio</th><th>Fecha fin / dias restantes</th><th class="num">Duracion</th><th class="num">Importe diario</th><th class="num">Presupuesto x anuncio</th><th class="num">Gasto x anuncio</th><th class="num">Presupuesto x campana</th><th class="num">Gasto x campana</th><th class="num">Saldo x anuncio</th><th class="num">Saldo por campana</th><th class="num">Nuevo ppto diario</th><th>Observaciones</th></tr></thead><tbody id="campaigns-body"></tbody></table></div></div>
       </section>
 
       <section class="view" id="view-messages">
@@ -297,12 +297,12 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/objectives.js?v=1.9.2"></script>
-<script src="js/messages-calculator.js?v=1.9.2"></script>
-<script src="js/reports-archive.js?v=1.9.2"></script>
-<script src="js/projections.js?v=1.9.2"></script>
-<script src="js/navigation.js?v=1.9.2"></script>
-<script src="js/sidebar.js?v=1.9.2"></script>
+<script src="js/objectives.js?v=1.10.0"></script>
+<script src="js/messages-calculator.js?v=1.10.0"></script>
+<script src="js/reports-archive.js?v=1.10.0"></script>
+<script src="js/projections.js?v=1.10.0"></script>
+<script src="js/navigation.js?v=1.10.0"></script>
+<script src="js/sidebar.js?v=1.10.0"></script>
 <script src="auth-login.js?v=1.9.3"></script>
 <script>
   AuthLogin.init({ password: 'TP2026', brand: 'Lima Retail', title: 'Terminal Pesquero', accent: '#26B8CF', sessionKey: 'tp_auth' });

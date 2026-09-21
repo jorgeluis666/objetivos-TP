@@ -16,6 +16,7 @@
   const GOALS_KEY = 'tp-reservation-goals-v1';
   const SHEET_SYNC_ENDPOINT_KEY = 'tp-sheet-sync-endpoint-v1';
   const CHART_COLLAPSED_KEY = 'tp-chart-collapsed-v1';
+  const TABLE_COMPACT_KEY = 'tp-campaigns-compact-v1';
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const REQUIRED_HEADERS = ['Tipo','Campaña','Anuncio','Objetivo','Reservas','Objetivo Reservas','Mensajes','Costo por mensaje','Costo por reserva','Ratio de reservas','Estado','Fecha de inicio','Fecha de fin','Duración (días)','Días restantes','Importe diario','Presupuesto total x campaña','Gasto x Campaña','Saldo por campaña','Proyección real de gasto mesual'];
@@ -29,8 +30,9 @@
     reservations: { label: 'Resultados', unit: 'count', color: '#ea580c', fill: 'rgba(234,88,12,.10)' },
   };
   const CHART_SERIES_KEY = 'tp-chart-series-v1';
-  const state = { data: null, types: readChartSeries(), month: 'Septiembre', chart: null, syncTimer: null, goals: readGoals(), chartCollapsed: readChartCollapsed(), lastSync: null };
+  const state = { data: null, types: readChartSeries(), month: 'Septiembre', chart: null, syncTimer: null, goals: readGoals(), chartCollapsed: readChartCollapsed(), tableCompact: readTableCompact(), tableFullscreen: false, lastSync: null };
 
+  const escapeAttr = value => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const fmtMoney = value => Number.isFinite(Number(value)) ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
   const fmtCount = value => Number(value || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 });
   const fmtRatio = value => Number.isFinite(Number(value)) ? `${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : '-';
@@ -48,6 +50,12 @@
       const saved = localStorage.getItem(CHART_COLLAPSED_KEY);
       return saved == null ? true : saved === 'true';
     } catch { return true; }
+  }
+  function readTableCompact() {
+    try { return localStorage.getItem(TABLE_COMPACT_KEY) === 'true'; } catch { return false; }
+  }
+  function saveTableCompact() {
+    try { localStorage.setItem(TABLE_COMPACT_KEY, String(state.tableCompact)); } catch {}
   }
   function saveChartCollapsed() {
     try { localStorage.setItem(CHART_COLLAPSED_KEY, String(state.chartCollapsed)); } catch {}
@@ -503,7 +511,7 @@
           tr += `<td class="ad-name-col"><input class="inline-edit" type="text" placeholder="Nombre anuncio" value="${currentAd.name || ''}" data-field="adname" data-cname="${c.name || ''}" data-cid="${c._id || ''}" data-aid="${currentAd._id || ''}"></td>`;
           tr += `<td><input class="inline-edit" type="text" placeholder="Objetivo" value="${obj || ''}" data-field="adobj" data-cname="${c.name || ''}" data-cid="${c._id || ''}" data-aid="${currentAd._id || ''}"></td>`;
         } else {
-          tr += `<td class="ad-name-col">${currentAd.adUrl ? `<a href="${currentAd.adUrl}" target="_blank" rel="noopener" title="Ver vista previa del anuncio">${adName}</a>` : adName}</td>`;
+          tr += `<td class="ad-name-col" title="${escapeAttr(adName)}"><span class="ad-name-text">${currentAd.adUrl ? `<a href="${currentAd.adUrl}" target="_blank" rel="noopener">${adName}</a>` : adName}</span></td>`;
           tr += `<td><span class="objective-pill">${obj || '—'}</span></td>`;
         }
         tr += `<td class="resultados-col">${reservas}</td>`;
@@ -534,7 +542,7 @@
       rows.push(`<tr class="campaign-sep"><td colspan="23"><button class="add-ad-btn add-ad-line-btn" data-cname="${c.name}">＋ Agregar anuncio</button></td></tr>`);
     }
     rows.push(`<tr class="add-campaign-row"><td colspan="23"><button class="add-campaign-btn">＋ Agregar campaña</button></td></tr>`);
-    rows.push(`<tr class="reservations-total-row"><td></td><td></td><td></td><td class="total-label">Total actualizado ${month.name.toLowerCase()}</td><td class="resultados-col">${totalReservas}</td><td class="goal-col">${totalGoals || ''}</td><td class="num">${totalMessages}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="num">${fmtMoney(month.adSpendTotal)}</td><td class="num">${fmtMoney(month.budgetTotal)}</td><td class="num">${fmtMoney(month.spend)}</td><td class="num">${fmtMoney(month.balanceTotal)}</td><td></td><td></td><td></td></tr>`);
+    rows.push(`<tr class="reservations-total-row"><td class="type-col"></td><td class="campaign-name"></td><td class="ad-name-col total-label">Total actualizado ${month.name.toLowerCase()}</td><td></td><td class="resultados-col">${totalReservas}</td><td class="goal-col">${totalGoals || ''}</td><td class="num">${totalMessages}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="num">${fmtMoney(month.adSpendTotal)}</td><td class="num">${fmtMoney(month.budgetTotal)}</td><td class="num">${fmtMoney(month.spend)}</td><td class="num">${fmtMoney(month.balanceTotal)}</td><td></td><td></td><td></td></tr>`);
     body.innerHTML = rows.join('');
   }
   function dateOrderValue(label) {
@@ -616,6 +624,39 @@
     if (mixed) scales.y1 = { beginAtZero: true, position: 'right', border: { display: false }, grid: { drawOnChartArea: false }, ticks: { precision: 0, color: '#7890b5', font: { size: 10 }, callback: countTicks } };
     return { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 24, right: 12, left: 4 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${context.dataset.label}: ${formatSeriesValue(context.raw, SERIES[context.dataset.seriesKey] || SERIES.investment)}` } } }, scales };
   }
+  // ── Barra de herramientas de la tabla de campanas ────────────────────────
+  function campaignsPanel() { return document.querySelector('.campaigns-panel'); }
+  function applyTableCompact() {
+    const panel = campaignsPanel();
+    const button = document.getElementById('campaigns-density-btn');
+    if (!panel || !button) return;
+    panel.classList.toggle('is-compact', state.tableCompact);
+    button.setAttribute('aria-pressed', String(state.tableCompact));
+    button.textContent = state.tableCompact ? 'Comodo' : 'Compacto';
+    button.setAttribute('title', state.tableCompact ? 'Volver a filas amplias' : 'Reducir el alto de las filas');
+  }
+  function applyTableFullscreen() {
+    const panel = campaignsPanel();
+    const button = document.getElementById('campaigns-expand-btn');
+    const tabs = document.getElementById('month-tabs');
+    const scroll = panel?.querySelector('.table-scroll');
+    if (!panel || !button) return;
+    panel.classList.toggle('is-fullscreen', state.tableFullscreen);
+    document.body.classList.toggle('tp-table-fullscreen', state.tableFullscreen);
+    // Las pestanas de mes viajan al panel para poder cambiar de mes sin salir.
+    if (tabs && scroll) {
+      if (state.tableFullscreen) panel.insertBefore(tabs, scroll);
+      else panel.parentNode.insertBefore(tabs, panel);
+    }
+    button.setAttribute('aria-pressed', String(state.tableFullscreen));
+    button.innerHTML = state.tableFullscreen ? '&#10005; Salir' : '&#10530; Pantalla completa';
+    button.setAttribute('title', state.tableFullscreen ? 'Salir de pantalla completa (Esc)' : 'Ver la tabla en pantalla completa (Esc para salir)');
+    if (state.tableFullscreen) scroll?.focus?.();
+  }
+  function toggleTableFullscreen(force) {
+    state.tableFullscreen = force == null ? !state.tableFullscreen : Boolean(force);
+    applyTableFullscreen();
+  }
   function applyChartCollapsed() {
     const panel = document.getElementById('chart-panel');
     const button = document.getElementById('chart-toggle-btn');
@@ -668,6 +709,20 @@
     REFRESH_BUTTON_IDS.forEach(id => {
       document.getElementById(id)?.addEventListener('click', () => syncLiveSheet({ manual: true }));
     });
+    document.getElementById('campaigns-density-btn')?.addEventListener('click', () => {
+      state.tableCompact = !state.tableCompact;
+      saveTableCompact();
+      applyTableCompact();
+    });
+    document.getElementById('campaigns-expand-btn')?.addEventListener('click', () => toggleTableFullscreen());
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && state.tableFullscreen) toggleTableFullscreen(false);
+    });
+    // Cambiar de modulo con el panel fijo dejaria el body bloqueado.
+    document.querySelectorAll('[data-view-target]').forEach(button => {
+      button.addEventListener('click', () => toggleTableFullscreen(false));
+    });
+    applyTableCompact();
     document.getElementById('chart-toggle-btn').addEventListener('click', () => {
       state.chartCollapsed = !state.chartCollapsed;
       saveChartCollapsed();

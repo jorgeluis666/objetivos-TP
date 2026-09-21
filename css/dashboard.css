@@ -1275,3 +1275,219 @@ body.modal-open {
     gap: 12px;
   }
 }
+
+/* ===== Tabla de campanas: navegacion (cabecera fija, columnas ancladas, pantalla completa) ===== */
+
+.table-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-tool-btn {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.table-tool-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+  background: var(--brand-soft);
+}
+
+.table-tool-btn[aria-pressed="true"] {
+  border-color: var(--brand);
+  color: var(--brand-text);
+  background: var(--brand-soft);
+}
+
+/* El alto propio del contenedor es lo que activa la cabecera fija: la tabla
+   scrollea dentro del panel en lugar de arrastrar toda la pagina. */
+.campaigns-panel .table-scroll {
+  overflow: auto;
+  max-height: calc(100vh - 230px);
+  min-height: 260px;
+  overscroll-behavior-x: contain;
+}
+
+.campaigns-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  /* Con border-collapse el borde se pierde al scrollear; el inset lo reemplaza. */
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+/* Columnas de identidad ancladas a la izquierda: Tipo, Campana y Anuncio
+   quedan a la vista mientras se recorren las 20 columnas de metricas. */
+.campaigns-table .type-col,
+.campaigns-table .campaign-name,
+.campaigns-table .ad-name-col,
+.campaigns-table thead th:nth-child(-n+3) {
+  position: sticky;
+  z-index: 2;
+  background: #fff;
+}
+
+.campaigns-table thead th:nth-child(-n+3) {
+  z-index: 4;
+  background: #f8fafc;
+}
+
+.campaigns-table .type-col,
+.campaigns-table thead th:nth-child(1) {
+  left: 0;
+  width: 84px;
+  min-width: 84px;
+}
+
+.campaigns-table .campaign-name,
+.campaigns-table thead th:nth-child(2) {
+  left: 84px;
+  width: 170px;
+  min-width: 170px;
+}
+
+.campaigns-table .ad-name-col,
+.campaigns-table thead th:nth-child(3) {
+  left: 254px;
+  width: 244px;
+  min-width: 244px;
+}
+
+/* Borde derecho del bloque anclado + sombra que indica que hay mas columnas. */
+.campaigns-table .ad-name-col,
+.campaigns-table thead th:nth-child(3) {
+  box-shadow: 1px 0 0 #cbd5e1, 9px 0 11px -8px rgba(15, 23, 42, .45);
+}
+
+.campaigns-table thead th:nth-child(3) {
+  box-shadow: 1px 0 0 #cbd5e1, 9px 0 11px -8px rgba(15, 23, 42, .45), inset 0 -1px 0 var(--border);
+}
+
+.campaigns-table .ad-name-text {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-table .campaign-name {
+  max-width: 170px;
+  overflow-wrap: anywhere;
+}
+
+/* Fila resaltada: con 23 columnas es lo que evita perder el renglon al scrollear. */
+.campaigns-table tbody tr:hover > td {
+  background: #f4fbfc;
+}
+
+.campaigns-table tbody tr.campaign-sep:hover > td,
+.campaigns-table tbody tr.add-campaign-row:hover > td {
+  background: transparent;
+}
+
+.campaigns-table .reservations-total-row:hover > td,
+.campaigns-table .reservations-total-row .type-col,
+.campaigns-table .reservations-total-row .campaign-name,
+.campaigns-table .reservations-total-row .ad-name-col {
+  background: #f8fafc;
+}
+
+/* La etiqueta del total viaja a la columna anclada para no perderse al scrollear. */
+.campaigns-table .reservations-total-row .total-label {
+  white-space: normal;
+  line-height: 1.25;
+  text-align: right;
+}
+
+/* Los botones de alta viven en celdas con colspan: sin sticky se esconden
+   detras de las columnas ancladas al scrollear. */
+.add-ad-line-btn,
+.add-campaign-btn {
+  position: sticky;
+  left: 12px;
+}
+
+.add-ad-line-btn {
+  top: auto;
+  transform: translateY(-8px);
+}
+
+/* Pantalla completa: el panel toma todo el viewport y la tabla se queda con
+   el alto libre. Las pestanas de mes se mueven aqui dentro por JS. */
+.campaigns-panel.is-fullscreen {
+  position: fixed;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  margin: 0;
+  padding: 16px 20px 12px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.campaigns-panel.is-fullscreen .table-scroll {
+  min-height: 0;
+  max-height: none;
+  flex: 1;
+}
+
+.campaigns-panel.is-fullscreen .month-tabs {
+  margin: 0 0 14px;
+}
+
+body.tp-table-fullscreen {
+  overflow: hidden;
+}
+
+/* Densidad compacta: mas filas visibles sin tocar el tamano de fuente base. */
+.campaigns-panel.is-compact .campaigns-table td {
+  padding: 6px 9px;
+}
+
+.campaigns-panel.is-compact .campaigns-table th {
+  padding: 7px 9px;
+}
+
+.campaigns-panel.is-compact .campaigns-table .status-pill,
+.campaigns-panel.is-compact .campaigns-table .objective-pill {
+  padding: 2px 7px;
+}
+
+.campaigns-panel.is-compact .reservations-total-row td {
+  padding: 7px 9px !important;
+}
+
+@media(max-width:760px) {
+  .campaigns-panel .table-scroll {
+    max-height: calc(100vh - 170px);
+  }
+
+  .campaigns-table .type-col,
+  .campaigns-table .campaign-name,
+  .campaigns-table .ad-name-col,
+  .campaigns-table thead th:nth-child(-n+3) {
+    position: static;
+  }
+
+  .table-tools {
+    flex-wrap: wrap;
+  }
+}
