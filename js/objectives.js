@@ -337,17 +337,26 @@
     ];
     host.innerHTML = cards.map(([label, value, meta]) => `<div class="kpi-pill"><span>${label}</span><strong>${value}</strong><small>${meta}</small></div>`).join('');
   }
+  // Un mes se habilita en cuanto tiene gasto, mensajes, resultados o campanas cargadas.
+  function hasMonthData(name) {
+    const month = sourceMonth(name);
+    if (!month) return false;
+    return Number(month.spend) > 0 || Number(month.messages) > 0 || Number(month.reservations) > 0 || (month.campaigns || []).length > 0;
+  }
   function renderTabs() {
     const host = document.getElementById('month-tabs');
     host.innerHTML = MONTHS.map(name => {
-      const available = !!sourceMonth(name);
+      const available = hasMonthData(name);
       const selected = name === state.month;
-      return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${name}" ${available ? '' : 'disabled'}>${name}${name === SHEET_MONTH ? '<span class="current-dot"></span>' : ''}</button>`;
+      return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${name}" aria-pressed="${selected}" ${available ? '' : 'disabled title="Sin datos registrados"'}>${name}${name === SHEET_MONTH ? '<span class="current-dot"></span>' : ''}</button>`;
     }).join('');
     host.querySelectorAll('.month-tab:not(:disabled)').forEach(button => {
       button.addEventListener('click', () => {
         state.month = button.dataset.month;
-        host.querySelectorAll('.month-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.month === state.month));
+        host.querySelectorAll('.month-tab').forEach(tab => {
+          tab.classList.toggle('active', tab.dataset.month === state.month);
+          tab.setAttribute('aria-pressed', String(tab.dataset.month === state.month));
+        });
         renderAll(false);
       });
     });
@@ -646,7 +655,7 @@
     // Las pestanas de mes viajan al panel para poder cambiar de mes sin salir.
     if (tabs && scroll) {
       if (state.tableFullscreen) panel.insertBefore(tabs, scroll);
-      else panel.parentNode.insertBefore(tabs, panel);
+      else { const chartPanel = document.getElementById('chart-panel'); chartPanel.parentNode.insertBefore(tabs, chartPanel); }
     }
     button.setAttribute('aria-pressed', String(state.tableFullscreen));
     button.innerHTML = state.tableFullscreen ? '&#10005; Salir' : '&#10530; Pantalla completa';
