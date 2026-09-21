@@ -1232,7 +1232,7 @@ body.modal-open {
 
 .projection-kpis .projection-campaign-card.active {
   border-color: var(--campaign-color);
-  box-shadow: inset 0 3px 0 var(--campaign-color);
+  background: color-mix(in srgb, var(--campaign-color) 4%, #fff);
 }
 
 .projection-kpis .projection-campaign-card strong {
