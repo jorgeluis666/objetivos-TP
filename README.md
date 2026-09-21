@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.11.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.11.1`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -57,7 +57,8 @@ El modulo Proyecciones lee los datos del modulo Gasto publicitario a traves de
 - Ritmo diario = acumulado del punto actual / dias transcurridos; la proyeccion mantiene ese ritmo
   hasta el ultimo dia del mes.
 - La linea de tiempo muestra resultados (eje izquierdo) y gasto (eje derecho) de la campana elegida.
-  El punto actual de cada linea se puede arrastrar (dia y valor) para simular un escenario; tarjetas
+  El punto actual de cada linea queda fijo en el dia de corte y solo se arrastra en vertical (entre 0
+  y el tope del eje), o se escribe en los campos bajo el grafico, para simular un escenario; tarjetas
   y tabla se recalculan al instante y la proyeccion original queda como referencia gris. Los
   escenarios viven solo en memoria y se pierden al recargar.
 - Cada sincronizacion con Google Sheets emite el evento `tp:data-updated` y el modulo se recalcula

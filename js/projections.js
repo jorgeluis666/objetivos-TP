@@ -14,8 +14,10 @@
     ready: false,
     campaign: null,
     visible: { results: true, spend: true },
-    // Escenarios por mes y campana: { [mes]: { [campana]: { results: {day, value}, spend: {day, value} } } }
+    // Escenarios por mes y campana: { [mes]: { [campana]: { results: valor, spend: valor } } }.
+    // El punto actual siempre queda en el dia de corte; solo cambia su valor.
     scenarios: {},
+    snapshot: null,
     chart: null,
     projection: null,
     drag: null,
@@ -76,10 +78,11 @@
     return state.scenarios[monthName][campaignKey];
   }
 
-  // Ritmo lineal: el acumulado de un dia dividido entre los dias transcurridos, extendido hasta fin de mes.
+  // Ritmo lineal: el acumulado al dia de corte dividido entre los dias transcurridos, extendido hasta fin de mes.
   function buildSeries(actual, realDay, daysInMonth, closed, override) {
-    const day = override ? override.day : realDay;
-    const value = override ? override.value : actual;
+    const adjusted = Number.isFinite(override);
+    const day = realDay;
+    const value = adjusted ? override : actual;
     const pace = day > 0 ? value / day : 0;
     const realPace = realDay > 0 ? actual / realDay : 0;
     return {
@@ -90,8 +93,8 @@
       day,
       value,
       pace,
-      projected: closed && !override ? actual : pace * daysInMonth,
-      adjusted: Boolean(override),
+      projected: closed && !adjusted ? actual : pace * daysInMonth,
+      adjusted,
     };
   }
 
@@ -250,7 +253,7 @@
       items.push(`<span><i class="legend-line dashed" style="color:${SPEND_COLOR}"></i><b>Gasto proyectado</b></span>`);
     }
     if (campaign.adjusted) items.push('<span><i class="legend-line dashed" style="color:#94a3b8"></i><b>Proyeccion original</b></span>');
-    if (!projection.closed) items.push('<span><i class="legend-handle"></i><b>Punto actual (arrastrable)</b></span>');
+    if (!projection.closed) items.push('<span><i class="legend-handle"></i><b>Punto actual (arrastrar arriba o abajo)</b></span>');
     host.innerHTML = items.join('');
   }
 
@@ -262,13 +265,17 @@
       return;
     }
     host.hidden = false;
-    const describe = (series, unit) => series.adjusted
-      ? `<b>${format(series.value, unit)}</b> al ${series.day}-${projection.shortMonth} <em>(real ${format(series.actual, unit)} al ${series.realDay}-${projection.shortMonth})</em>`
-      : `<b>${format(series.actual, unit)}</b> al ${series.realDay}-${projection.shortMonth}`;
+    const day = `${projection.daysWithData}-${projection.shortMonth}`;
+    const field = (key, label, series, step) => `
+      <label class="projection-scenario-field">
+        <span>${label} al ${day}</span>
+        <input type="number" min="0" step="${step}" value="${step === 1 ? Math.round(series.value) : series.value.toFixed(2)}" data-series="${key}" aria-label="${label} al ${day}">
+        <em>${series.adjusted ? `real ${format(series.actual, SERIES[key].unit)}` : 'valor real'}</em>
+      </label>`;
     host.innerHTML = `
       <div class="projection-scenario-text">
-        <span>${campaign.resultLabel}: ${describe(campaign.results, 'count')}</span>
-        <span>Gasto: ${describe(campaign.spend, 'money')}</span>
+        ${field('results', campaign.resultLabel, campaign.results, 1)}
+        ${field('spend', 'Gasto (S/.)', campaign.spend, 0.01)}
       </div>
       <button type="button" class="table-tool-btn" id="projection-reset" ${campaign.adjusted ? '' : 'disabled'}>Restablecer punto actual</button>`;
   }
@@ -303,6 +310,17 @@
         if (!point) return;
         const text = format(dataset.data[dataset.handleIndex], dataset.unit);
         ctx.save();
+        if (dataset.realValue != null && dataset.realValue !== dataset.data[dataset.handleIndex]) {
+          const realY = chart.scales[dataset.yAxisID].getPixelForValue(dataset.realValue);
+          ctx.setLineDash([2, 3]);
+          ctx.strokeStyle = dataset.borderColor;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(point.x, realY);
+          ctx.lineTo(point.x, point.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
         ctx.font = '700 10px Inter, sans-serif';
         const width = ctx.measureText(text).width + 12;
         const x = Math.min(Math.max(point.x - width / 2, left), right - width);
@@ -340,7 +358,7 @@
       datasets.push({ ...base, label: `${meta.label} proyeccion original`, data: original, borderColor: '#94a3b8', borderDash: [3, 4], borderWidth: 1.5, fill: false });
     }
     if (draggable) {
-      datasets.push({ ...base, label: `${meta.label} punto actual`, data: handle, borderColor: meta.color, backgroundColor: '#fff', borderWidth: 3, pointRadius: 7, pointHoverRadius: 9, showLine: false, handle: true, handleIndex: series.day - 1 });
+      datasets.push({ ...base, label: `${meta.label} punto actual`, data: handle, borderColor: meta.color, backgroundColor: '#fff', borderWidth: 3, pointRadius: 7, pointHoverRadius: 9, showLine: false, handle: true, handleIndex: series.day - 1, realValue: series.actual });
     }
     return datasets;
   }
@@ -419,7 +437,7 @@
     if (sub) {
       sub.textContent = projection.closed
         ? `Mes cerrado con ${projection.daysInMonth} dias de datos.`
-        : `Datos reales hasta el dia ${projection.daysWithData} y proyeccion lineal hasta el ${projection.daysInMonth}. Arrastra el punto actual para simular otro escenario.`;
+        : `Datos reales hasta el dia ${projection.daysWithData} y proyeccion lineal hasta el ${projection.daysInMonth}. Arrastra el punto actual hacia arriba o abajo para simular otro escenario.`;
     }
     const note = document.getElementById('projection-note');
     if (note) {
@@ -459,16 +477,18 @@
     if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Esperando los datos del modulo Gasto publicitario...</td></tr>';
   }
 
-  function recompute() {
-    const snapshot = window.TPObjectives?.snapshot?.();
+  // Un escenario no cambia los datos: se reutiliza el ultimo snapshot en vez de clonar todo el mes en cada movimiento.
+  function recompute({ reuseSnapshot = false } = {}) {
+    const snapshot = reuseSnapshot && state.snapshot ? state.snapshot : window.TPObjectives?.snapshot?.();
     if (!snapshot) return null;
+    state.snapshot = snapshot;
     state.projection = buildProjection(snapshot);
     return state.projection;
   }
 
   // Durante el arrastre solo se actualizan los datos del grafico; recrearlo cortaria el gesto.
   function refreshAfterScenario() {
-    const projection = recompute();
+    const projection = recompute({ reuseSnapshot: true });
     if (!projection) return;
     const campaign = selectedCampaign(projection);
     renderKpis(projection);
@@ -526,6 +546,13 @@
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
+  function setScenarioValue(seriesKey, value) {
+    if (!state.projection || !Number.isFinite(value)) return;
+    const rounded = seriesKey === 'spend' ? Math.round(value * 100) / 100 : Math.round(value);
+    scenarioFor(state.projection.monthName, state.campaign)[seriesKey] = Math.max(0, rounded);
+    refreshAfterScenario();
+  }
+
   function wireDrag() {
     const canvas = document.getElementById('chart-projection');
     if (!canvas) return;
@@ -540,7 +567,8 @@
       // Se congela el eje para que la escala no se mueva mientras se arrastra.
       const scale = chart.scales[handle.yAxisID];
       chart.options.scales[handle.yAxisID].max = scale.max;
-      state.drag = { series: handle.seriesKey, axis: handle.yAxisID, max: scale.max, pointerId: event.pointerId };
+      const point = chart.getDatasetMeta(chart.data.datasets.indexOf(handle)).data[handle.handleIndex];
+      state.drag = { series: handle.seriesKey, axis: handle.yAxisID, max: scale.max, offset: y - point.y, pointerId: event.pointerId };
       canvas.setPointerCapture(event.pointerId);
       canvas.classList.add('is-dragging');
       chart.options.plugins.tooltip.enabled = false;
@@ -554,14 +582,11 @@
         canvas.classList.toggle('can-drag', Boolean(!state.projection?.closed && handleAt(chart, x, y)));
         return;
       }
-      const projection = state.projection;
-      const index = Math.round(chart.scales.x.getValueForPixel(x));
-      const day = Math.min(projection.daysInMonth, Math.max(1, index + 1));
-      const raw = chart.scales[state.drag.axis].getValueForPixel(y);
-      const value = Math.min(state.drag.max, Math.max(0, raw));
-      const rounded = state.drag.series === 'spend' ? Math.round(value * 100) / 100 : Math.round(value);
-      scenarioFor(projection.monthName, state.campaign)[state.drag.series] = { day, value: rounded };
-      refreshAfterScenario();
+      // Solo se mueve en vertical sobre el dia de corte y sin salir del area del grafico.
+      const { top, bottom } = chart.chartArea;
+      const pixel = Math.min(bottom, Math.max(top, y - state.drag.offset));
+      const value = Math.min(state.drag.max, Math.max(0, chart.scales[state.drag.axis].getValueForPixel(pixel)));
+      setScenarioValue(state.drag.series, value);
     });
 
     const endDrag = event => {
@@ -604,6 +629,12 @@
         label.classList.toggle('active', Boolean(state.visible[label.dataset.series]));
       });
       if (state.projection) renderChart(state.projection);
+    });
+
+    document.getElementById('projection-scenario')?.addEventListener('change', event => {
+      const input = event.target.closest('input[data-series]');
+      if (!input || input.value === '') return;
+      setScenarioValue(input.dataset.series, Number(input.value));
     });
 
     document.getElementById('projection-scenario')?.addEventListener('click', event => {

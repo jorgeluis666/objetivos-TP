@@ -1263,12 +1263,12 @@ body.modal-open {
   font-weight: 500;
 }
 
-#chart-projection.can-drag {
-  cursor: grab;
+#chart-projection.can-drag,
+#chart-projection.is-dragging {
+  cursor: ns-resize;
 }
 
 #chart-projection.is-dragging {
-  cursor: grabbing;
   touch-action: none;
 }
 
@@ -1297,8 +1297,28 @@ body.modal-open {
   gap: 6px 22px;
 }
 
-.projection-scenario b {
+.projection-scenario-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projection-scenario-field input {
+  width: 118px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
   color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: right;
+}
+
+.projection-scenario-field input:focus {
+  border-color: var(--brand);
+  outline: 2px solid var(--brand-soft);
 }
 
 .projection-scenario em {
