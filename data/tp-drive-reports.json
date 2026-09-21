@@ -1,10 +1,28 @@
 {
   "folder": {
-    "id": "",
+    "id": "19IDo_fygI4JRfHvs665wGmAZ7egbDeiO",
     "name": "Reportes Terminal Pesquero | Agencia Lima Retail",
-    "url": "",
-    "owner": ""
+    "url": "https://drive.google.com/drive/folders/19IDo_fygI4JRfHvs665wGmAZ7egbDeiO",
+    "owner": "diegomachuca@limaretail.com"
   },
-  "syncedAt": null,
-  "files": []
+  "syncedAt": "2026-09-21T16:31:21Z",
+  "files": [
+    { "id": "1RdfIa36UoQu1utiQ2ZL2cQP_sdePEjQI", "title": "Reporte_Terminal_Pesquero_1-20Sep2026.pdf", "mimeType": "application/pdf", "sizeBytes": 235993, "createdTime": "2026-09-21T16:12:06.988Z", "modifiedTime": "2026-09-21T16:02:26Z" },
+    { "id": "12Laqmc41tUAjYSLN_oG6qJlbq3LqglV7", "title": "Reporte_Terminal_Pesquero_1-13Sep2026.pdf", "mimeType": "application/pdf", "sizeBytes": 236343, "createdTime": "2026-09-21T16:12:57.991Z", "modifiedTime": "2026-09-14T17:55:33Z" },
+    { "id": "1YLTVXztWFu5OPEVhbR1GqkMyhi3Q2kSz", "title": "Reporte_Terminal_Pesquero_Septiembre2026 (3).pdf", "mimeType": "application/pdf", "sizeBytes": 243646, "createdTime": "2026-09-21T16:12:57.996Z", "modifiedTime": "2026-09-07T20:51:06Z" },
+    { "id": "1x6Uq8CDW0ktMiCXgDRBXGELnuz2ACU_X", "title": "Reporte_Terminal_Pesquero_Septiembre2026 (2).pdf", "mimeType": "application/pdf", "sizeBytes": 244777, "createdTime": "2026-09-21T16:12:57.968Z", "modifiedTime": "2026-09-07T18:09:07Z" },
+    { "id": "11zMnGMFNm0SMdCOhnWyFUIx6doUQ_RHC", "title": "Reporte_Terminal_Pesquero_Septiembre2026 (1).pdf", "mimeType": "application/pdf", "sizeBytes": 244938, "createdTime": "2026-09-21T16:12:57.930Z", "modifiedTime": "2026-09-07T18:06:59Z" },
+    { "id": "1Sh4anrUl4TAKWyK9hZbCDdrfZTH4VMji", "title": "Reporte_Terminal_Pesquero_Septiembre2026.pdf", "mimeType": "application/pdf", "sizeBytes": 198358, "createdTime": "2026-09-21T16:12:57.824Z", "modifiedTime": "2026-09-07T18:02:43Z" },
+    { "id": "12TFUT_MGiFq9b90iPF8cO00FnU_Ls5k_", "title": "Reporte_Ads_Terminal_Pesquero_Agosto2026 (2).pdf", "mimeType": "application/pdf", "sizeBytes": 357621, "createdTime": "2026-09-21T16:12:56.433Z", "modifiedTime": "2026-09-01T15:24:13Z" },
+    { "id": "1nLbWjftgoUkZ3U-f7749yJytmqzV2eeb", "title": "Reporte_Ads_Terminal_Pesquero_Agosto2026 (1).pdf", "mimeType": "application/pdf", "sizeBytes": 288548, "createdTime": "2026-09-21T16:12:58.070Z", "modifiedTime": "2026-08-31T23:52:01Z" },
+    { "id": "1aaMXl46zH-g0kL2BpenIZ1ESXZ1gJ0f1", "title": "Reporte_Ads_Terminal_Pesquero_Agosto2026.pdf", "mimeType": "application/pdf", "sizeBytes": 178506, "createdTime": "2026-09-21T16:12:57.605Z", "modifiedTime": "2026-08-31T18:38:55Z" },
+    { "id": "1waqchBjeAkGqQwFEP9ril5cV_ohcCnSP", "title": "Reporte_TerminalPesquero_Agosto2026_Objetivos_Separados.pdf", "mimeType": "application/pdf", "sizeBytes": 179750, "createdTime": "2026-09-21T16:12:57.645Z", "modifiedTime": "2026-08-25T15:08:55Z" },
+    { "id": "1gXjTfnGSygZgjuYOlumnoL8v_dOt8jTr", "title": "Reporte_TerminalPesquero_Agosto2026_Ajustado.pdf", "mimeType": "application/pdf", "sizeBytes": 152108, "createdTime": "2026-09-21T16:12:57.580Z", "modifiedTime": "2026-08-25T15:00:49Z" },
+    { "id": "1wVvleOhCpc1BwG1Sph6UJ4y_blNhQ4Ly", "title": "Reporte_TerminalPesquero_Agosto2026 (2).pdf", "mimeType": "application/pdf", "sizeBytes": 146013, "createdTime": "2026-09-21T16:12:57.489Z", "modifiedTime": "2026-08-25T14:47:52Z" },
+    { "id": "1vvr6CJXrfDbzw_XO4gMhe_9Eh9LC7oOF", "title": "Reporte_TerminalPesquero_Agosto2026 (1).pdf", "mimeType": "application/pdf", "sizeBytes": 146013, "createdTime": "2026-09-21T16:12:57.430Z", "modifiedTime": "2026-08-25T14:46:38Z" },
+    { "id": "1kRgPNB1M0A6DULpel6heLZ8Sp3xx_MbG", "title": "Reporte_TerminalPesquero_Agosto2026.pdf", "mimeType": "application/pdf", "sizeBytes": 121337, "createdTime": "2026-09-21T16:12:57.024Z", "modifiedTime": "2026-08-10T22:20:54Z" },
+    { "id": "1L_nbilD0XEutOnKdGXttsyqPQNLW8xLw", "title": "TerminalPesquero_Julio2026 (1).pdf", "mimeType": "application/pdf", "sizeBytes": 153640, "createdTime": "2026-09-21T16:12:56.821Z", "modifiedTime": "2026-08-04T22:38:15Z" },
+    { "id": "1VnhMCIoXR8qwS73xMB0w6tFIT1OnphPd", "title": "TerminalPesquero_Julio2026.pdf", "mimeType": "application/pdf", "sizeBytes": 153640, "createdTime": "2026-09-21T16:12:56.922Z", "modifiedTime": "2026-08-04T22:32:31Z" },
+    { "id": "1Vrtfvo1Krw9NK0fYZMhOOxTK5G-whD3u", "title": "Reporte_Pesquero_Julio2026.pdf", "mimeType": "application/pdf", "sizeBytes": 174427, "createdTime": "2026-09-21T16:12:57.606Z", "modifiedTime": "2026-07-22T00:11:15Z" }
+  ]
 }

@@ -64,7 +64,6 @@ Estos valores estan vacios a proposito y hay que cargarlos antes de publicar:
 | Que | Donde |
 | --- | --- |
 | ID del Google Sheet | `js/objectives.js` (`SHEET_ID`) y `scripts/google-sheets-sync.gs` (`SPREADSHEET_ID`) |
-| Carpeta de Drive de reportes | `index.html` (`reports-folder-link`) y `data/tp-drive-reports.json` |
 | Contrasena de acceso | `index.html`, al final (`AuthLogin.init`) |
 | Logo | `assets/logo-terminal-pesquero.png` |
 | Favicon | `assets/favicon.png` |
