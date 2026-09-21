@@ -1,19 +1,37 @@
 (function () {
   const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const METRICS = {
-    investment: { key: 'investment', label: 'Inversion', unit: 'money', color: '#2563eb', fill: 'rgba(37,99,235,.10)', field: 'spend', reference: 'budget', referenceLabel: 'Presupuesto' },
-    messages: { key: 'messages', label: 'Mensajes', unit: 'count', color: '#16a34a', fill: 'rgba(22,163,74,.10)', field: 'messages', reference: null, referenceLabel: null },
-    reservations: { key: 'reservations', label: 'Reservas', unit: 'count', color: '#ea580c', fill: 'rgba(234,88,12,.10)', field: 'reservations', reference: 'reservationGoal', referenceLabel: 'Objetivo' },
+  // Cada campana mide un resultado distinto, asi que cada una recibe su propio color.
+  const CAMPAIGN_COLORS = ['#ea580c', '#7c3aed', '#0d9488', '#db2777', '#ca8a04'];
+  const SPEND_COLOR = '#2563eb';
+  const HANDLE_HIT_RADIUS = 16;
+  const SERIES = {
+    results: { key: 'results', label: 'Resultados', axis: 'y', unit: 'count' },
+    spend: { key: 'spend', label: 'Gasto', axis: 'y1', unit: 'money' },
   };
 
-  const state = { ready: false, metric: 'investment', chart: null, projection: null };
+  const state = {
+    ready: false,
+    campaign: null,
+    visible: { results: true, spend: true },
+    // Escenarios por mes y campana: { [mes]: { [campana]: { results: {day, value}, spend: {day, value} } } }
+    scenarios: {},
+    chart: null,
+    projection: null,
+    drag: null,
+  };
 
   const money = value => Number.isFinite(Number(value))
     ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '-';
   const count = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 }) : '-';
+  // Los costos por resultado de branding son centavos: se muestran con mas decimales para que no se vean en 0.01.
+  const unitCost = value => (Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) < 0.1
+    ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 3, maximumFractionDigits: 4 })}`
+    : money(value));
   const format = (value, unit) => (unit === 'money' ? money(value) : count(Math.round(Number(value) || 0)));
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
   function toDate(iso) {
     const value = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? `${iso}T00:00:00` : iso;
@@ -34,6 +52,49 @@
     return current || withData[withData.length - 1];
   }
 
+  // El nombre de la campana empieza por su tipo ("Interaccion | Posts | ..."), que es lo que se muestra.
+  function shortName(name) {
+    const first = String(name || '').split('|')[0].trim().replace(/^campa(n|ñ)a\s+/i, '');
+    return first ? first.charAt(0).toUpperCase() + first.slice(1) : 'Campana';
+  }
+
+  // El objetivo de Meta define que cuenta como resultado en cada campana.
+  function resultLabel(objective) {
+    const text = normalize(objective);
+    if (text.includes('interacc')) return 'Interacciones';
+    if (text.includes('thruplay') || text.includes('reproduc')) return 'ThruPlays';
+    if (text.includes('contacto')) return 'Contactos';
+    if (text.includes('mensaje')) return 'Mensajes';
+    if (text.includes('reconocimiento') || text.includes('alcance')) return 'Alcance';
+    if (text.includes('trafico') || text.includes('clic')) return 'Clics';
+    return 'Resultados';
+  }
+
+  function scenarioFor(monthName, campaignKey) {
+    state.scenarios[monthName] = state.scenarios[monthName] || {};
+    state.scenarios[monthName][campaignKey] = state.scenarios[monthName][campaignKey] || {};
+    return state.scenarios[monthName][campaignKey];
+  }
+
+  // Ritmo lineal: el acumulado de un dia dividido entre los dias transcurridos, extendido hasta fin de mes.
+  function buildSeries(actual, realDay, daysInMonth, closed, override) {
+    const day = override ? override.day : realDay;
+    const value = override ? override.value : actual;
+    const pace = day > 0 ? value / day : 0;
+    const realPace = realDay > 0 ? actual / realDay : 0;
+    return {
+      actual,
+      realDay,
+      realPace,
+      realProjected: closed ? actual : realPace * daysInMonth,
+      day,
+      value,
+      pace,
+      projected: closed && !override ? actual : pace * daysInMonth,
+      adjusted: Boolean(override),
+    };
+  }
+
   function buildProjection(snapshot) {
     const month = pickMonth(snapshot.months || [], snapshot.cutoff);
     if (!month) return null;
@@ -47,29 +108,35 @@
     const daysWithData = closed ? daysInMonth : Math.min(daysInMonth, Math.max(1, cutoffDate.getDate()));
     const daysLeft = daysInMonth - daysWithData;
 
-    const reservationGoal = (month.campaigns || []).reduce((total, campaign) => total + (Number(campaign.reservationGoal) || 0), 0) || null;
-    const references = { budget: Number(month.budgetTotal) || null, reservationGoal, messages: null };
-
-    const metrics = Object.values(METRICS).map(metric => {
-      const actual = Number(month[metric.field]) || 0;
-      const pace = actual / daysWithData;
-      const projected = closed ? actual : pace * daysInMonth;
-      const reference = metric.reference ? references[metric.reference] : null;
+    const campaigns = (month.campaigns || []).map((campaign, index) => {
+      const objective = campaign.objective || (campaign.ads || []).find(ad => ad.objective)?.objective || '';
+      const scenario = scenarioFor(month.name, campaign.name);
+      const results = buildSeries(Number(campaign.reservas) || 0, daysWithData, daysInMonth, closed, scenario.results);
+      const spend = buildSeries(Number(campaign.spent) || 0, daysWithData, daysInMonth, closed, scenario.spend);
       return {
-        ...metric,
-        actual,
-        pace,
-        projected,
-        reference,
-        gap: reference == null ? null : reference - projected,
-        requiredPace: reference == null || daysLeft <= 0 ? null : Math.max(0, (reference - actual) / daysLeft),
+        key: campaign.name,
+        name: campaign.name,
+        short: shortName(campaign.name),
+        type: campaign.type || '',
+        objective,
+        resultLabel: resultLabel(objective),
+        color: CAMPAIGN_COLORS[index % CAMPAIGN_COLORS.length],
+        messages: Number(campaign.messages) || 0,
+        results,
+        spend,
+        costPerResult: results.projected > 0 ? spend.projected / results.projected : null,
+        adjusted: results.adjusted || spend.adjusted,
       };
     });
 
-    const byKey = Object.fromEntries(metrics.map(metric => [metric.key, metric]));
-    const projectedSpend = byKey.investment.projected;
-    const projectedMessages = byKey.messages.projected;
-    const projectedReservations = byKey.reservations.projected;
+    // Si hay gasto del mes que no pertenece a ninguna campana listada, se proyecta aparte para no perderlo.
+    const monthSpend = Number(month.spend) || 0;
+    const campaignSpend = campaigns.reduce((total, campaign) => total + campaign.spend.actual, 0);
+    const unassigned = Math.max(0, monthSpend - campaignSpend);
+    const unassignedProjected = closed ? unassigned : (unassigned / daysWithData) * daysInMonth;
+    const spendActual = campaignSpend + unassigned;
+    const spendProjected = campaigns.reduce((total, campaign) => total + campaign.spend.projected, 0) + unassignedProjected;
+    const messages = Number(month.messages) || 0;
 
     return {
       monthName: month.name,
@@ -82,169 +149,267 @@
       closed,
       cutoffDate,
       source: snapshot.source,
-      metrics,
-      byKey,
-      budget: references.budget,
-      budgetUsedPct: references.budget ? (byKey.investment.actual / references.budget) * 100 : null,
-      budgetProjectedPct: references.budget ? (projectedSpend / references.budget) * 100 : null,
-      costPerMessage: byKey.messages.actual ? byKey.investment.actual / byKey.messages.actual : null,
-      costPerReservation: byKey.reservations.actual ? byKey.investment.actual / byKey.reservations.actual : null,
-      projectedCostPerMessage: projectedMessages ? projectedSpend / projectedMessages : null,
-      projectedCostPerReservation: projectedReservations ? projectedSpend / projectedReservations : null,
+      campaigns,
+      spendActual,
+      spendProjected,
+      spendPace: spendActual / daysWithData,
+      budget: Number(month.budgetTotal) || null,
+      adjusted: campaigns.some(campaign => campaign.adjusted),
+      spendAdjusted: campaigns.some(campaign => campaign.spend.adjusted),
+      costPerMessage: messages ? monthSpend / messages : null,
     };
+  }
+
+  function selectedCampaign(projection) {
+    if (!projection.campaigns.length) return null;
+    return projection.campaigns.find(campaign => campaign.key === state.campaign) || projection.campaigns[0];
   }
 
   function renderKpis(projection) {
     const host = document.getElementById('projection-kpis');
     if (!host) return;
-    const investment = projection.byKey.investment;
-    const messages = projection.byKey.messages;
-    const reservations = projection.byKey.reservations;
     const budgetHint = projection.budget
-      ? `${projection.budgetProjectedPct.toFixed(0)}% del presupuesto (${money(projection.budget)})`
-      : 'Sin presupuesto registrado';
-    const goalHint = reservations.reference
-      ? `Objetivo ${count(reservations.reference)} | ${reservations.gap >= 0 ? `faltan ${count(Math.abs(Math.round(reservations.gap)))}` : `sobre el objetivo por ${count(Math.abs(Math.round(reservations.gap)))}`}`
-      : 'Sin objetivo registrado';
-
-    const cards = [
-      { label: 'Inversion proyectada', value: money(investment.projected), hint: budgetHint },
-      { label: 'Mensajes proyectados', value: count(Math.round(messages.projected)), hint: `Ritmo ${count(Math.round(messages.pace))} por dia` },
-      { label: 'Reservas proyectadas', value: count(Math.round(reservations.projected)), hint: goalHint },
-      { label: 'Ritmo de inversion', value: `${money(investment.pace)} / dia`, hint: projection.closed ? 'Mes cerrado' : `Quedan ${projection.daysLeft} dias del mes` },
-      { label: 'Avance del mes', value: `${projection.daysWithData} de ${projection.daysInMonth} dias`, hint: `Datos al ${longDate(projection.cutoffDate)}` },
+      ? `${((projection.spendProjected / projection.budget) * 100).toFixed(0)}% del presupuesto (${money(projection.budget)})`
+      : `Ritmo real ${money(projection.spendPace)} por dia`;
+    const spendCards = [
+      `<div class="kpi-pill"><span>Gasto al ${projection.daysWithData}-${projection.shortMonth}</span><strong>${money(projection.spendActual)}</strong><small>${projection.closed ? 'Mes cerrado' : `Quedan ${projection.daysLeft} dias del mes`}</small></div>`,
+      `<div class="kpi-pill"><span>Gasto proyectado</span><strong>${money(projection.spendProjected)}</strong><small>${projection.spendAdjusted ? 'Incluye escenarios ajustados' : budgetHint}</small></div>`,
     ];
+    const selected = selectedCampaign(projection);
+    const campaignCards = projection.campaigns.map(campaign => `
+      <button type="button" class="kpi-pill projection-campaign-card${campaign === selected ? ' active' : ''}${campaign.adjusted ? ' is-adjusted' : ''}" data-campaign="${escapeHtml(campaign.key)}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
+        <span><i class="campaign-dot"></i>${escapeHtml(campaign.short)} | ${campaign.resultLabel}</span>
+        <strong>${count(Math.round(campaign.results.projected))}</strong>
+        <small>Gasto proyectado ${money(campaign.spend.projected)}</small>
+      </button>`);
+    host.innerHTML = spendCards.concat(campaignCards).join('');
+  }
 
-    host.innerHTML = cards.map(card => `
-      <div class="kpi-pill">
-        <span>${card.label}</span>
-        <strong>${card.value}</strong>
-        <small>${card.hint}</small>
-      </div>
-    `).join('');
+  function renderCampaignChips(projection) {
+    const host = document.getElementById('projection-campaigns');
+    if (!host) return;
+    const selected = selectedCampaign(projection);
+    host.innerHTML = projection.campaigns.map(campaign => `
+      <label class="series-toggle campaign-chip${campaign === selected ? ' active' : ''}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
+        <input type="radio" name="projection-campaign" value="${escapeHtml(campaign.key)}"${campaign === selected ? ' checked' : ''}>${escapeHtml(campaign.short)}
+      </label>`).join('');
   }
 
   function renderTable(projection) {
     const body = document.getElementById('projection-body');
     if (!body) return;
-    const rows = projection.metrics.map(metric => {
-      const gap = metric.gap == null
-        ? '<span class="no-data">Sin referencia</span>'
-        : `<span class="projection-gap ${metric.gap >= 0 ? 'ok' : 'over'}">${metric.gap >= 0 ? '' : '+'}${format(Math.abs(metric.gap), metric.unit)} ${metric.gap >= 0 ? 'por debajo' : 'por encima'}</span>`;
+    const rows = projection.campaigns.map(campaign => {
+      const status = campaign.adjusted
+        ? '<span class="projection-gap over">Escenario ajustado</span>'
+        : '<span class="projection-gap ok">Ritmo real</span>';
       return `
         <tr>
-          <td class="campaign-name">${metric.label}</td>
-          <td class="num">${format(metric.actual, metric.unit)}</td>
-          <td class="num">${format(metric.pace, metric.unit)}</td>
-          <td class="num projection-value">${format(metric.projected, metric.unit)}</td>
-          <td class="num">${metric.reference == null ? '<span class="no-data">-</span>' : format(metric.reference, metric.unit)}</td>
-          <td>${gap}</td>
+          <td class="campaign-name"><span class="campaign-dot" style="--campaign-color:${campaign.color}"></span>${escapeHtml(campaign.short)}<small class="projection-campaign-full">${escapeHtml(campaign.name)}</small></td>
+          <td>${escapeHtml(campaign.type) || '<span class="no-data">-</span>'}</td>
+          <td><span class="objective-pill">${campaign.resultLabel}</span></td>
+          <td class="num">${count(campaign.results.actual)}</td>
+          <td class="num">${count(Math.round(campaign.results.pace))}</td>
+          <td class="num projection-value">${count(Math.round(campaign.results.projected))}</td>
+          <td class="num">${money(campaign.spend.actual)}</td>
+          <td class="num projection-value">${money(campaign.spend.projected)}</td>
+          <td class="num">${unitCost(campaign.costPerResult)}</td>
+          <td>${status}</td>
         </tr>`;
     }).join('');
 
-    const costRow = `
+    const totalRow = `
       <tr class="projection-cost-row">
-        <td class="campaign-name">Costo por mensaje / reserva</td>
-        <td class="num">${money(projection.costPerMessage)} / ${money(projection.costPerReservation)}</td>
-        <td class="num"><span class="no-data">-</span></td>
-        <td class="num projection-value">${money(projection.projectedCostPerMessage)} / ${money(projection.projectedCostPerReservation)}</td>
-        <td class="num"><span class="no-data">-</span></td>
-        <td><span class="no-data">Se mantiene si el ritmo no cambia</span></td>
+        <td class="campaign-name">Total del mes</td>
+        <td></td>
+        <td><span class="no-data">Los resultados no se suman entre tipos</span></td>
+        <td></td><td></td><td></td>
+        <td class="num">${money(projection.spendActual)}</td>
+        <td class="num projection-value">${money(projection.spendProjected)}</td>
+        <td></td>
+        <td></td>
       </tr>`;
 
-    body.innerHTML = rows + costRow;
+    body.innerHTML = rows ? rows + totalRow : '<tr><td class="table-empty" colspan="10">No hay campanas registradas en el mes.</td></tr>';
 
     const head = document.getElementById('projection-actual-head');
-    if (head) head.textContent = `Actual al ${projection.daysWithData}-${projection.shortMonth}`;
+    if (head) head.textContent = `Resultados al ${projection.daysWithData}-${projection.shortMonth}`;
     const closeHead = document.getElementById('projection-close-head');
     if (closeHead) closeHead.textContent = `Proyeccion al ${projection.daysInMonth}-${projection.shortMonth}`;
   }
 
-  function renderLegend(projection, metric) {
+  function renderLegend(projection, campaign) {
     const host = document.getElementById('projection-legend');
     if (!host) return;
-    const items = [
-      `<span><i class="legend-line" style="background:${metric.color}"></i><b>Acumulado real</b></span>`,
-      `<span><i class="legend-line dashed" style="background:${metric.color}"></i><b>Proyeccion al cierre</b></span>`,
-    ];
-    if (metric.reference != null) {
-      items.push(`<span><i class="legend-line dashed" style="background:#94a3b8"></i><b>${metric.referenceLabel}</b></span>`);
+    const items = [];
+    if (state.visible.results) {
+      items.push(`<span><i class="legend-line" style="background:${campaign.color}"></i><b>${campaign.resultLabel} real</b></span>`);
+      items.push(`<span><i class="legend-line dashed" style="color:${campaign.color}"></i><b>${campaign.resultLabel} proyectado</b></span>`);
     }
+    if (state.visible.spend) {
+      items.push(`<span><i class="legend-line" style="background:${SPEND_COLOR}"></i><b>Gasto real</b></span>`);
+      items.push(`<span><i class="legend-line dashed" style="color:${SPEND_COLOR}"></i><b>Gasto proyectado</b></span>`);
+    }
+    if (campaign.adjusted) items.push('<span><i class="legend-line dashed" style="color:#94a3b8"></i><b>Proyeccion original</b></span>');
+    if (!projection.closed) items.push('<span><i class="legend-handle"></i><b>Punto actual (arrastrable)</b></span>');
     host.innerHTML = items.join('');
   }
 
-  const cutoffMarker = {
-    id: 'cutoffMarker',
+  function renderScenarioBar(projection, campaign) {
+    const host = document.getElementById('projection-scenario');
+    if (!host) return;
+    if (projection.closed || !campaign) {
+      host.hidden = true;
+      return;
+    }
+    host.hidden = false;
+    const describe = (series, unit) => series.adjusted
+      ? `<b>${format(series.value, unit)}</b> al ${series.day}-${projection.shortMonth} <em>(real ${format(series.actual, unit)} al ${series.realDay}-${projection.shortMonth})</em>`
+      : `<b>${format(series.actual, unit)}</b> al ${series.realDay}-${projection.shortMonth}`;
+    host.innerHTML = `
+      <div class="projection-scenario-text">
+        <span>${campaign.resultLabel}: ${describe(campaign.results, 'count')}</span>
+        <span>Gasto: ${describe(campaign.spend, 'money')}</span>
+      </div>
+      <button type="button" class="table-tool-btn" id="projection-reset" ${campaign.adjusted ? '' : 'disabled'}>Restablecer punto actual</button>`;
+  }
+
+  // Linea vertical en el dia de corte real y etiqueta de valor sobre cada punto arrastrable.
+  const projectionMarkers = {
+    id: 'projectionMarkers',
     afterDatasetsDraw(chart, args, options) {
-      const index = options?.index;
-      if (index == null || index < 0) return;
-      const x = chart.scales.x.getPixelForValue(index);
-      const { top, bottom } = chart.chartArea;
       const ctx = chart.ctx;
-      ctx.save();
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, top);
-      ctx.lineTo(x, bottom);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#7890b5';
-      ctx.font = '700 9px Inter, sans-serif';
-      ctx.textAlign = x > (chart.chartArea.left + chart.chartArea.right) / 2 ? 'right' : 'left';
-      ctx.fillText(options.label || 'Ultima actualizacion', x + (ctx.textAlign === 'right' ? -6 : 6), top + 10);
-      ctx.restore();
+      const { top, bottom, left, right } = chart.chartArea;
+      const index = options?.index;
+      if (index != null && index >= 0) {
+        const x = chart.scales.x.getPixelForValue(index);
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#7890b5';
+        ctx.font = '700 9px Inter, sans-serif';
+        ctx.textAlign = x > (left + right) / 2 ? 'right' : 'left';
+        ctx.fillText(options.label || 'Ultima actualizacion', x + (ctx.textAlign === 'right' ? -6 : 6), top + 10);
+        ctx.restore();
+      }
+      chart.data.datasets.forEach((dataset, datasetIndex) => {
+        if (!dataset.handle || !chart.isDatasetVisible(datasetIndex)) return;
+        const point = chart.getDatasetMeta(datasetIndex).data[dataset.handleIndex];
+        if (!point) return;
+        const text = format(dataset.data[dataset.handleIndex], dataset.unit);
+        ctx.save();
+        ctx.font = '700 10px Inter, sans-serif';
+        const width = ctx.measureText(text).width + 12;
+        const x = Math.min(Math.max(point.x - width / 2, left), right - width);
+        // Resultados etiqueta arriba y gasto abajo para que no se tapen cuando las lineas se acercan.
+        const above = dataset.seriesKey !== 'spend';
+        const y = above ? (point.y - 28 < top ? point.y + 12 : point.y - 28) : (point.y + 29 > bottom ? point.y - 28 : point.y + 12);
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = dataset.borderColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, 17, 5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = dataset.borderColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x + 6, y + 9);
+        ctx.restore();
+      });
     },
   };
+
+  function seriesDatasets(series, meta, projection, draggable) {
+    const days = projection.daysInMonth;
+    const real = Array.from({ length: days }, (_, i) => (i + 1 <= series.realDay ? series.realPace * (i + 1) : null));
+    const forecast = Array.from({ length: days }, (_, i) => (i + 1 >= series.day ? series.pace * (i + 1) : null));
+    const original = Array.from({ length: days }, (_, i) => (i + 1 >= series.realDay ? series.realPace * (i + 1) : null));
+    const handle = Array.from({ length: days }, (_, i) => (i + 1 === series.day ? series.value : null));
+    const base = { yAxisID: meta.axis, unit: meta.unit, pointRadius: 0, pointHoverRadius: 4, tension: 0, seriesKey: meta.key };
+    const datasets = [
+      { ...base, label: `${meta.label} real`, data: real, borderColor: meta.color, backgroundColor: meta.fill, borderWidth: 2, fill: meta.key === 'results' ? 'origin' : false },
+      { ...base, label: `${meta.label} proyectado`, data: projection.closed ? [] : forecast, borderColor: meta.color, borderDash: [6, 5], borderWidth: 2, fill: false },
+    ];
+    if (series.adjusted) {
+      datasets.push({ ...base, label: `${meta.label} proyeccion original`, data: original, borderColor: '#94a3b8', borderDash: [3, 4], borderWidth: 1.5, fill: false });
+    }
+    if (draggable) {
+      datasets.push({ ...base, label: `${meta.label} punto actual`, data: handle, borderColor: meta.color, backgroundColor: '#fff', borderWidth: 3, pointRadius: 7, pointHoverRadius: 9, showLine: false, handle: true, handleIndex: series.day - 1 });
+    }
+    return datasets;
+  }
+
+  function chartDatasets(projection, campaign) {
+    const draggable = !projection.closed;
+    const datasets = [];
+    if (state.visible.results) {
+      datasets.push(...seriesDatasets(campaign.results, { ...SERIES.results, label: campaign.resultLabel, color: campaign.color, fill: `${campaign.color}1a` }, projection, draggable));
+    }
+    if (state.visible.spend) {
+      datasets.push(...seriesDatasets(campaign.spend, { ...SERIES.spend, color: SPEND_COLOR, fill: 'rgba(37,99,235,.08)' }, projection, draggable));
+    }
+    return datasets;
+  }
 
   function renderChart(projection) {
     const canvas = document.getElementById('chart-projection');
     if (!canvas || typeof Chart === 'undefined') return;
-    const metric = projection.byKey[state.metric] || projection.byKey.investment;
-    const labels = Array.from({ length: projection.daysInMonth }, (_, index) => `${index + 1} ${projection.shortMonth}`);
-    const real = labels.map((_, index) => (index + 1 <= projection.daysWithData ? metric.pace * (index + 1) : null));
-    const forecast = labels.map((_, index) => (index + 1 >= projection.daysWithData ? metric.pace * (index + 1) : null));
-
-    const datasets = [
-      { label: 'Acumulado real', data: real, borderColor: metric.color, backgroundColor: metric.fill, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: .15, fill: true, unit: metric.unit },
-      { label: 'Proyeccion al cierre', data: projection.closed ? [] : forecast, borderColor: metric.color, borderDash: [6, 5], borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: .15, fill: false, unit: metric.unit },
-    ];
-    if (metric.reference != null) {
-      datasets.push({ label: metric.referenceLabel, data: labels.map(() => metric.reference), borderColor: '#94a3b8', borderDash: [3, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false, unit: metric.unit });
+    const campaign = selectedCampaign(projection);
+    if (state.chart) {
+      state.chart.destroy();
+      state.chart = null;
     }
+    if (!campaign) {
+      renderLegend(projection, { adjusted: false });
+      return;
+    }
+    const labels = Array.from({ length: projection.daysInMonth }, (_, index) => `${index + 1} ${projection.shortMonth}`);
+    const money0 = value => (value === 0 ? 'S/. 0' : `S/. ${Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 })}`);
 
-    const ticks = metric.unit === 'money'
-      ? value => (value === 0 ? 'S/. 0' : `S/. ${(value / 1000).toFixed(1)}k`)
-      : value => Number(value).toLocaleString('es-PE');
-
-    if (state.chart) state.chart.destroy();
     state.chart = new Chart(canvas, {
       type: 'line',
-      data: { labels, datasets },
+      data: { labels, datasets: chartDatasets(projection, campaign) },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         interaction: { mode: 'index', intersect: false },
-        layout: { padding: { top: 18, right: 14, left: 4 } },
+        layout: { padding: { top: 18, right: 8, left: 4 } },
         plugins: {
           legend: { display: false },
-          cutoffMarker: { index: projection.daysWithData - 1, label: `Datos al ${projection.daysWithData}-${projection.shortMonth}` },
+          projectionMarkers: { index: projection.daysWithData - 1, label: `Datos al ${projection.daysWithData}-${projection.shortMonth}` },
           tooltip: {
+            filter: item => item.raw != null && !item.dataset.handle,
             callbacks: {
-              label: context => (context.raw == null ? null : ` ${context.dataset.label}: ${format(context.raw, metric.unit)}`),
+              label: context => ` ${context.dataset.label}: ${format(context.raw, context.dataset.unit)}`,
             },
           },
         },
         scales: {
           x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#7890b5', font: { size: 10 }, maxTicksLimit: 10, autoSkip: true } },
-          y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(148,163,184,.20)' }, ticks: { color: '#7890b5', font: { size: 10 }, callback: ticks } },
+          y: {
+            display: 'auto', position: 'left', beginAtZero: true, border: { display: false }, grid: { color: 'rgba(148,163,184,.20)' },
+            title: { display: true, text: campaign.resultLabel, color: campaign.color, font: { size: 10, weight: '700' } },
+            ticks: { color: '#7890b5', font: { size: 10 }, callback: value => Number(value).toLocaleString('es-PE') },
+          },
+          y1: {
+            // Con ambas series visibles el gasto recibe margen extra para que su linea corra por debajo de la de resultados.
+            display: 'auto', position: 'right', beginAtZero: true, grace: state.visible.results ? '60%' : 0, border: { display: false }, grid: { drawOnChartArea: !state.visible.results },
+            title: { display: true, text: 'Gasto', color: SPEND_COLOR, font: { size: 10, weight: '700' } },
+            ticks: { color: '#7890b5', font: { size: 10 }, callback: money0 },
+          },
         },
       },
-      plugins: [cutoffMarker],
+      plugins: [projectionMarkers],
     });
 
-    renderLegend(projection, metric);
+    renderLegend(projection, campaign);
   }
 
   function renderHeader(projection) {
@@ -254,15 +419,15 @@
     if (sub) {
       sub.textContent = projection.closed
         ? `Mes cerrado con ${projection.daysInMonth} dias de datos.`
-        : `Datos reales hasta el dia ${projection.daysWithData} y proyeccion lineal hasta el ${projection.daysInMonth}.`;
+        : `Datos reales hasta el dia ${projection.daysWithData} y proyeccion lineal hasta el ${projection.daysInMonth}. Arrastra el punto actual para simular otro escenario.`;
     }
     const note = document.getElementById('projection-note');
     if (note) {
-      note.textContent = `La proyeccion asume que se mantiene el ritmo promedio del mes (${money(projection.byKey.investment.pace)} por dia). Fuente: ${projection.source || 'Terminal Pesquero'}.`;
+      note.textContent = `Cada campana mide un resultado distinto segun su objetivo (Interaccion, Notoriedad, Pedidos), por eso se proyectan por separado. La proyeccion mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: ${projection.source || 'Terminal Pesquero'}.`;
     }
     const desc = document.getElementById('projection-desc');
     if (desc) {
-      desc.textContent = `Proyeccion al cierre de ${projection.monthLabel} calculada con los datos reales del modulo Gasto publicitario, actualizados al ${longDate(projection.cutoffDate)}.`;
+      desc.textContent = `Proyeccion al cierre de ${projection.monthLabel} por campana, calculada con los datos reales del modulo Gasto publicitario, actualizados al ${longDate(projection.cutoffDate)}.`;
     }
   }
 
@@ -284,45 +449,167 @@
     const panel = document.getElementById('projection-panel');
     if (panel) panel.innerHTML = '<div class="empty-state"><strong>Sin datos para proyectar</strong>Todavia no hay gasto registrado en el mes en curso.</div>';
     const body = document.getElementById('projection-body');
-    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="6">Sin datos para proyectar.</td></tr>';
+    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Sin datos para proyectar.</td></tr>';
   }
 
   function renderWaiting() {
     const sub = document.getElementById('projection-sub');
     if (sub) sub.textContent = 'Esperando los datos del modulo Gasto publicitario...';
     const body = document.getElementById('projection-body');
-    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="6">Esperando los datos del modulo Gasto publicitario...</td></tr>';
+    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Esperando los datos del modulo Gasto publicitario...</td></tr>';
+  }
+
+  function recompute() {
+    const snapshot = window.TPObjectives?.snapshot?.();
+    if (!snapshot) return null;
+    state.projection = buildProjection(snapshot);
+    return state.projection;
+  }
+
+  // Durante el arrastre solo se actualizan los datos del grafico; recrearlo cortaria el gesto.
+  function refreshAfterScenario() {
+    const projection = recompute();
+    if (!projection) return;
+    const campaign = selectedCampaign(projection);
+    renderKpis(projection);
+    renderTable(projection);
+    renderScenarioBar(projection, campaign);
+    renderLegend(projection, campaign);
+    if (state.chart && campaign) {
+      state.chart.data.datasets = chartDatasets(projection, campaign);
+      state.chart.update('none');
+    }
   }
 
   function render() {
     // El modulo puede abrirse antes de que Gasto publicitario termine de cargar; el evento tp:data-updated lo reintenta.
-    const snapshot = window.TPObjectives?.snapshot?.();
-    if (!snapshot) {
+    if (!window.TPObjectives?.snapshot?.()) {
       renderWaiting();
       return;
     }
-    const projection = buildProjection(snapshot);
-    state.projection = projection;
+    const projection = recompute();
     if (!projection) {
       renderEmpty();
       return;
     }
+    const campaign = selectedCampaign(projection);
+    state.campaign = campaign?.key || null;
     renderHeader(projection);
     renderKpis(projection);
+    renderCampaignChips(projection);
     renderChart(projection);
+    renderScenarioBar(projection, campaign);
     renderTable(projection);
     renderCplLink(projection);
   }
 
+  function selectCampaign(key) {
+    if (!key || key === state.campaign) return;
+    state.campaign = key;
+    render();
+  }
+
+  function handleAt(chart, x, y) {
+    let best = null;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      if (!dataset.handle) return;
+      const point = chart.getDatasetMeta(datasetIndex).data[dataset.handleIndex];
+      if (!point) return;
+      const distance = Math.hypot(point.x - x, point.y - y);
+      if (distance <= HANDLE_HIT_RADIUS && (!best || distance < best.distance)) best = { dataset, distance };
+    });
+    return best?.dataset || null;
+  }
+
+  function canvasPoint(event) {
+    const rect = event.target.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function wireDrag() {
+    const canvas = document.getElementById('chart-projection');
+    if (!canvas) return;
+
+    canvas.addEventListener('pointerdown', event => {
+      const chart = state.chart;
+      if (!chart || !state.projection || state.projection.closed) return;
+      const { x, y } = canvasPoint(event);
+      const handle = handleAt(chart, x, y);
+      if (!handle) return;
+      event.preventDefault();
+      // Se congela el eje para que la escala no se mueva mientras se arrastra.
+      const scale = chart.scales[handle.yAxisID];
+      chart.options.scales[handle.yAxisID].max = scale.max;
+      state.drag = { series: handle.seriesKey, axis: handle.yAxisID, max: scale.max, pointerId: event.pointerId };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add('is-dragging');
+      chart.options.plugins.tooltip.enabled = false;
+    });
+
+    canvas.addEventListener('pointermove', event => {
+      const chart = state.chart;
+      if (!chart) return;
+      const { x, y } = canvasPoint(event);
+      if (!state.drag) {
+        canvas.classList.toggle('can-drag', Boolean(!state.projection?.closed && handleAt(chart, x, y)));
+        return;
+      }
+      const projection = state.projection;
+      const index = Math.round(chart.scales.x.getValueForPixel(x));
+      const day = Math.min(projection.daysInMonth, Math.max(1, index + 1));
+      const raw = chart.scales[state.drag.axis].getValueForPixel(y);
+      const value = Math.min(state.drag.max, Math.max(0, raw));
+      const rounded = state.drag.series === 'spend' ? Math.round(value * 100) / 100 : Math.round(value);
+      scenarioFor(projection.monthName, state.campaign)[state.drag.series] = { day, value: rounded };
+      refreshAfterScenario();
+    });
+
+    const endDrag = event => {
+      if (!state.drag) return;
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      const chart = state.chart;
+      if (chart) {
+        delete chart.options.scales[state.drag.axis].max;
+        chart.options.plugins.tooltip.enabled = true;
+        chart.update('none');
+      }
+      state.drag = null;
+      canvas.classList.remove('is-dragging');
+    };
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+  }
+
   function wireEvents() {
-    document.getElementById('projection-metrics')?.addEventListener('change', event => {
+    document.getElementById('projection-campaigns')?.addEventListener('change', event => {
       const input = event.target.closest('input[type="radio"]');
+      if (input) selectCampaign(input.value);
+    });
+
+    document.getElementById('projection-kpis')?.addEventListener('click', event => {
+      const card = event.target.closest('[data-campaign]');
+      if (card) selectCampaign(card.dataset.campaign);
+    });
+
+    document.getElementById('projection-series')?.addEventListener('change', event => {
+      const input = event.target.closest('input[type="checkbox"]');
       if (!input) return;
-      state.metric = input.value;
-      document.querySelectorAll('#projection-metrics .series-toggle').forEach(label => {
-        label.classList.toggle('active', label.dataset.series === state.metric);
+      state.visible[input.value] = input.checked;
+      // Siempre queda al menos una serie visible.
+      if (!state.visible.results && !state.visible.spend) {
+        state.visible[input.value] = true;
+        input.checked = true;
+      }
+      document.querySelectorAll('#projection-series .series-toggle').forEach(label => {
+        label.classList.toggle('active', Boolean(state.visible[label.dataset.series]));
       });
       if (state.projection) renderChart(state.projection);
+    });
+
+    document.getElementById('projection-scenario')?.addEventListener('click', event => {
+      if (!event.target.closest('#projection-reset') || !state.projection) return;
+      delete state.scenarios[state.projection.monthName]?.[state.campaign];
+      render();
     });
 
     document.getElementById('projection-use-cpl')?.addEventListener('click', event => {
@@ -337,8 +624,10 @@
     });
 
     window.addEventListener('tp:data-updated', () => {
-      if (state.ready) render();
+      if (state.ready && !state.drag) render();
     });
+
+    wireDrag();
   }
 
   function init() {

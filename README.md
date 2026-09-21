@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.10.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.11.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -20,7 +20,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Distribucion entre Branding y Ventas.
 - Campanas por mes.
 - Estado, objetivo, presupuesto, gasto, importe diario y URL de anuncios.
-- Proyecciones: cierre de mes estimado con los datos reales y calculadora de inversion por CPL.
+- Proyecciones: cierre de mes estimado por campana (resultados y gasto) y calculadora de inversion por CPL.
 - Historico de Campanas finalizadas.
 - Archivo de Reportes: catalogo de los documentos guardados en la carpeta de Google Drive.
 - Navegacion de la tabla de campanas: cabecera fija, columnas Tipo / Campana / Anuncio ancladas
@@ -50,10 +50,16 @@ El modulo Proyecciones lee los datos del modulo Gasto publicitario a traves de
 
 - El mes proyectado es el que corresponde a la fecha de corte (`cutoff`); si no tiene gasto, se usa
   el ultimo mes con datos.
-- Ritmo diario = acumulado real / dias con datos; la proyeccion mantiene ese ritmo hasta el ultimo
-  dia del mes.
-- La linea de tiempo marca el dia de la ultima actualizacion y compara contra el presupuesto
-  (inversion) o el objetivo de reservas.
+- Cada campana se proyecta por separado porque mide un resultado distinto segun su objetivo de Meta
+  (Interaccion -> interacciones, Notoriedad -> ThruPlays, Pedidos WhatsApp -> contactos). El tipo
+  se toma de la primera parte del nombre de la campana (antes de `|`). Los resultados no se suman
+  entre campanas; solo el gasto tiene total del mes.
+- Ritmo diario = acumulado del punto actual / dias transcurridos; la proyeccion mantiene ese ritmo
+  hasta el ultimo dia del mes.
+- La linea de tiempo muestra resultados (eje izquierdo) y gasto (eje derecho) de la campana elegida.
+  El punto actual de cada linea se puede arrastrar (dia y valor) para simular un escenario; tarjetas
+  y tabla se recalculan al instante y la proyeccion original queda como referencia gris. Los
+  escenarios viven solo en memoria y se pierden al recargar.
 - Cada sincronizacion con Google Sheets emite el evento `tp:data-updated` y el modulo se recalcula
   solo.
 

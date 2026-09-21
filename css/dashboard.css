@@ -1205,6 +1205,121 @@ body.modal-open {
   align-items: center;
 }
 
+.projection-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 18px;
+}
+
+.series-toggle.campaign-chip.active {
+  color: var(--campaign-color);
+  border-color: var(--campaign-color);
+  background: color-mix(in srgb, var(--campaign-color) 9%, #fff);
+}
+
+.projection-kpis .projection-campaign-card {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.projection-kpis .projection-campaign-card:hover {
+  border-color: #94a3b8;
+}
+
+.projection-kpis .projection-campaign-card.active {
+  border-color: var(--campaign-color);
+  box-shadow: inset 0 3px 0 var(--campaign-color);
+}
+
+.projection-kpis .projection-campaign-card strong {
+  color: var(--campaign-color);
+}
+
+.projection-kpis .kpi-pill.is-adjusted small::after {
+  content: " | escenario";
+  color: var(--brand-text);
+  font-weight: 700;
+}
+
+.campaign-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--campaign-color, #94a3b8);
+  vertical-align: 0;
+}
+
+.projection-campaign-full {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+#chart-projection.can-drag {
+  cursor: grab;
+}
+
+#chart-projection.is-dragging {
+  cursor: grabbing;
+  touch-action: none;
+}
+
+.projection-scenario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f8fafc;
+  font-size: 11px;
+  color: #475569;
+}
+
+.projection-scenario[hidden] {
+  display: none;
+}
+
+.projection-scenario-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+
+.projection-scenario b {
+  color: var(--ink);
+}
+
+.projection-scenario em {
+  color: #94a3b8;
+  font-style: normal;
+}
+
+.projection-scenario .table-tool-btn:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.legend-handle {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2.5px solid #475569;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .projection-legend {
   display: flex;
   flex-wrap: wrap;

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.10.0">
+<link rel="stylesheet" href="css/dashboard.css?v=1.11.0">
 <style>
   .reservations-total-row td { height: auto !important; padding: 10px 12px !important; border-top: 2px solid #cbd5e1 !important; color: #0f172a !important; background: #f8fafc; font-size: 13px; font-weight: 800; vertical-align: middle; }
   .reservations-total-row .total-label { text-align: right; }
@@ -41,7 +41,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="tp-sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.10.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.11.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -104,13 +104,16 @@
               <div class="panel-title" id="projection-title">Linea de tiempo</div>
               <div class="panel-sub" id="projection-sub">Cargando datos del mes en curso...</div>
             </div>
-            <div class="chart-series-toggles" id="projection-metrics" role="group" aria-label="Indicador proyectado">
-              <label class="series-toggle active" data-series="investment"><input type="radio" name="projection-metric" value="investment" checked>Inversion</label>
-              <label class="series-toggle" data-series="messages"><input type="radio" name="projection-metric" value="messages">Mensajes</label>
-              <label class="series-toggle" data-series="reservations"><input type="radio" name="projection-metric" value="reservations">Resultados</label>
+            <div class="projection-controls">
+              <div class="chart-series-toggles" id="projection-campaigns" role="radiogroup" aria-label="Campana proyectada"></div>
+              <div class="chart-series-toggles" id="projection-series" role="group" aria-label="Series del grafico">
+                <label class="series-toggle active" data-series="reservations"><input type="checkbox" value="results" checked>Resultados</label>
+                <label class="series-toggle active" data-series="investment"><input type="checkbox" value="spend" checked>Gasto</label>
+              </div>
             </div>
           </div>
-          <div class="chart-wrap h-360"><canvas id="chart-projection"></canvas></div>
+          <div class="chart-wrap h-360"><canvas id="chart-projection" aria-label="Linea de tiempo de resultados y gasto por campana"></canvas></div>
+          <div class="projection-scenario" id="projection-scenario" hidden></div>
           <div class="chart-legend projection-legend" id="projection-legend"></div>
           <p class="projection-note" id="projection-note"></p>
         </div>
@@ -118,15 +121,15 @@
         <div class="panel projection-table-panel">
           <div class="panel-head projection-table-head">
             <div>
-              <div class="panel-title">Proyeccion al cierre del mes</div>
-              <div class="panel-sub">Ritmo diario = acumulado real / dias con datos. La proyeccion mantiene ese ritmo hasta el ultimo dia del mes.</div>
+              <div class="panel-title">Proyeccion al cierre por campana</div>
+              <div class="panel-sub">Ritmo diario = acumulado del punto actual / dias transcurridos. Cada campana proyecta su propio tipo de resultado y su gasto.</div>
             </div>
             <button type="button" class="refresh-sheet-btn" id="projection-refresh-btn" title="Actualizar datos desde Google Sheets">Actualizar</button>
           </div>
           <div class="table-scroll">
             <table class="data-table projection-table">
-              <thead><tr><th>Indicador</th><th class="num" id="projection-actual-head">Actual</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Referencia</th><th>Brecha</th></tr></thead>
-              <tbody id="projection-body"><tr><td class="table-empty" colspan="6">Cargando proyeccion...</td></tr></tbody>
+              <thead><tr><th>Campana</th><th>Tipo</th><th>Resultado</th><th class="num" id="projection-actual-head">Resultados actuales</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Gasto actual</th><th class="num">Gasto proyectado</th><th class="num">Costo por resultado</th><th>Escenario</th></tr></thead>
+              <tbody id="projection-body"><tr><td class="table-empty" colspan="10">Cargando proyeccion...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -297,12 +300,12 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/objectives.js?v=1.10.0"></script>
-<script src="js/messages-calculator.js?v=1.10.0"></script>
-<script src="js/reports-archive.js?v=1.10.0"></script>
-<script src="js/projections.js?v=1.10.0"></script>
-<script src="js/navigation.js?v=1.10.0"></script>
-<script src="js/sidebar.js?v=1.10.0"></script>
+<script src="js/objectives.js?v=1.11.0"></script>
+<script src="js/messages-calculator.js?v=1.11.0"></script>
+<script src="js/reports-archive.js?v=1.11.0"></script>
+<script src="js/projections.js?v=1.11.0"></script>
+<script src="js/navigation.js?v=1.11.0"></script>
+<script src="js/sidebar.js?v=1.11.0"></script>
 <script src="auth-login.js?v=1.9.3"></script>
 <script>
   AuthLogin.init({ password: 'TP2026', brand: 'Lima Retail', title: 'Terminal Pesquero', accent: '#26B8CF', sessionKey: 'tp_auth' });
