@@ -1,5 +1,7 @@
 (function () {
   const DATA_URL = 'data/tp-drive-reports.json';
+  // Los nombres de archivo vienen de Drive: se escapan antes de ir a innerHTML.
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const MONTHS = [
     'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
@@ -145,9 +147,9 @@
         sizeBytes: Number(file.sizeBytes) || 0,
         modifiedTime: file.modifiedTime,
         createdTime: file.createdTime,
-        viewUrl: `https://drive.google.com/file/d/${file.id}/view`,
-        previewUrl: `https://drive.google.com/file/d/${file.id}/preview`,
-        downloadUrl: `https://drive.google.com/uc?export=download&id=${file.id}`,
+        viewUrl: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
+        previewUrl: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
+        downloadUrl: `https://drive.google.com/uc?export=download&id=${encodeURIComponent(file.id)}`,
         latest: true,
       };
     });
@@ -211,7 +213,7 @@
       <div class="kpi-pill">
         <span>${card.label}</span>
         <strong>${card.value}</strong>
-        <small>${card.hint}</small>
+        <small>${esc(card.hint)}</small>
       </div>
     `).join('');
   }
@@ -259,19 +261,19 @@
     els.body.innerHTML = rows.map(report => `
       <tr>
         <td class="report-name-col">
-          <span class="report-name">${report.name}</span>
-          <span class="report-file">${report.title}</span>
+          <span class="report-name">${esc(report.name)}</span>
+          <span class="report-file">${esc(report.title)}</span>
         </td>
         <td><span class="type-pill ${report.type.tone}">${report.type.label}</span></td>
-        <td class="date-col">${report.period ? report.period.label : '<span class="no-data">Sin periodo</span>'}${report.range ? `<span class="report-range">${report.range}</span>` : ''}</td>
-        <td><span class="format-tag ${report.isVideo ? 'video' : 'pdf'}">${report.format}</span></td>
+        <td class="date-col">${report.period ? report.period.label : '<span class="no-data">Sin periodo</span>'}${report.range ? `<span class="report-range">${esc(report.range)}</span>` : ''}</td>
+        <td><span class="format-tag ${report.isVideo ? 'video' : 'pdf'}">${esc(report.format)}</span></td>
         <td class="num">${formatSize(report.sizeBytes)}</td>
         <td class="date-col">${formatDate(report.modifiedTime)}${report.latest ? '<span class="version-flag current">Version vigente</span>' : '<span class="version-flag old">Version anterior</span>'}</td>
         <td>
           <div class="report-actions">
-            <button type="button" class="report-btn primary" data-preview="${report.id}">Ver</button>
-            <a class="report-btn" href="${report.viewUrl}" target="_blank" rel="noopener">Drive</a>
-            <a class="report-btn" href="${report.downloadUrl}" target="_blank" rel="noopener">Descargar</a>
+            <button type="button" class="report-btn primary" data-preview="${esc(report.id)}">Ver</button>
+            <a class="report-btn" href="${esc(report.viewUrl)}" target="_blank" rel="noopener">Drive</a>
+            <a class="report-btn" href="${esc(report.downloadUrl)}" target="_blank" rel="noopener">Descargar</a>
           </div>
         </td>
       </tr>
@@ -368,13 +370,13 @@
       state.folder = data.folder || null;
       state.syncedAt = data.syncedAt || '';
       state.reports = buildReports(data.files);
-      if (els.folderLink && state.folder?.url) els.folderLink.href = state.folder.url;
+      if (els.folderLink && /^https:\/\//i.test(String(state.folder?.url || ''))) els.folderLink.href = state.folder.url;
       bindEvents();
       render();
       state.ready = true;
     } catch (error) {
       if (els.body) {
-        els.body.innerHTML = `<tr><td class="table-empty" colspan="7">No se pudo cargar el archivo de reportes (${error.message}).</td></tr>`;
+        els.body.innerHTML = `<tr><td class="table-empty" colspan="7">No se pudo cargar el archivo de reportes (${esc(error.message)}).</td></tr>`;
       }
     } finally {
       state.loading = false;

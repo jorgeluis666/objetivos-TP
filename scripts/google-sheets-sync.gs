@@ -1,5 +1,8 @@
 const SPREADSHEET_ID = ''; // PENDIENTE: ID del Google Sheet de Terminal Pesquero
 const DEFAULT_SHEET_NAME = 'Agosto';
+// Solo se escribe en las pestañas mensuales de SPREADSHEET_ID. La peticion ya no puede elegir otro
+// spreadsheet: antes cualquiera con la URL del Web App podia escribir en cualquier Sheet del propietario.
+const ALLOWED_SHEETS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function doPost(event) {
   try {
@@ -10,13 +13,17 @@ function doPost(event) {
     const result = updateReservationGoal_(payload);
     return json_({ ok: true, result });
   } catch (error) {
-    return json_({ ok: false, error: error.message });
+    console.error(error);
+    return json_({ ok: false, error: 'No se pudo actualizar el objetivo.' });
   }
 }
 
 function updateReservationGoal_(payload) {
-  const spreadsheet = SpreadsheetApp.openById(payload.spreadsheetId || SPREADSHEET_ID);
-  const sheet = spreadsheet.getSheetByName(payload.sheetName || DEFAULT_SHEET_NAME);
+  if (!SPREADSHEET_ID) throw new Error('Falta configurar SPREADSHEET_ID.');
+  const sheetName = payload.sheetName || DEFAULT_SHEET_NAME;
+  if (ALLOWED_SHEETS.indexOf(sheetName) < 0) throw new Error('Hoja no permitida.');
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) throw new Error('No se encontro la hoja solicitada.');
 
   const values = sheet.getDataRange().getDisplayValues();
@@ -44,6 +51,9 @@ function updateReservationGoal_(payload) {
   if (!campaignRows.length) throw new Error('No se encontro la campana en el sheet.');
 
   const cleanValue = payload.value === '' || payload.value == null ? '' : Number(payload.value);
+  if (cleanValue !== '' && !(Number.isInteger(cleanValue) && cleanValue >= 0 && cleanValue <= 100000)) {
+    throw new Error('Valor de objetivo invalido.');
+  }
   let rowIndex;
   if (payload.campaignLevel || ad === '__campaign__') {
     rowIndex = campaignRows[0].index;

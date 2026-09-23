@@ -14,7 +14,9 @@
   const LIVE_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_MONTH)}`;
   const SYNC_INTERVAL_MS = 60 * 60 * 1000;
   const GOALS_KEY = 'tp-reservation-goals-v1';
-  const SHEET_SYNC_ENDPOINT_KEY = 'tp-sheet-sync-endpoint-v1';
+  // URL del Web App de scripts/google-sheets-sync.gs; vacio = la edicion de objetivos queda solo local.
+  const SHEET_SYNC_ENDPOINT = '';
+  const SHEET_SYNC_ENDPOINT_RE = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
   const CHART_COLLAPSED_KEY = 'tp-chart-collapsed-v1';
   const TABLE_COMPACT_KEY = 'tp-campaigns-compact-v1';
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -32,7 +34,10 @@
   const CHART_SERIES_KEY = 'tp-chart-series-v1';
   const state = { data: null, types: readChartSeries(), month: 'Septiembre', chart: null, syncTimer: null, goals: readGoals(), chartCollapsed: readChartCollapsed(), tableCompact: readTableCompact(), tableFullscreen: false, lastSync: null };
 
-  const escapeAttr = value => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  // Los textos vienen del Google Sheet (editable por terceros): siempre se escapan antes de ir a innerHTML.
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  // Solo enlaces http(s); descarta javascript:, data:, etc.
+  const safeUrl = value => /^https?:\/\//i.test(String(value || '').trim()) ? esc(String(value).trim()) : '';
   const fmtMoney = value => Number.isFinite(Number(value)) ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
   const fmtCount = value => Number(value || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 });
   const fmtRatio = value => Number.isFinite(Number(value)) ? `${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : '-';
@@ -73,15 +78,10 @@
   function saveChartSeries() {
     try { localStorage.setItem(CHART_SERIES_KEY, JSON.stringify(state.types)); } catch {}
   }
+  // El endpoint de escritura va fijo en el codigo (SHEET_SYNC_ENDPOINT). Ya no se acepta desde la URL
+  // ni desde localStorage: un enlace manipulado podia desviar los POST a un tercero.
   function syncEndpoint() {
-    const params = new URLSearchParams(window.location.search);
-    const fromUrl = params.get('sheetSyncEndpoint');
-    if (fromUrl) {
-      try { localStorage.setItem(SHEET_SYNC_ENDPOINT_KEY, fromUrl); } catch {}
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return fromUrl.trim();
-    }
-    return (window.TP_SHEET_SYNC_ENDPOINT || localStorage.getItem(SHEET_SYNC_ENDPOINT_KEY) || '').trim();
+    return SHEET_SYNC_ENDPOINT_RE.test(SHEET_SYNC_ENDPOINT) ? SHEET_SYNC_ENDPOINT : '';
   }
 
   // ── Custom campaigns / ads (stored in localStorage) ──────────────────────
@@ -387,14 +387,14 @@
   }
   function renderDeadline(endDate, days) {
     if (!endDate) return '-';
-    if (days == null) return endDate;
+    if (days == null) return esc(endDate);
     const counterClass = days === 0 ? 'closed' : days <= 3 ? 'urgent' : '';
     const label = days === 0 ? 'Plazo finalizado' : `${days} ${days === 1 ? 'día restante' : 'días restantes'}`;
-    return `${endDate}<span class="days-counter ${counterClass}">${label}</span>`;
+    return `${esc(endDate)}<span class="days-counter ${counterClass}">${label}</span>`;
   }
   function renderGoalInput(campaign, ad) {
     const value = effectiveGoal(campaign, ad);
-    return `<input class="reservation-goal-input" type="number" min="0" step="1" value="${value ?? ''}" data-campaign="${campaign.name}" data-ad="${ad.name}" aria-label="Objetivo Reservas ${campaign.name} ${ad.name}">`;
+    return `<input class="reservation-goal-input" type="number" min="0" step="1" value="${esc(value)}" data-campaign="${esc(campaign.name)}" data-ad="${esc(ad.name)}" aria-label="Objetivo Reservas ${esc(campaign.name)} ${esc(ad.name)}">`;
   }
   function goalValue(campaign, ad) {
     return Number(effectiveGoal(campaign, ad || {}) || 0);
@@ -407,7 +407,7 @@
   }
   function renderCampaignGoalInput(campaign, ads) {
     const value = campaignGoal(campaign, ads);
-    return `<input class="reservation-goal-input" type="number" min="0" step="1" value="${value || ''}" data-campaign="${campaign.name}" data-ad="__campaign__" aria-label="Objetivo Reservas ${campaign.name}">`;
+    return `<input class="reservation-goal-input" type="number" min="0" step="1" value="${esc(value || '')}" data-campaign="${esc(campaign.name)}" data-ad="__campaign__" aria-label="Objetivo Reservas ${esc(campaign.name)}">`;
   }
   function updateAdGoal(campaignName, adName, value) {
     const month = sourceMonth(state.month);
@@ -436,7 +436,6 @@
     }
     const payload = {
       action: 'updateReservationGoal',
-      spreadsheetId: SHEET_ID,
       sheetName: SHEET_MONTH,
       campaign: input.dataset.campaign,
       ad: input.dataset.ad,
@@ -509,19 +508,19 @@
         let tr = '<tr>';
         if (i === 0) {
           if (isCustomC) {
-            tr += `<td class="type-col"${rs}><input class="inline-edit" type="text" placeholder="Tipo" value="${c.type || ''}" data-field="type" data-cid="${c._id}"></td>`;
-            tr += `<td class="campaign-name"${rs}><input class="inline-edit wide" type="text" placeholder="Nombre campaña" value="${c.name || ''}" data-field="cname" data-cid="${c._id}"></td>`;
+            tr += `<td class="type-col"${rs}><input class="inline-edit" type="text" placeholder="Tipo" value="${esc(c.type)}" data-field="type" data-cid="${esc(c._id)}"></td>`;
+            tr += `<td class="campaign-name"${rs}><input class="inline-edit wide" type="text" placeholder="Nombre campaña" value="${esc(c.name)}" data-field="cname" data-cid="${esc(c._id)}"></td>`;
           } else {
-            tr += `<td class="type-col"${rs}>${c.type || '—'}</td>`;
-            tr += `<td class="campaign-name"${rs}>${c.name}</td>`;
+            tr += `<td class="type-col"${rs}>${esc(c.type || '—')}</td>`;
+            tr += `<td class="campaign-name"${rs}>${esc(c.name)}</td>`;
           }
         }
         if (isExtraAd || isCustomC) {
-          tr += `<td class="ad-name-col"><input class="inline-edit" type="text" placeholder="Nombre anuncio" value="${currentAd.name || ''}" data-field="adname" data-cname="${c.name || ''}" data-cid="${c._id || ''}" data-aid="${currentAd._id || ''}"></td>`;
-          tr += `<td><input class="inline-edit" type="text" placeholder="Objetivo" value="${obj || ''}" data-field="adobj" data-cname="${c.name || ''}" data-cid="${c._id || ''}" data-aid="${currentAd._id || ''}"></td>`;
+          tr += `<td class="ad-name-col"><input class="inline-edit" type="text" placeholder="Nombre anuncio" value="${esc(currentAd.name)}" data-field="adname" data-cname="${esc(c.name)}" data-cid="${esc(c._id)}" data-aid="${esc(currentAd._id)}"></td>`;
+          tr += `<td><input class="inline-edit" type="text" placeholder="Objetivo" value="${esc(obj)}" data-field="adobj" data-cname="${esc(c.name)}" data-cid="${esc(c._id)}" data-aid="${esc(currentAd._id)}"></td>`;
         } else {
-          tr += `<td class="ad-name-col" title="${escapeAttr(adName)}"><span class="ad-name-text">${currentAd.adUrl ? `<a href="${currentAd.adUrl}" target="_blank" rel="noopener">${adName}</a>` : adName}</span></td>`;
-          tr += `<td><span class="objective-pill">${obj || '—'}</span></td>`;
+          tr += `<td class="ad-name-col" title="${esc(adName)}"><span class="ad-name-text">${safeUrl(currentAd.adUrl) ? `<a href="${safeUrl(currentAd.adUrl)}" target="_blank" rel="noopener">${esc(adName)}</a>` : esc(adName)}</span></td>`;
+          tr += `<td><span class="objective-pill">${esc(obj || '—')}</span></td>`;
         }
         tr += `<td class="resultados-col">${reservas}</td>`;
         if (i === 0) {
@@ -531,8 +530,8 @@
         tr += `<td class="num">${fmtMoney(costPerMessage)}</td>`;
         tr += `<td class="num">${fmtMoney(costPerReservation)}</td>`;
         tr += `<td class="num">${fmtRatio(ratio)}</td>`;
-        tr += `<td><span class="status-pill ${statusClass(st)}">${st || '—'}</span></td>`;
-        tr += `<td class="date-col">${currentAd.startDate || '—'}</td>`;
+        tr += `<td><span class="status-pill ${statusClass(st)}">${esc(st || '—')}</span></td>`;
+        tr += `<td class="date-col">${esc(currentAd.startDate || '—')}</td>`;
         tr += `<td class="date-col deadline-cell">${renderDeadline(currentAd.endDate, currentAd.daysRemaining)}</td>`;
         tr += `<td class="num">${currentAd.duration != null ? currentAd.duration + ' d' : '—'}</td>`;
         tr += `<td class="num">${fmtMoney(daily)}</td>`;
@@ -543,15 +542,15 @@
         tr += `<td class="num">${fmtMoney(adBalance)}</td>`;
         if (i === 0) tr += `<td class="num campaign-total"${rs}>${fmtMoney(c.balance)}</td>`;
         tr += `<td class="num">${fmtMoney(currentAd.newDailyAmount)}</td>`;
-        tr += `<td class="observation-col">${observation || '—'}</td>`;
+        tr += `<td class="observation-col">${esc(observation || '—')}</td>`;
         tr += '</tr>';
         rows.push(tr);
       });
       // Separator row with "add ad" button on the dividing line
-      rows.push(`<tr class="campaign-sep"><td colspan="23"><button class="add-ad-btn add-ad-line-btn" data-cname="${c.name}">＋ Agregar anuncio</button></td></tr>`);
+      rows.push(`<tr class="campaign-sep"><td colspan="23"><button class="add-ad-btn add-ad-line-btn" data-cname="${esc(c.name)}">＋ Agregar anuncio</button></td></tr>`);
     }
     rows.push(`<tr class="add-campaign-row"><td colspan="23"><button class="add-campaign-btn">＋ Agregar campaña</button></td></tr>`);
-    rows.push(`<tr class="reservations-total-row"><td class="type-col"></td><td class="campaign-name"></td><td class="ad-name-col total-label">Total actualizado ${month.name.toLowerCase()}</td><td></td><td class="resultados-col">${totalReservas}</td><td class="goal-col">${totalGoals || ''}</td><td class="num">${totalMessages}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="num">${fmtMoney(month.adSpendTotal)}</td><td class="num">${fmtMoney(month.budgetTotal)}</td><td class="num">${fmtMoney(month.spend)}</td><td class="num">${fmtMoney(month.balanceTotal)}</td><td></td><td></td><td></td></tr>`);
+    rows.push(`<tr class="reservations-total-row"><td class="type-col"></td><td class="campaign-name"></td><td class="ad-name-col total-label">Total actualizado ${esc(month.name.toLowerCase())}</td><td></td><td class="resultados-col">${totalReservas}</td><td class="goal-col">${totalGoals || ''}</td><td class="num">${totalMessages}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="num">${fmtMoney(month.adSpendTotal)}</td><td class="num">${fmtMoney(month.budgetTotal)}</td><td class="num">${fmtMoney(month.spend)}</td><td class="num">${fmtMoney(month.balanceTotal)}</td><td></td><td></td><td></td></tr>`);
     body.innerHTML = rows.join('');
   }
   function dateOrderValue(label) {
@@ -607,16 +606,16 @@
     }
     body.innerHTML = rows.map(({ month, campaign, ads, reservas, messages, spent, budget, balance, startDate, endDate }) => `
       <tr>
-        <td class="date-col">${month}</td>
-        <td class="campaign-name">${campaign.name}</td>
+        <td class="date-col">${esc(month)}</td>
+        <td class="campaign-name">${esc(campaign.name)}</td>
         <td class="num">${fmtCount(reservas)}</td>
         <td class="num">${fmtCount(messages)}</td>
         <td class="num">${fmtMoney(budget)}</td>
         <td class="num">${fmtMoney(spent)}</td>
         <td class="num">${fmtMoney(balance)}</td>
-        <td>${ads.length ? ads.map(ad => ad.adUrl ? `<a class="history-ad-link" href="${ad.adUrl}" target="_blank" rel="noopener">${ad.name}</a>` : `<span class="history-ad-muted">${ad.name}</span>`).join('') : '-'}</td>
-        <td class="date-col">${startDate || '-'}</td>
-        <td class="date-col">${endDate || '-'}</td>
+        <td>${ads.length ? ads.map(ad => safeUrl(ad.adUrl) ? `<a class="history-ad-link" href="${safeUrl(ad.adUrl)}" target="_blank" rel="noopener">${esc(ad.name)}</a>` : `<span class="history-ad-muted">${esc(ad.name)}</span>`).join('') : '-'}</td>
+        <td class="date-col">${esc(startDate || '-')}</td>
+        <td class="date-col">${esc(endDate || '-')}</td>
       </tr>
     `).join('');
   }

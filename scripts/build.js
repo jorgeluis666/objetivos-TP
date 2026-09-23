@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,17 +12,36 @@ function readFile(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 }
 
-// La pantalla de acceso vive fuera del HTML inlineado, asi que dist/ necesita
-// una copia del script y de la imagen de fondo o el build sale sin login.
-function copyLoginAssets() {
-  for (const asset of ['auth-login.js', 'login-bg.jpg']) {
-    const source = path.join(ROOT, asset);
-    if (!fs.existsSync(source)) {
-      console.warn(`[build] falta ${asset}; dist quedara sin ese archivo`);
-      continue;
-    }
-    fs.copyFileSync(source, path.join(DIST_DIR, asset));
+// El acceso lo controla Apache (HTTP Basic Auth), no el navegador. HTPASSWD_PATH es la ruta absoluta
+// del archivo de claves en el servidor (la que crea cPanel > Privacidad de directorios). Si falta,
+// se deja un marcador: Apache responde 500 en vez de servir el tablero sin clave.
+function writeHtaccess(html) {
+  const htpasswdPath = (process.env.HTPASSWD_PATH || '').trim();
+  if (!htpasswdPath) console.warn('[build] falta HTPASSWD_PATH; dist/.htaccess queda con un marcador y el sitio no abrira');
+  // CSP con el hash de cada <script> inline, porque el build mete todo el JS dentro del HTML.
+  const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+    .map(match => `'sha256-${crypto.createHash('sha256').update(match[1], 'utf8').digest('base64')}'`);
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' https://cdnjs.cloudflare.com ${hashes.join(' ')}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    'font-src https://fonts.gstatic.com',
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://docs.google.com https://script.google.com https://script.googleusercontent.com",
+    'frame-src https://drive.google.com',
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; ');
+  const template = readFile('deploy/.htaccess');
+  for (const token of ['__HTPASSWD_PATH__', '__CSP__']) {
+    if (template.split(token).length !== 2) throw new Error(`deploy/.htaccess debe contener ${token} exactamente una vez`);
   }
+  const output = template
+    .replace('__HTPASSWD_PATH__', htpasswdPath || '/RUTA/NO/CONFIGURADA/.htpasswd')
+    .replace('__CSP__', csp);
+  fs.writeFileSync(path.join(DIST_DIR, '.htaccess'), output, 'utf8');
 }
 
 // El logo y el favicon se referencian por URL, no se inlinean: sin esta copia
@@ -88,17 +108,21 @@ function main() {
     `<script>window.TP_ADS_DATA = ${data};window.TP_DRIVE_REPORTS = ${driveReports};</script></head>`
   );
 
+  // El navegador convierte CRLF en LF antes de calcular el hash CSP de cada <script>; si el HTML
+  // conserva CRLF (archivos editados en Windows) los hashes no coinciden y el tablero no carga.
+  html = html.replace(/\r\n?/g, '\n');
+
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(path.join(DIST_DIR, 'data'), { recursive: true });
   fs.writeFileSync(DIST_HTML, html, 'utf8');
-  // Los meses cerrados de CLOSED_MONTH_URLS se piden por fetch en tiempo de
-  // ejecucion, asi que dist/ necesita todo data/, no solo los dos inlineados.
-  for (const file of fs.readdirSync(path.join(ROOT, 'data')).filter(name => name.endsWith('.json'))) {
+  // tp-ads-2026.json y tp-drive-reports.json ya van incrustados en el HTML. Solo se publican los
+  // meses cerrados de CLOSED_MONTH_URLS (objectives.js), que se piden por fetch sin respaldo inline.
+  for (const file of fs.readdirSync(path.join(ROOT, 'data')).filter(name => /^tp-[a-z]+-sheet-2026\.json$/.test(name))) {
     fs.copyFileSync(path.join(ROOT, 'data', file), path.join(DIST_DIR, 'data', file));
   }
 
-  copyLoginAssets();
   copyBrandAssets();
+  writeHtaccess(html);
 
   console.log(`[build] escrito dist/index.html (${(fs.statSync(DIST_HTML).size / 1024).toFixed(1)} KB)`);
 }
