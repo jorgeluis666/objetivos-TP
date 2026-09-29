@@ -1,0 +1,50 @@
+name: Publicar en GitHub Pages
+
+# Pagina publica para validar el tablero: compila con la URL del Web App (secret TP_DATA_ENDPOINT) y
+# publica dist/ en GitHub Pages. No lleva clave: cualquiera con el enlace ve los datos.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Build
+        env:
+          TP_DATA_ENDPOINT: ${{ secrets.TP_DATA_ENDPOINT }}
+        run: |
+          if [ -z "$TP_DATA_ENDPOINT" ]; then echo "::error::Falta el secret TP_DATA_ENDPOINT"; exit 1; fi
+          node scripts/build.js
+          # .htaccess es para el hosting de Lima Retail; GitHub Pages no lo usa.
+          rm -f dist/.htaccess
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
