@@ -1,5 +1,6 @@
 (function () {
-  const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  // Formatos compartidos de js/data-source.js, que se carga antes que este archivo.
+  const { fmt, esc: escapeHtml, SHORT_MONTHS } = window.TPData;
   // Cada objetivo trae su color desde js/data-source.js; el gasto siempre va en azul.
   const SPEND_COLOR = '#2563eb';
   const HANDLE_HIT_RADIUS = 16;
@@ -17,19 +18,16 @@
     scenarios: {},
     chart: null,
     projection: null,
+    // Objetivos y acumulados diarios del ultimo barrido (no dependen del escenario).
+    base: null,
     drag: null,
   };
 
-  const money = value => Number.isFinite(Number(value))
-    ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '-';
-  const count = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 }) : '-';
-  // Los costos por resultado de branding son centavos: se muestran con mas decimales para que no se vean en 0.01.
-  const unitCost = value => (Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) < 0.1
-    ? `S/. ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 3, maximumFractionDigits: 4 })}`
-    : money(value));
+  const money = fmt.money;
+  const count = fmt.count;
+  // Un objetivo sin resultados proyectados muestra S/. 0.00 de costo por resultado.
+  const unitCost = value => fmt.unitCost(value ?? 0);
   const format = (value, unit) => (unit === 'money' ? money(value) : count(Math.round(Number(value) || 0)));
-  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
   function scenarioFor(monthKey, objectiveKey) {
     state.scenarios[monthKey] = state.scenarios[monthKey] || {};
@@ -61,23 +59,38 @@
     };
   }
 
+  // Se calcula una vez por barrido: al arrastrar el punto actual solo se rehace la proyeccion, no las sumas.
+  function baseFor(tp, month) {
+    const snapshot = tp.snapshot();
+    if (state.base?.snapshot === snapshot) return state.base.objectives;
+    const { metrics } = tp;
+    const objectives = metrics.objectives(month.rows).map(objective => {
+      const filter = row => row.group === objective.key;
+      return {
+        objective,
+        results: metrics.cumulative(metrics.dailyValues(month, 'results', filter)),
+        spend: metrics.cumulative(metrics.dailyValues(month, 'spend', filter)),
+      };
+    });
+    state.base = { snapshot, objectives };
+    return objectives;
+  }
+
   // Se proyecta el ultimo mes con datos, por objetivo: cada objetivo mide un resultado distinto
   // (interacciones, ThruPlays, clics al boton de WhatsApp) y los resultados no se suman entre si.
   function buildProjection() {
     const tp = window.TPData;
     const month = tp?.latestMonth();
     if (!month || !month.hasData || !month.lastDay) return null;
-    const { metrics } = tp;
     const closed = month.complete || month.past;
     const firstDay = month.firstDay || 1;
     const lastDay = closed ? month.daysInMonth : month.lastDay;
     const daysInMonth = month.daysInMonth;
 
-    const campaigns = metrics.objectives(month.rows).map(objective => {
-      const filter = row => row.group === objective.key;
+    const campaigns = baseFor(tp, month).map(({ objective, results: dailyResults, spend: dailySpend }) => {
       const scenario = scenarioFor(month.key, objective.key);
-      const results = buildSeries(metrics.cumulative(metrics.dailyValues(month, 'results', filter)), firstDay, lastDay, daysInMonth, closed, scenario.results);
-      const spend = buildSeries(metrics.cumulative(metrics.dailyValues(month, 'spend', filter)), firstDay, lastDay, daysInMonth, closed, scenario.spend);
+      const results = buildSeries(dailyResults, firstDay, lastDay, daysInMonth, closed, scenario.results);
+      const spend = buildSeries(dailySpend, firstDay, lastDay, daysInMonth, closed, scenario.spend);
       return {
         key: objective.key,
         name: objective.campaigns.join(' / '),

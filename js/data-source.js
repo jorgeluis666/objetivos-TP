@@ -183,7 +183,7 @@
       rows,
       firstDay,
       lastDay,
-      hasData: rows.some(row => row.spend > 0 || row.impressions > 0),
+      hasData: active.length > 0,
       complete: lastDay === daysInMonth,
     };
   }
@@ -545,6 +545,7 @@
     latestMonth: () => monthByKey(state.data?.latestKey),
     nextSweep,
     formatStamp,
+    limaParts,
     metrics: { summarize, objectives, campaigns, ads, rowsBetween, dailyValues, cumulative, period, change, resultLabel, dayLabel, rangeLabel },
     fmt,
     esc,

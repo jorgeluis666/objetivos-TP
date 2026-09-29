@@ -96,16 +96,13 @@ async function main() {
   // Al inlinear el CSS la ruta pasa a resolverse desde dist/index.html,
   // asi que '../assets/' tiene que quedar como 'assets/'.
   const css = readFile('css/dashboard.css').replace(/\.\.\/assets\//g, 'assets/');
-  const metaData = (await loadSnapshot(endpoint)).replace(/</g, '\u003c');
+  // '\\u003c' es el texto \u003c (no el caracter <): un "</script>" en los datos cerraria el <script>.
+  const metaData = (await loadSnapshot(endpoint)).replace(/</g, '\\u003c');
 
   // Reemplazos con funcion: una cadena de reemplazo interpretaria "$'" o "$&" dentro del codigo o de los datos.
   html = html.replace(/<link rel="stylesheet" href="css\/dashboard\.css(?:\?v=[^"]+)?">/, () => `<style>${css}</style>`);
-  for (const name of ['data-source', 'objectives', 'messages-calculator', 'navigation', 'sidebar', 'projections', 'reports-archive']) {
-    const pattern = new RegExp(`<script src="js/${name}\\.js(?:\\?v=[^"]+)?"></script>`);
-    if (!pattern.test(html)) throw new Error(`index.html no carga js/${name}.js`);
-    const code = readFile(`js/${name}.js`);
-    html = html.replace(pattern, () => `<script>${code}</script>`);
-  }
+  // Se incrustan, en el orden de index.html, todos los js/ que carga: no hay otra lista que mantener.
+  html = html.replace(/<script src="js\/([\w-]+\.js)(?:\?v=[^"]+)?"><\/script>/g, (_, file) => `<script>${readFile(`js/${file}`)}</script>`);
   if (/<script src="js\//.test(html)) throw new Error('index.html carga un js/ que el build no incrusta');
   const config = `window.TP_DATA_ENDPOINT = ${JSON.stringify(endpoint)};window.TP_META_DATA = ${metaData};`;
   html = html.replace('</head>', () => `<script>${config}</script></head>`);

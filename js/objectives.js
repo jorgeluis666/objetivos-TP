@@ -62,11 +62,6 @@
     return month && month.hasData ? month : data().latestMonth();
   }
 
-  function formatValue(value, format) {
-    if (format === 'decimal') return fmt('decimal', value);
-    return fmt(format, value);
-  }
-
   // "▲ 12,3% vs 1-20 Agosto". El color depende de si subir es bueno para ese indicador.
   function deltaHtml(current, previous, better, compareLabel) {
     const change = data().metrics.change(current, previous);
@@ -121,7 +116,7 @@
     host.innerHTML = KPIS.map(kpi => `
       <div class="kpi-pill">
         <span>${kpi.label}</span>
-        <strong>${formatValue(current[kpi.key], kpi.format)}</strong>
+        <strong>${fmt(kpi.format, current[kpi.key])}</strong>
         ${previous ? deltaHtml(current[kpi.key], previous[kpi.key], kpi.better, period.compare.label) : `<small>${kpi.hint}</small>`}
       </div>`).join('');
   }
@@ -183,7 +178,7 @@
     const objectives = month ? data().metrics.objectives(month.rows) : [];
     return BASE_METRICS.concat(objectives.map(objective => ({
       key: `obj:${objective.key}`,
-      label: `${objective.label}`,
+      label: objective.label,
       resultLabel: objective.resultLabel,
       unit: 'count',
       color: objective.color,
@@ -264,12 +259,12 @@
       const transform = values => (cumulative ? data().metrics.cumulative(values) : values);
       labels = Array.from({ length: month.daysInMonth }, (_, index) => `${index + 1}`);
       const currentValues = transform(data().metrics.dailyValues(month, metric.field, metricFilter(metric)));
-      datasets = [{ label: `${month.name}`, data: currentValues, borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2, unit: metric.unit }];
+      datasets = [{ label: month.name, data: currentValues, borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2, unit: metric.unit }];
       legendItems = [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(month.name)} ${month.year}</b></span>`];
       if (previous?.hasData) {
         const previousValues = transform(data().metrics.dailyValues(previous, metric.field, metricFilter(metric))).slice(0, month.daysInMonth);
         if (previousValues.some(value => value)) {
-          datasets.push({ label: `${previous.name}`, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2, unit: metric.unit });
+          datasets.push({ label: previous.name, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2, unit: metric.unit });
           legendItems.push(`<span><i class="legend-line dashed" style="color:${PREVIOUS_COLOR}"></i><b>${esc(previous.name)} (mismo dia del mes)</b></span>`);
         }
       }
@@ -480,6 +475,7 @@
           ...campaign,
           name,
           color: objectives.get(campaign.group)?.color || PREVIOUS_COLOR,
+          rows: entry.rows,
           ads: adList,
           first: entry.first,
           last: entry.last,
@@ -503,7 +499,7 @@
     const all = campaignHistory(snapshot);
     const rows = all.filter(item => item.finished);
     const active = all.filter(item => !item.finished);
-    const totals = data().metrics.summarize(rows.flatMap(item => snapshot.months.flatMap(month => month.rows.filter(row => row.campaign === item.name))));
+    const totals = data().metrics.summarize(rows.flatMap(item => item.rows));
     const kpis = document.getElementById('history-kpis');
     const sub = document.getElementById('history-sub');
     if (kpis) {

@@ -86,13 +86,7 @@
   }
 
   function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    })[character]);
+    return global.TPData.esc(value);
   }
 
   function setText(id, text) {

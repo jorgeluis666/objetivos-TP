@@ -1,9 +1,8 @@
 (function () {
   // La lista de reportes llega en el mismo barrido que las descargas de Meta (window.TPData, js/data-source.js):
   // el boton Actualizar relee ambas carpetas de Drive y este modulo valida que cada mes con gasto tenga su reporte.
-  const LIMA_OFFSET_HOURS = -5;
   // Los nombres de archivo vienen de Drive: se escapan antes de ir a innerHTML.
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const esc = value => window.TPData.esc(value);
   const MONTHS = [
     'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
@@ -150,8 +149,8 @@
   function limaDay(iso) {
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return null;
-    const shifted = new Date(date.getTime() + LIMA_OFFSET_HOURS * 3600 * 1000);
-    return { key: `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`, day: shifted.getUTCDate() };
+    const { year, month, day } = window.TPData.limaParts(date);
+    return { key: `${year}-${String(month + 1).padStart(2, '0')}`, day };
   }
 
   function buildReports(files) {
@@ -498,7 +497,7 @@
       if (event.target === els.modal || event.target.closest('[data-close-preview]')) closePreview();
     });
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') closePreview();
+      if (event.key === 'Escape' && els.modal?.classList.contains('visible')) closePreview();
     });
     window.addEventListener('tp:data-updated', load);
     window.addEventListener('tp:data-error', () => renderValidation());
