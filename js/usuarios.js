@@ -198,12 +198,14 @@
   async function init() {
     if (state.ready) return;
     state.ready = true;
+    wireEvents();
     state.published = await loadPublished();
+    // Lo agregado mientras cargaba el archivo se suma a lo cargado en vez de perderse.
+    const early = state.users;
     const draft = readDraft();
     state.draft = Boolean(draft);
-    state.users = draft || publishedUsers();
-    // Los eventos se conectan despues de cargar: un alta hecha antes se pisaria con lo publicado.
-    wireEvents();
+    state.users = (draft || publishedUsers()).concat(early);
+    if (early.length) saveDraft();
     render();
   }
 

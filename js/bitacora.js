@@ -228,9 +228,12 @@
     if (dateInput) dateInput.value = today();
     wireEvents();
     state.published = await loadPublished();
+    // Lo agregado mientras cargaba el archivo se suma a lo cargado en vez de perderse.
+    const early = state.items;
     const draft = readDraft();
     state.draft = Boolean(draft);
-    state.items = draft || publishedItems();
+    state.items = (draft || publishedItems()).concat(early);
+    if (early.length) saveDraft();
     render();
   }
 
