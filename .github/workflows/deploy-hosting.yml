@@ -1,7 +1,7 @@
 name: Deploy al hosting de Lima Retail
 
 # Publica solo dist/ (HTML con datos incrustados + .htaccess con Basic Auth) en la carpeta del
-# cliente. Nunca sube data/csv-backups, scripts ni el resto del repo.
+# cliente. Nunca sube data/, scripts ni el resto del repo.
 on:
   push:
     branches: [main]
@@ -27,8 +27,11 @@ jobs:
       - name: Build
         env:
           HTPASSWD_PATH: ${{ secrets.HTPASSWD_PATH }}
+          # URL /exec del Web App de Apps Script: no va en el repo (es publico), solo en dist/ con clave.
+          TP_DATA_ENDPOINT: ${{ secrets.TP_DATA_ENDPOINT }}
         run: |
           if [ -z "$HTPASSWD_PATH" ]; then echo "::error::Falta el secret HTPASSWD_PATH"; exit 1; fi
+          if [ -z "$TP_DATA_ENDPOINT" ]; then echo "::error::Falta el secret TP_DATA_ENDPOINT"; exit 1; fi
           node scripts/build.js
 
       - name: Subir dist/ por FTPS

@@ -41,36 +41,6 @@
   font-size: 10px;
 }
 
-.goal-col {
-  min-width: 96px;
-}
-
-.reservation-goal-input {
-  width: 78px;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
-  font-size: 11px;
-  text-align: right;
-}
-
-.reservation-goal-input:focus {
-  border-color: var(--brand);
-  outline: 2px solid rgba(185, 28, 28, .12);
-}
-
-.sheet-goal-value {
-  display: inline-flex;
-  min-width: 36px;
-  justify-content: center;
-  font-weight: 800;
-  color: var(--ink);
-}
-
 .history-kpis {
   margin-top: 20px;
 }
@@ -1255,6 +1225,10 @@ body.modal-open {
   vertical-align: 0;
 }
 
+.projection-campaigns-col {
+  min-width: 240px;
+}
+
 .projection-campaign-full {
   display: block;
   margin-top: 3px;
@@ -1465,18 +1439,17 @@ body.modal-open {
   box-shadow: inset 0 -1px 0 var(--border);
 }
 
-/* Columnas de identidad ancladas a la izquierda: Tipo, Campana y Anuncio
-   quedan a la vista mientras se recorren las 20 columnas de metricas. */
+/* Columnas de identidad ancladas a la izquierda: Objetivo y Anuncio quedan a la
+   vista mientras se recorren las columnas de metricas. */
 .campaigns-table .type-col,
-.campaigns-table .campaign-name,
 .campaigns-table .ad-name-col,
-.campaigns-table thead th:nth-child(-n+3) {
+.campaigns-table thead th:nth-child(-n+2) {
   position: sticky;
   z-index: 2;
   background: #fff;
 }
 
-.campaigns-table thead th:nth-child(-n+3) {
+.campaigns-table thead th:nth-child(-n+2) {
   z-index: 4;
   background: #f8fafc;
 }
@@ -1484,31 +1457,29 @@ body.modal-open {
 .campaigns-table .type-col,
 .campaigns-table thead th:nth-child(1) {
   left: 0;
-  width: 84px;
-  min-width: 84px;
-}
-
-.campaigns-table .campaign-name,
-.campaigns-table thead th:nth-child(2) {
-  left: 84px;
-  width: 170px;
-  min-width: 170px;
+  width: 150px;
+  min-width: 150px;
 }
 
 .campaigns-table .ad-name-col,
-.campaigns-table thead th:nth-child(3) {
-  left: 254px;
+.campaigns-table thead th:nth-child(2) {
+  left: 150px;
   width: 244px;
   min-width: 244px;
 }
 
+.campaigns-table td.ad-name-col {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* Borde derecho del bloque anclado + sombra que indica que hay mas columnas. */
-.campaigns-table .ad-name-col,
-.campaigns-table thead th:nth-child(3) {
+.campaigns-table .ad-name-col {
   box-shadow: 1px 0 0 #cbd5e1, 9px 0 11px -8px rgba(15, 23, 42, .45);
 }
 
-.campaigns-table thead th:nth-child(3) {
+.campaigns-table thead th:nth-child(2) {
   box-shadow: 1px 0 0 #cbd5e1, 9px 0 11px -8px rgba(15, 23, 42, .45), inset 0 -1px 0 var(--border);
 }
 
@@ -1520,46 +1491,9 @@ body.modal-open {
   white-space: nowrap;
 }
 
-.campaigns-table .campaign-name {
-  max-width: 170px;
-  overflow-wrap: anywhere;
-}
-
-/* Fila resaltada: con 23 columnas es lo que evita perder el renglon al scrollear. */
+/* Fila resaltada: con 15 columnas es lo que evita perder el renglon al scrollear. */
 .campaigns-table tbody tr:hover > td {
   background: #f4fbfc;
-}
-
-.campaigns-table tbody tr.campaign-sep:hover > td,
-.campaigns-table tbody tr.add-campaign-row:hover > td {
-  background: transparent;
-}
-
-.campaigns-table .reservations-total-row:hover > td,
-.campaigns-table .reservations-total-row .type-col,
-.campaigns-table .reservations-total-row .campaign-name,
-.campaigns-table .reservations-total-row .ad-name-col {
-  background: #f8fafc;
-}
-
-/* La etiqueta del total viaja a la columna anclada para no perderse al scrollear. */
-.campaigns-table .reservations-total-row .total-label {
-  white-space: normal;
-  line-height: 1.25;
-  text-align: right;
-}
-
-/* Los botones de alta viven en celdas con colspan: sin sticky se esconden
-   detras de las columnas ancladas al scrollear. */
-.add-ad-line-btn,
-.add-campaign-btn {
-  position: sticky;
-  left: 12px;
-}
-
-.add-ad-line-btn {
-  top: auto;
-  transform: translateY(-8px);
 }
 
 /* Pantalla completa: el panel toma todo el viewport y la tabla se queda con
@@ -1606,23 +1540,371 @@ body.tp-table-fullscreen {
   padding: 2px 7px;
 }
 
-.campaigns-panel.is-compact .reservations-total-row td {
-  padding: 7px 9px !important;
-}
-
 @media(max-width:760px) {
   .campaigns-panel .table-scroll {
     max-height: calc(100vh - 170px);
   }
 
   .campaigns-table .type-col,
-  .campaigns-table .campaign-name,
   .campaigns-table .ad-name-col,
-  .campaigns-table thead th:nth-child(-n+3) {
+  .campaigns-table thead th:nth-child(-n+2) {
     position: static;
   }
 
   .table-tools {
     flex-wrap: wrap;
   }
+}
+
+/* ===== 01 - Gasto publicitario (descargas de Meta) ===== */
+
+.topbar-pill.warn {
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.period-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.period-title {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.period-sub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.kpi-pill small.delta,
+p.delta {
+  font-weight: 700;
+}
+
+.delta.good { color: var(--green-text); }
+.delta.bad { color: #b91c1c; }
+.delta.flat { color: #64748b; }
+
+.objectives-panel {
+  margin-top: 14px;
+}
+
+.objective-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. */
+.objective-card {
+  padding: 14px 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.objective-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.objective-card header em {
+  color: #94a3b8;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.objective-card > strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--campaign-color);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.objective-card > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.objective-card dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.objective-card dt {
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.objective-card dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.objective-card p.delta {
+  margin: 10px 0 0;
+  font-size: 10px;
+}
+
+.reoriented {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9px;
+  color: #475569;
+  font-size: 11px;
+}
+
+.reoriented[hidden] {
+  display: none;
+}
+
+.reoriented-title {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.reoriented-item {
+  margin-top: 3px;
+}
+
+.chart-metrics {
+  margin: -4px 0 14px;
+}
+
+.chart-panel .chart-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.distribution-panel {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.distribution-table {
+  min-width: 1180px;
+}
+
+.objective-label {
+  display: inline-flex;
+  align-items: center;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.share-col {
+  white-space: nowrap;
+}
+
+.share-bar {
+  display: inline-block;
+  width: 72px;
+  height: 6px;
+  margin-right: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #f1f5f9;
+  vertical-align: middle;
+}
+
+.share-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--campaign-color);
+}
+
+.share-value {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.data-table .total-row td {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.campaigns-table {
+  min-width: 1500px;
+}
+
+.campaign-set-col {
+  min-width: 190px;
+  color: #475569;
+  font-size: 10px;
+}
+
+.campaign-set-col small {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.leader-star {
+  color: #f59e0b;
+}
+
+.delta-pill {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.delta-pill.good { color: var(--green-text); background: var(--green-soft); }
+.delta-pill.bad { color: #b91c1c; background: #fef2f2; }
+.delta-pill.new { color: var(--brand-text); background: var(--brand-soft); }
+
+.preview-link {
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.preview-link:hover {
+  text-decoration: underline;
+}
+
+.table-tool-select select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* ===== 04 - Validacion de reportes ===== */
+
+.sync-panel {
+  margin-top: 20px;
+}
+
+.sync-panel-head {
+  align-items: center;
+}
+
+.sync-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 10px;
+}
+
+.sync-schedule b {
+  color: #334155;
+}
+
+.sync-schedule .sync-error {
+  flex-basis: 100%;
+  color: #b91c1c;
+}
+
+.sync-table {
+  min-width: 980px;
+}
+
+.sync-report {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sync-detail {
+  display: block;
+  max-width: 260px;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.sync-notes {
+  margin: 12px 0 0;
+  padding: 10px 12px 10px 28px;
+  border: 1px dashed #fcd34d;
+  border-radius: 9px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.sync-notes[hidden] {
+  display: none;
+}
+
+@media(max-width:760px) {
+  .period-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .objective-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.projection-panel.is-empty > :not(.projection-empty) {
+  display: none;
+}
+
+.projection-panel:not(.is-empty) .projection-empty {
+  display: none;
 }

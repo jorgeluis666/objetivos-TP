@@ -6,3 +6,6 @@ credentials/
 *.local
 .DS_Store
 .claude/
+
+# Copia local del barrido de Meta (datos del cliente): la genera npm run build, nunca va al repo.
+data/tp-meta-*.json

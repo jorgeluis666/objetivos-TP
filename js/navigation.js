@@ -4,30 +4,26 @@
     'view-obj': {
       title: 'Gasto publicitario 2026',
       caption: 'Agencia Lima Retail',
-      status: 'Datos al 17 de septiembre',
-      source: 'Fuente: Google Sheets / Terminal Pesquero',
-      footer: 'Sincronizado por Agencia Lima Retail',
+      source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
+      footer: 'Barrido automatico lunes, miercoles y viernes',
     },
     'view-messages': {
       title: 'Proyecciones',
       caption: 'Cierre de mes y planificación por CPL',
-      status: 'Proyección sobre datos reales',
-      source: 'Fuente: Gasto publicitario / Terminal Pesquero',
+      source: 'Fuente: Gasto publicitario / Meta Ads',
       footer: 'Proyección lineal según el ritmo del mes',
     },
     'view-history': {
       title: 'Histórico de Campañas',
       caption: 'Campañas finalizadas',
-      status: 'Datos al 17 de septiembre',
-      source: 'Fuente: Terminal Pesquero / Histórico consolidado',
+      source: 'Fuente: Meta Ads / todos los meses con descarga',
       footer: 'Solo campañas finalizadas',
     },
     'view-reports': {
       title: 'Archivo de Reportes',
       caption: 'Documentos en Google Drive',
-      status: 'Catalogo al 17 de septiembre',
       source: 'Fuente: Carpeta compartida Reportes Terminal Pesquero / Google Drive',
-      footer: 'Vista previa y descarga directa desde Drive',
+      footer: 'Validado contra las descargas de Meta del modulo Gasto publicitario',
     },
   };
 
@@ -61,7 +57,8 @@
 
     document.getElementById('topbar-title').textContent = meta.title;
     document.getElementById('topbar-caption').textContent = meta.caption;
-    document.getElementById('topbar-status').textContent = meta.status;
+    // El estado de los datos es el mismo en todos los modulos: lo arma js/data-source.js.
+    document.getElementById('topbar-status').textContent = window.TPData?.statusLabel() || 'Cargando datos...';
     document.getElementById('footer-source').textContent = meta.source;
     document.getElementById('footer-status').textContent = meta.footer;
     saveView(viewId);

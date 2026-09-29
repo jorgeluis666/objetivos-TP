@@ -8,44 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.12.0">
-<style>
-  .reservations-total-row td { height: auto !important; padding: 10px 12px !important; border-top: 2px solid #cbd5e1 !important; color: #0f172a !important; background: #f8fafc; font-size: 13px; font-weight: 800; vertical-align: middle; }
-  .reservations-total-row .total-label { text-align: right; }
-  .reservations-total-row .resultados-col { font-size: 12px; }
-  .campaigns-note { display: none; margin: -5px 0 12px; color: #64748b; font-size: 10px; font-weight: 600; line-height: 1.45; }
-  .campaigns-note.visible { display: block; }
-  .deadline-cell { min-width: 92px; }
-  .days-counter { display: block; margin-top: 5px; color: #64748b; font-size: 9px; font-weight: 700; white-space: nowrap; }
-  .days-counter.urgent { color: #b91c1c; }
-  .days-counter.closed { color: #94a3b8; }
-  .reservation-value { display: block; }
-  .reservation-trend { display: block; margin-top: 3px; font-size: 9px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
-  .reservation-trend.up { color: #16a34a; }
-  .reservation-trend.down { color: #dc2626; }
-  .icon-btn { background: none; border: 1px solid #cbd5e1; border-radius: 4px; color: #64748b; cursor: pointer; font-size: 11px; line-height: 1; margin-left: 4px; padding: 1px 4px; vertical-align: middle; }
-  .icon-btn:hover { background: #f1f5f9; color: #0f172a; }
-  .add-campaign-row td { padding: 8px 12px !important; }
-  .add-campaign-btn { background: none; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer; font-size: 11px; font-weight: 600; padding: 5px 14px; }
-  .add-campaign-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #0f172a; }
-  .inline-edit { border: 1px solid #e2e8f0; border-radius: 4px; color: #0f172a; font-size: 12px; padding: 2px 6px; width: 90px; }
-  .inline-edit.wide { width: 130px; }
-  .inline-edit:focus { border-color: #3b82f6; outline: none; }
-  .campaign-sep td { height: 0; padding: 0 !important; border: none; position: relative; text-align: center; }
-  .add-ad-line-btn { background: #fff; border: 1px solid #cbd5e1; border-radius: 10px; color: #64748b; cursor: pointer; font-size: 10px; font-weight: 700; line-height: 16px; opacity: 0; padding: 0 10px; position: relative; top: -8px; transition: opacity .15s, border-color .15s; }
-  .campaign-sep:hover .add-ad-line-btn { opacity: 1; }
-  .add-ad-line-btn:hover { border-color: #3b82f6; color: #1d4ed8; }
-</style>
+<link rel="stylesheet" href="css/dashboard.css?v=1.13.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.12.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.13.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
-      <div class="s-text"><div class="s-title-nav">Gasto publicitario</div><div class="s-desc-nav">Branding y ventas</div></div>
+      <div class="s-text"><div class="s-title-nav">Gasto publicitario</div><div class="s-desc-nav">Meta Ads por objetivo</div></div>
     </button>
     <button class="s-item" type="button" data-view-target="view-messages">
       <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg></div>
@@ -67,19 +40,83 @@
     <div class="s-modulo-activo"><div class="s-ma-label">CUENTA</div><div class="s-ma-name">Terminal Pesquero</div><div class="s-ma-desc">Control de pauta digital</div></div>
   </aside>
   <main class="main">
-    <div class="topbar"><div class="topbar-left"><button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Minimizar panel" title="Minimizar panel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/><path class="toggle-arrow" d="m16 9-3 3 3 3"/></svg></button><div><div class="topbar-title" id="topbar-title">Gasto publicitario 2026</div><div class="topbar-caption" id="topbar-caption">Agencia Lima Retail</div></div></div><div class="topbar-meta"><span class="topbar-pill sync ok"><span class="sync-dot"></span><span id="topbar-status">Datos al 17 de septiembre</span></span></div></div>
+    <div class="topbar"><div class="topbar-left"><button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Minimizar panel" title="Minimizar panel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/><path class="toggle-arrow" d="m16 9-3 3 3 3"/></svg></button><div><div class="topbar-title" id="topbar-title">Gasto publicitario 2026</div><div class="topbar-caption" id="topbar-caption">Agencia Lima Retail</div></div></div><div class="topbar-meta"><span class="topbar-pill sync ok"><span class="sync-dot"></span><span id="topbar-status">Cargando datos...</span></span></div></div>
     <div class="content">
       <section class="view visible" id="view-obj">
         <div class="sec-lbl">01 - Inversion publicitaria</div>
-        <h1 class="section-title">Indicadores 2026 por mes</h1>
-        <p class="section-desc">Evolucion mensual de la inversion publicitaria, los mensajes y las reservas registradas.</p>
-        <div class="kpi-strip" id="kpi-strip" aria-label="KPIs generales"></div>
+        <h1 class="section-title">Meta Ads 2026 por mes</h1>
+        <p class="section-desc">Indicadores del reporte de Ads calculados con la descarga de Meta de cada mes: inversion, alcance, resultados por objetivo y comparacion con el mismo tramo del mes anterior.</p>
         <div class="month-tabs" id="month-tabs" role="group" aria-label="Mes de los indicadores"></div>
-        <div class="panel chart-panel is-collapsed" id="chart-panel">
-          <div class="panel-head chart-panel-head"><div><div class="panel-title" id="chart-title">Evolucion mensual | Inversion | 2026</div><div class="panel-sub">Indicadores reales registrados de enero a septiembre</div></div><div class="chart-controls"><button type="button" class="chart-toggle" id="chart-toggle-btn" aria-expanded="false" aria-controls="monthly-chart-body" title="Expandir grafico">+</button><div class="chart-series-toggles" id="chart-series-toggles" role="group" aria-label="Indicadores del grafico"><label class="series-toggle active" data-series="investment"><input type="checkbox" value="investment" checked>Inversion</label><label class="series-toggle" data-series="messages"><input type="checkbox" value="messages">Mensajes</label><label class="series-toggle" data-series="reservations"><input type="checkbox" value="reservations">Resultados</label></div><div class="chart-legend" id="chart-legend"></div></div></div>
-          <div class="chart-wrap h-360" id="monthly-chart-body"><canvas id="chart-monthly"></canvas></div>
+        <div class="period-bar">
+          <div>
+            <div class="period-title" id="period-title">Cargando datos de Meta...</div>
+            <div class="period-sub" id="period-sub"></div>
+          </div>
+          <button type="button" class="refresh-sheet-btn" id="campaigns-refresh-btn" data-tp-refresh title="Releer en este momento las descargas de Meta y los reportes de Drive">Actualizar</button>
         </div>
-        <div class="panel campaigns-panel"><div class="panel-head campaigns-panel-head"><div><div class="panel-title" id="campaigns-title">Campanas de Junio 2026</div><div class="panel-sub" id="campaigns-sub"></div></div><div class="table-tools"><button type="button" class="table-tool-btn" id="campaigns-density-btn" aria-pressed="false" title="Alternar densidad de las filas">Compacto</button><button type="button" class="table-tool-btn" id="campaigns-expand-btn" aria-pressed="false" title="Ver la tabla en pantalla completa (Esc para salir)">&#10530; Pantalla completa</button><button type="button" class="refresh-sheet-btn" id="campaigns-refresh-btn" title="Actualizar datos desde Google Sheets">Actualizar</button></div></div><div class="campaigns-note" id="campaigns-note"></div><div class="table-scroll"><table class="data-table campaigns-table"><thead><tr><th>Tipo</th><th>Campana</th><th>Anuncio</th><th>Objetivo</th><th>Resultados</th><th>Objetivo Reservas</th><th>Mensajes</th><th class="num">Costo por mensaje</th><th class="num">Costo por resultado</th><th class="num">Ratio de reservas</th><th>Estado</th><th>Fecha inicio</th><th>Fecha fin / dias restantes</th><th class="num">Duracion</th><th class="num">Importe diario</th><th class="num">Presupuesto x anuncio</th><th class="num">Gasto x anuncio</th><th class="num">Presupuesto x campana</th><th class="num">Gasto x campana</th><th class="num">Saldo x anuncio</th><th class="num">Saldo por campana</th><th class="num">Nuevo ppto diario</th><th>Observaciones</th></tr></thead><tbody id="campaigns-body"></tbody></table></div></div>
+        <div class="kpi-strip" id="kpi-strip" aria-label="Resumen ejecutivo"></div>
+
+        <div class="panel objectives-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Resultados por objetivo</div>
+              <div class="panel-sub" id="objectives-sub">Cada objetivo se mide con su propio resultado: no se suman entre objetivos.</div>
+            </div>
+          </div>
+          <div class="objective-grid" id="objective-cards"></div>
+          <div class="reoriented" id="reoriented" hidden></div>
+        </div>
+
+        <div class="panel chart-panel" id="chart-panel">
+          <div class="panel-head chart-panel-head">
+            <div>
+              <div class="panel-title" id="chart-title">Evolucion</div>
+              <div class="panel-sub" id="chart-sub"></div>
+            </div>
+            <div class="chart-controls">
+              <div class="chart-series-toggles" id="chart-modes" role="radiogroup" aria-label="Vista del grafico"></div>
+              <button type="button" class="chart-toggle" id="chart-toggle-btn" aria-expanded="true" aria-controls="monthly-chart-body" title="Minimizar grafico">-</button>
+            </div>
+          </div>
+          <div class="chart-series-toggles chart-metrics" id="chart-metrics" role="radiogroup" aria-label="Indicador del grafico"></div>
+          <div class="chart-wrap h-360" id="monthly-chart-body"><canvas id="chart-monthly" aria-label="Grafico lineal del indicador elegido"></canvas></div>
+          <div class="chart-legend projection-legend" id="chart-legend"></div>
+        </div>
+
+        <div class="panel distribution-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Distribucion de inversion por campana</div>
+              <div class="panel-sub" id="distribution-sub"></div>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table distribution-table">
+              <thead><tr><th>Campana</th><th>Objetivo</th><th>Resultado</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th>% de la inversion</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">Frecuencia</th><th class="num">CPM</th><th class="num">Clics</th><th class="num">CTR</th></tr></thead>
+              <tbody id="distribution-body"><tr><td class="table-empty" colspan="13">Cargando datos de Meta...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel campaigns-panel">
+          <div class="panel-head campaigns-panel-head">
+            <div>
+              <div class="panel-title" id="campaigns-title">Anuncios del periodo</div>
+              <div class="panel-sub" id="campaigns-sub"></div>
+            </div>
+            <div class="table-tools">
+              <label class="table-tool-select" for="ads-objective"><span class="sr-only">Filtrar por objetivo</span><select id="ads-objective"><option value="all">Todos los objetivos</option></select></label>
+              <button type="button" class="table-tool-btn" id="campaigns-density-btn" aria-pressed="false" title="Alternar densidad de las filas">Compacto</button>
+              <button type="button" class="table-tool-btn" id="campaigns-expand-btn" aria-pressed="false" title="Ver la tabla en pantalla completa (Esc para salir)">&#10530; Pantalla completa</button>
+            </div>
+          </div>
+          <div class="table-scroll" tabindex="0">
+            <table class="data-table campaigns-table">
+              <thead><tr><th>Objetivo</th><th>Anuncio</th><th>Campana / conjunto</th><th>Resultado</th><th class="num">Resultados</th><th class="num" id="ads-prev-head">Mes anterior</th><th class="num">Variacion</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">CPM</th><th class="num">Clics</th><th>Dias activos</th><th>Vista previa</th></tr></thead>
+              <tbody id="campaigns-body"><tr><td class="table-empty" colspan="15">Cargando datos de Meta...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section class="view" id="view-messages">
@@ -110,14 +147,14 @@
         <div class="panel projection-table-panel">
           <div class="panel-head projection-table-head">
             <div>
-              <div class="panel-title">Proyeccion al cierre por campana</div>
-              <div class="panel-sub">Ritmo diario = acumulado del punto actual / dias transcurridos. Cada campana proyecta su propio tipo de resultado y su gasto.</div>
+              <div class="panel-title">Proyeccion al cierre por objetivo</div>
+              <div class="panel-sub">Ritmo diario = acumulado del punto actual / dias transcurridos. Cada objetivo proyecta su propio tipo de resultado y su gasto.</div>
             </div>
-            <button type="button" class="refresh-sheet-btn" id="projection-refresh-btn" title="Actualizar datos desde Google Sheets">Actualizar</button>
+            <button type="button" class="refresh-sheet-btn" id="projection-refresh-btn" data-tp-refresh title="Releer en este momento las descargas de Meta y los reportes de Drive">Actualizar</button>
           </div>
           <div class="table-scroll">
             <table class="data-table projection-table">
-              <thead><tr><th>Campana</th><th>Tipo</th><th>Resultado</th><th class="num" id="projection-actual-head">Resultados actuales</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Gasto actual</th><th class="num">Gasto proyectado</th><th class="num">Costo por resultado</th><th>Escenario</th></tr></thead>
+              <thead><tr><th>Objetivo</th><th>Campanas</th><th>Resultado</th><th class="num" id="projection-actual-head">Resultados actuales</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Gasto actual</th><th class="num">Gasto proyectado</th><th class="num">Costo por resultado</th><th>Escenario</th></tr></thead>
               <tbody id="projection-body"><tr><td class="table-empty" colspan="10">Cargando proyeccion...</td></tr></tbody>
             </table>
           </div>
@@ -201,7 +238,7 @@
       <section class="view" id="view-history">
         <div class="sec-lbl">03 - Histórico</div>
         <h1 class="section-title">Histórico de Campañas</h1>
-        <p class="section-desc">Registro acumulado de campañas finalizadas extraídas de todos los meses disponibles en el tablero.</p>
+        <p class="section-desc">Campañas que dejaron de correr, con su acumulado de todos los meses según las descargas de Meta. Una campaña se da por finalizada cuando no tiene gasto ni impresiones en el último día con datos.</p>
         <div class="kpi-strip history-kpis" id="history-kpis" aria-label="KPIs historicos"></div>
         <div class="panel history-panel">
           <div class="panel-head">
@@ -212,8 +249,8 @@
           </div>
           <div class="table-scroll">
             <table class="data-table history-table">
-              <thead><tr><th>Mes</th><th>Campaña</th><th class="num">Resultados</th><th class="num">Mensajes</th><th class="num">Presupuesto</th><th class="num">Gasto</th><th class="num">Saldo</th><th>Anuncios</th><th>Fecha de inicio</th><th>Fecha de fin</th></tr></thead>
-              <tbody id="history-body"></tbody>
+              <thead><tr><th>Campaña</th><th>Objetivo</th><th>Resultado</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th class="num">Impresiones</th><th class="num">Alcance</th><th>Anuncios</th><th>Inicio</th><th>Fin</th><th>Meses</th></tr></thead>
+              <tbody id="history-body"><tr><td class="table-empty" colspan="12">Cargando datos de Meta...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -224,6 +261,23 @@
         <h1 class="section-title">Archivo de Reportes</h1>
         <p class="section-desc">Repositorio de los reportes, propuestas y materiales de Terminal Pesquero almacenados en la carpeta compartida de Google Drive. Cada documento se puede previsualizar sin salir del tablero, abrir en Drive o descargar.</p>
         <div class="kpi-strip reports-kpis" id="reports-kpis" aria-label="KPIs del archivo de reportes"></div>
+        <div class="panel sync-panel" id="sync-panel">
+          <div class="panel-head sync-panel-head">
+            <div>
+              <div class="panel-title">Validacion con Gasto publicitario</div>
+              <div class="panel-sub" id="sync-sub">Cargando validacion...</div>
+            </div>
+            <button type="button" class="refresh-sheet-btn" id="reports-refresh-btn" data-tp-refresh title="Releer en este momento las descargas de Meta y los reportes de Drive, y volver a validar">Actualizar</button>
+          </div>
+          <div class="sync-schedule" id="sync-schedule"></div>
+          <div class="table-scroll">
+            <table class="data-table sync-table">
+              <thead><tr><th>Mes</th><th>Descarga de Meta</th><th class="num">Gasto</th><th>Reporte vigente</th><th>Cobertura del reporte</th><th>Estado</th></tr></thead>
+              <tbody id="sync-body"><tr><td class="table-empty" colspan="6">Cargando validacion...</td></tr></tbody>
+            </table>
+          </div>
+          <ul class="sync-notes" id="sync-notes" hidden></ul>
+        </div>
         <div class="panel reports-panel">
           <div class="panel-head reports-panel-head">
             <div>
@@ -268,7 +322,7 @@
         </div>
       </section>
 
-      <div class="site-footer"><span id="footer-source">Fuente: Google Sheets Terminal Pesquero + Registro de reservas x DM</span><span id="footer-status">Sincronizado por Agencia Lima Retail</span></div>
+      <div class="site-footer"><span id="footer-source">Fuente: Meta Ads / descargas mensuales en Google Drive</span><span id="footer-status">Sincronizado por Agencia Lima Retail</span></div>
     </div>
   </main>
 </div>
@@ -289,12 +343,13 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/objectives.js?v=1.12.0"></script>
-<script src="js/messages-calculator.js?v=1.12.0"></script>
-<script src="js/reports-archive.js?v=1.12.0"></script>
-<script src="js/projections.js?v=1.12.0"></script>
-<script src="js/navigation.js?v=1.12.0"></script>
-<script src="js/sidebar.js?v=1.12.0"></script>
+<script src="js/data-source.js?v=1.13.0"></script>
+<script src="js/objectives.js?v=1.13.0"></script>
+<script src="js/messages-calculator.js?v=1.13.0"></script>
+<script src="js/reports-archive.js?v=1.13.0"></script>
+<script src="js/projections.js?v=1.13.0"></script>
+<script src="js/navigation.js?v=1.13.0"></script>
+<script src="js/sidebar.js?v=1.13.0"></script>
 <!-- El acceso lo controla el servidor (deploy/.htaccess + HTTP Basic Auth). -->
 </body>
 </html>

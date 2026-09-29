@@ -1,8 +1,6 @@
 (function () {
-  const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  // Cada campana mide un resultado distinto, asi que cada una recibe su propio color.
-  const CAMPAIGN_COLORS = ['#ea580c', '#7c3aed', '#0d9488', '#db2777', '#ca8a04'];
+  // Cada objetivo trae su color desde js/data-source.js; el gasto siempre va en azul.
   const SPEND_COLOR = '#2563eb';
   const HANDLE_HIT_RADIUS = 16;
   const SERIES = {
@@ -14,10 +12,9 @@
     ready: false,
     campaign: null,
     visible: { results: true, spend: true },
-    // Escenarios por mes y campana: { [mes]: { [campana]: { results: valor, spend: valor } } }.
-    // El punto actual siempre queda en el dia de corte; solo cambia su valor.
+    // Escenarios por mes y objetivo: { [mes]: { [objetivo]: { results: valor, spend: valor } } }.
+    // El punto actual siempre queda en el ultimo dia con datos; solo cambia su valor.
     scenarios: {},
-    snapshot: null,
     chart: null,
     projection: null,
     drag: null,
@@ -33,133 +30,94 @@
     : money(value));
   const format = (value, unit) => (unit === 'money' ? money(value) : count(Math.round(Number(value) || 0)));
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-  const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-  function toDate(iso) {
-    const value = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? `${iso}T00:00:00` : iso;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
+  function scenarioFor(monthKey, objectiveKey) {
+    state.scenarios[monthKey] = state.scenarios[monthKey] || {};
+    state.scenarios[monthKey][objectiveKey] = state.scenarios[monthKey][objectiveKey] || {};
+    return state.scenarios[monthKey][objectiveKey];
   }
 
-  function longDate(date) {
-    return date ? `${date.getDate()} de ${MONTHS[date.getMonth()].toLowerCase()} de ${date.getFullYear()}` : '-';
-  }
-
-  // El mes proyectado es el que esta en curso; si aun no tiene gasto, se usa el ultimo mes con datos.
-  function pickMonth(months, cutoff) {
-    const withData = months.filter(month => Number(month.spend) > 0);
-    if (!withData.length) return null;
-    const reference = toDate(cutoff) || new Date();
-    const current = withData.find(month => MONTHS.indexOf(month.name) === reference.getMonth());
-    return current || withData[withData.length - 1];
-  }
-
-  // El nombre de la campana empieza por su tipo ("Interaccion | Posts | ..."), que es lo que se muestra.
-  function shortName(name) {
-    const first = String(name || '').split('|')[0].trim().replace(/^campa(n|ñ)a\s+/i, '');
-    return first ? first.charAt(0).toUpperCase() + first.slice(1) : 'Campana';
-  }
-
-  // El objetivo de Meta define que cuenta como resultado en cada campana.
-  function resultLabel(objective) {
-    const text = normalize(objective);
-    if (text.includes('interacc')) return 'Interacciones';
-    if (text.includes('thruplay') || text.includes('reproduc')) return 'ThruPlays';
-    if (text.includes('contacto')) return 'Contactos';
-    if (text.includes('mensaje')) return 'Mensajes';
-    if (text.includes('reconocimiento') || text.includes('alcance')) return 'Alcance';
-    if (text.includes('trafico') || text.includes('clic')) return 'Clics';
-    return 'Resultados';
-  }
-
-  function scenarioFor(monthName, campaignKey) {
-    state.scenarios[monthName] = state.scenarios[monthName] || {};
-    state.scenarios[monthName][campaignKey] = state.scenarios[monthName][campaignKey] || {};
-    return state.scenarios[monthName][campaignKey];
-  }
-
-  // Ritmo lineal: el acumulado al dia de corte dividido entre los dias transcurridos, extendido hasta fin de mes.
-  function buildSeries(actual, realDay, daysInMonth, closed, override) {
+  // Ritmo lineal: el acumulado al ultimo dia con datos dividido entre los dias transcurridos desde el primer
+  // dia con datos, extendido hasta fin de mes. daily es el acumulado real dia a dia (indice 0 = dia 1).
+  function buildSeries(daily, firstDay, lastDay, daysInMonth, closed, override) {
+    const actual = daily[lastDay - 1] || 0;
     const adjusted = Number.isFinite(override);
-    const day = realDay;
+    const elapsed = Math.max(1, lastDay - firstDay + 1);
+    const daysLeft = daysInMonth - lastDay;
     const value = adjusted ? override : actual;
-    const pace = day > 0 ? value / day : 0;
-    const realPace = realDay > 0 ? actual / realDay : 0;
+    const pace = value / elapsed;
+    const realPace = actual / elapsed;
     return {
+      daily,
       actual,
-      realDay,
+      realDay: lastDay,
       realPace,
-      realProjected: closed ? actual : realPace * daysInMonth,
-      day,
+      realProjected: closed ? actual : actual + realPace * daysLeft,
+      day: lastDay,
       value,
       pace,
-      projected: closed && !adjusted ? actual : pace * daysInMonth,
+      projected: closed && !adjusted ? actual : value + pace * daysLeft,
       adjusted,
     };
   }
 
-  function buildProjection(snapshot) {
-    const month = pickMonth(snapshot.months || [], snapshot.cutoff);
-    if (!month) return null;
+  // Se proyecta el ultimo mes con datos, por objetivo: cada objetivo mide un resultado distinto
+  // (interacciones, ThruPlays, clics al boton de WhatsApp) y los resultados no se suman entre si.
+  function buildProjection() {
+    const tp = window.TPData;
+    const month = tp?.latestMonth();
+    if (!month || !month.hasData || !month.lastDay) return null;
+    const { metrics } = tp;
+    const closed = month.complete || month.past;
+    const firstDay = month.firstDay || 1;
+    const lastDay = closed ? month.daysInMonth : month.lastDay;
+    const daysInMonth = month.daysInMonth;
 
-    const monthIndex = MONTHS.indexOf(month.name);
-    const year = snapshot.year || (toDate(snapshot.cutoff) || new Date()).getFullYear();
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const cutoffDate = toDate(snapshot.cutoff);
-    const sameMonth = cutoffDate && cutoffDate.getMonth() === monthIndex && cutoffDate.getFullYear() === year;
-    const closed = !sameMonth;
-    const daysWithData = closed ? daysInMonth : Math.min(daysInMonth, Math.max(1, cutoffDate.getDate()));
-    const daysLeft = daysInMonth - daysWithData;
-
-    const campaigns = (month.campaigns || []).map((campaign, index) => {
-      const objective = campaign.objective || (campaign.ads || []).find(ad => ad.objective)?.objective || '';
-      const scenario = scenarioFor(month.name, campaign.name);
-      const results = buildSeries(Number(campaign.reservas) || 0, daysWithData, daysInMonth, closed, scenario.results);
-      const spend = buildSeries(Number(campaign.spent) || 0, daysWithData, daysInMonth, closed, scenario.spend);
+    const campaigns = metrics.objectives(month.rows).map(objective => {
+      const filter = row => row.group === objective.key;
+      const scenario = scenarioFor(month.key, objective.key);
+      const results = buildSeries(metrics.cumulative(metrics.dailyValues(month, 'results', filter)), firstDay, lastDay, daysInMonth, closed, scenario.results);
+      const spend = buildSeries(metrics.cumulative(metrics.dailyValues(month, 'spend', filter)), firstDay, lastDay, daysInMonth, closed, scenario.spend);
       return {
-        key: campaign.name,
-        name: campaign.name,
-        short: shortName(campaign.name),
-        type: campaign.type || '',
-        objective,
-        resultLabel: resultLabel(objective),
-        color: CAMPAIGN_COLORS[index % CAMPAIGN_COLORS.length],
-        messages: Number(campaign.messages) || 0,
+        key: objective.key,
+        name: objective.campaigns.join(' / '),
+        short: objective.label,
+        type: `${objective.campaigns.length} ${objective.campaigns.length === 1 ? 'campana' : 'campanas'}`,
+        resultLabel: objective.resultLabel,
+        color: objective.color,
         results,
         spend,
         costPerResult: results.projected > 0 ? spend.projected / results.projected : null,
+        currentCost: objective.costPerResult,
         adjusted: results.adjusted || spend.adjusted,
       };
     });
 
-    // Si hay gasto del mes que no pertenece a ninguna campana listada, se proyecta aparte para no perderlo.
-    const monthSpend = Number(month.spend) || 0;
-    const campaignSpend = campaigns.reduce((total, campaign) => total + campaign.spend.actual, 0);
-    const unassigned = Math.max(0, monthSpend - campaignSpend);
-    const unassignedProjected = closed ? unassigned : (unassigned / daysWithData) * daysInMonth;
-    const spendActual = campaignSpend + unassigned;
-    const spendProjected = campaigns.reduce((total, campaign) => total + campaign.spend.projected, 0) + unassignedProjected;
-    const messages = Number(month.messages) || 0;
+    const spendActual = campaigns.reduce((total, campaign) => total + campaign.spend.actual, 0);
+    const spendProjected = campaigns.reduce((total, campaign) => total + campaign.spend.projected, 0);
+    // El CPL real que usa la calculadora es el costo por resultado del objetivo de WhatsApp.
+    const whatsapp = campaigns.find(campaign => /whatsapp/.test(campaign.key));
 
     return {
+      monthKey: month.key,
       monthName: month.name,
-      monthLabel: `${month.name} ${year}`,
-      shortMonth: SHORT_MONTHS[monthIndex],
-      year,
+      monthLabel: `${month.name} ${month.year}`,
+      shortMonth: SHORT_MONTHS[month.month - 1],
+      year: month.year,
       daysInMonth,
-      daysWithData,
-      daysLeft,
+      daysWithData: lastDay,
+      firstDay,
+      daysLeft: daysInMonth - lastDay,
       closed,
-      cutoffDate,
-      source: snapshot.source,
+      source: tp.statusLabel(),
       campaigns,
       spendActual,
       spendProjected,
-      spendPace: spendActual / daysWithData,
-      budget: Number(month.budgetTotal) || null,
+      spendPace: spendActual / Math.max(1, lastDay - firstDay + 1),
       adjusted: campaigns.some(campaign => campaign.adjusted),
       spendAdjusted: campaigns.some(campaign => campaign.spend.adjusted),
-      costPerMessage: messages ? monthSpend / messages : null,
+      costPerLead: whatsapp?.currentCost || null,
+      costPerLeadLabel: whatsapp ? `${whatsapp.short}: ${whatsapp.resultLabel.toLowerCase()}` : '',
     };
   }
 
@@ -171,9 +129,7 @@
   function renderKpis(projection) {
     const host = document.getElementById('projection-kpis');
     if (!host) return;
-    const budgetHint = projection.budget
-      ? `${((projection.spendProjected / projection.budget) * 100).toFixed(0)}% del presupuesto (${money(projection.budget)})`
-      : `Ritmo real ${money(projection.spendPace)} por dia`;
+    const budgetHint = `Ritmo real ${money(projection.spendPace)} por dia`;
     const spendCards = [
       `<div class="kpi-pill"><span>Gasto al ${projection.daysWithData}-${projection.shortMonth}</span><strong>${money(projection.spendActual)}</strong><small>${projection.closed ? 'Mes cerrado' : `Quedan ${projection.daysLeft} dias del mes`}</small></div>`,
       `<div class="kpi-pill"><span>Gasto proyectado</span><strong>${money(projection.spendProjected)}</strong><small>${projection.spendAdjusted ? 'Incluye escenarios ajustados' : budgetHint}</small></div>`,
@@ -181,7 +137,7 @@
     const selected = selectedCampaign(projection);
     const campaignCards = projection.campaigns.map(campaign => `
       <button type="button" class="kpi-pill projection-campaign-card${campaign === selected ? ' active' : ''}${campaign.adjusted ? ' is-adjusted' : ''}" data-campaign="${escapeHtml(campaign.key)}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
-        <span><i class="campaign-dot"></i>${escapeHtml(campaign.short)} | ${campaign.resultLabel}</span>
+        <span><i class="campaign-dot"></i>${escapeHtml(campaign.short)} | ${escapeHtml(campaign.resultLabel)}</span>
         <strong>${count(Math.round(campaign.results.projected))}</strong>
         <small>Gasto proyectado ${money(campaign.spend.projected)}</small>
       </button>`);
@@ -207,9 +163,9 @@
         : '<span class="projection-gap ok">Ritmo real</span>';
       return `
         <tr>
-          <td class="campaign-name"><span class="campaign-dot" style="--campaign-color:${campaign.color}"></span>${escapeHtml(campaign.short)}<small class="projection-campaign-full">${escapeHtml(campaign.name)}</small></td>
-          <td>${escapeHtml(campaign.type) || '<span class="no-data">-</span>'}</td>
-          <td><span class="objective-pill">${campaign.resultLabel}</span></td>
+          <td class="campaign-name"><span class="campaign-dot" style="--campaign-color:${campaign.color}"></span>${escapeHtml(campaign.short)}</td>
+          <td class="projection-campaigns-col">${escapeHtml(campaign.type)}<small class="projection-campaign-full">${escapeHtml(campaign.name)}</small></td>
+          <td><span class="objective-pill">${escapeHtml(campaign.resultLabel)}</span></td>
           <td class="num">${count(campaign.results.actual)}</td>
           <td class="num">${count(Math.round(campaign.results.pace))}</td>
           <td class="num projection-value">${count(Math.round(campaign.results.projected))}</td>
@@ -224,7 +180,7 @@
       <tr class="projection-cost-row">
         <td class="campaign-name">Total del mes</td>
         <td></td>
-        <td><span class="no-data">Los resultados no se suman entre tipos</span></td>
+        <td><span class="no-data">Los resultados no se suman entre objetivos</span></td>
         <td></td><td></td><td></td>
         <td class="num">${money(projection.spendActual)}</td>
         <td class="num projection-value">${money(projection.spendProjected)}</td>
@@ -232,7 +188,7 @@
         <td></td>
       </tr>`;
 
-    body.innerHTML = rows ? rows + totalRow : '<tr><td class="table-empty" colspan="10">No hay campanas registradas en el mes.</td></tr>';
+    body.innerHTML = rows ? rows + totalRow : '<tr><td class="table-empty" colspan="10">No hay campanas con gasto en el mes.</td></tr>';
 
     const head = document.getElementById('projection-actual-head');
     if (head) head.textContent = `Resultados al ${projection.daysWithData}-${projection.shortMonth}`;
@@ -245,8 +201,8 @@
     if (!host) return;
     const items = [];
     if (state.visible.results) {
-      items.push(`<span><i class="legend-line" style="background:${campaign.color}"></i><b>${campaign.resultLabel} real</b></span>`);
-      items.push(`<span><i class="legend-line dashed" style="color:${campaign.color}"></i><b>${campaign.resultLabel} proyectado</b></span>`);
+      items.push(`<span><i class="legend-line" style="background:${campaign.color}"></i><b>${escapeHtml(campaign.resultLabel)} real</b></span>`);
+      items.push(`<span><i class="legend-line dashed" style="color:${campaign.color}"></i><b>${escapeHtml(campaign.resultLabel)} proyectado</b></span>`);
     }
     if (state.visible.spend) {
       items.push(`<span><i class="legend-line" style="background:${SPEND_COLOR}"></i><b>Gasto real</b></span>`);
@@ -268,8 +224,8 @@
     const day = `${projection.daysWithData}-${projection.shortMonth}`;
     const field = (key, label, series, step) => `
       <label class="projection-scenario-field">
-        <span>${label} al ${day}</span>
-        <input type="number" min="0" step="${step}" value="${step === 1 ? Math.round(series.value) : series.value.toFixed(2)}" data-series="${key}" aria-label="${label} al ${day}">
+        <span>${escapeHtml(label)} al ${day}</span>
+        <input type="number" min="0" step="${step}" value="${step === 1 ? Math.round(series.value) : series.value.toFixed(2)}" data-series="${key}" aria-label="${escapeHtml(label)} al ${day}">
         <em>${series.adjusted ? `real ${format(series.actual, SERIES[key].unit)}` : 'valor real'}</em>
       </label>`;
     host.innerHTML = `
@@ -345,9 +301,10 @@
 
   function seriesDatasets(series, meta, projection, draggable) {
     const days = projection.daysInMonth;
-    const real = Array.from({ length: days }, (_, i) => (i + 1 <= series.realDay ? series.realPace * (i + 1) : null));
-    const forecast = Array.from({ length: days }, (_, i) => (i + 1 >= series.day ? series.pace * (i + 1) : null));
-    const original = Array.from({ length: days }, (_, i) => (i + 1 >= series.realDay ? series.realPace * (i + 1) : null));
+    // La linea real es el acumulado dia a dia de la descarga de Meta; la proyeccion parte del punto actual.
+    const real = Array.from({ length: days }, (_, i) => (i + 1 <= series.realDay ? series.daily[i] ?? null : null));
+    const forecast = Array.from({ length: days }, (_, i) => (i + 1 >= series.day ? series.value + series.pace * (i + 1 - series.day) : null));
+    const original = Array.from({ length: days }, (_, i) => (i + 1 >= series.realDay ? series.actual + series.realPace * (i + 1 - series.realDay) : null));
     const handle = Array.from({ length: days }, (_, i) => (i + 1 === series.day ? series.value : null));
     const base = { yAxisID: meta.axis, unit: meta.unit, pointRadius: 0, pointHoverRadius: 4, tension: 0, seriesKey: meta.key };
     const datasets = [
@@ -441,54 +398,71 @@
     }
     const note = document.getElementById('projection-note');
     if (note) {
-      note.textContent = `Cada campana mide un resultado distinto segun su objetivo (Interaccion, Notoriedad, Pedidos), por eso se proyectan por separado. La proyeccion mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: ${projection.source || 'Terminal Pesquero'}.`;
+      note.textContent = `Cada objetivo mide un resultado distinto (interacciones, ThruPlays, clics al boton de WhatsApp), por eso se proyectan por separado. La linea continua es el acumulado real de cada dia; la punteada mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: Meta Ads | ${projection.source}.`;
     }
     const desc = document.getElementById('projection-desc');
     if (desc) {
-      desc.textContent = `Proyeccion al cierre de ${projection.monthLabel} por campana, calculada con los datos reales del modulo Gasto publicitario, actualizados al ${longDate(projection.cutoffDate)}.`;
+      desc.textContent = projection.closed
+        ? `${projection.monthLabel} ya cerro: se muestran sus resultados finales por objetivo con los datos del modulo Gasto publicitario.`
+        : `Proyeccion al cierre de ${projection.monthLabel} por objetivo, calculada con los datos reales del modulo Gasto publicitario hasta el ${projection.daysWithData} de ${projection.monthName.toLowerCase()}.`;
     }
   }
 
-  // El CPL real del mes alimenta la calculadora de inversion.
+  // El CPL real del mes (costo por resultado del objetivo de WhatsApp) alimenta la calculadora de inversion.
   function renderCplLink(projection) {
     const button = document.getElementById('projection-use-cpl');
     if (!button) return;
-    const cpl = projection.costPerMessage;
+    const cpl = projection.costPerLead;
     if (!cpl) {
       button.hidden = true;
       return;
     }
     button.hidden = false;
     button.textContent = `Usar CPL real (${money(cpl)})`;
+    button.title = `Costo por resultado real de ${projection.costPerLeadLabel} en ${projection.monthLabel}`;
     button.dataset.cpl = cpl.toFixed(2);
   }
 
-  function renderEmpty() {
+  // Sin datos se oculta el contenido del panel (sin borrarlo) para que vuelva cuando llegue un barrido bueno.
+  function setPanelEmpty(empty) {
     const panel = document.getElementById('projection-panel');
-    if (panel) panel.innerHTML = '<div class="empty-state"><strong>Sin datos para proyectar</strong>Todavia no hay gasto registrado en el mes en curso.</div>';
+    if (!panel) return;
+    panel.classList.toggle('is-empty', empty);
+    let notice = document.getElementById('projection-empty');
+    if (empty && !notice) {
+      notice = document.createElement('div');
+      notice.id = 'projection-empty';
+      notice.className = 'empty-state projection-empty';
+      notice.innerHTML = '<strong>Sin datos para proyectar</strong>No hay descargas de Meta con gasto en la carpeta de Drive.';
+      panel.appendChild(notice);
+    }
+  }
+
+  function renderEmpty() {
+    if (state.chart) {
+      state.chart.destroy();
+      state.chart = null;
+    }
+    setPanelEmpty(true);
     const body = document.getElementById('projection-body');
     if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Sin datos para proyectar.</td></tr>';
   }
 
   function renderWaiting() {
     const sub = document.getElementById('projection-sub');
-    if (sub) sub.textContent = 'Esperando los datos del modulo Gasto publicitario...';
+    if (sub) sub.textContent = 'Esperando los datos de Meta...';
     const body = document.getElementById('projection-body');
-    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Esperando los datos del modulo Gasto publicitario...</td></tr>';
+    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Esperando los datos de Meta...</td></tr>';
   }
 
-  // Un escenario no cambia los datos: se reutiliza el ultimo snapshot en vez de clonar todo el mes en cada movimiento.
-  function recompute({ reuseSnapshot = false } = {}) {
-    const snapshot = reuseSnapshot && state.snapshot ? state.snapshot : window.TPObjectives?.snapshot?.();
-    if (!snapshot) return null;
-    state.snapshot = snapshot;
-    state.projection = buildProjection(snapshot);
+  function recompute() {
+    state.projection = buildProjection();
     return state.projection;
   }
 
   // Durante el arrastre solo se actualizan los datos del grafico; recrearlo cortaria el gesto.
   function refreshAfterScenario() {
-    const projection = recompute({ reuseSnapshot: true });
+    const projection = recompute();
     if (!projection) return;
     const campaign = selectedCampaign(projection);
     renderKpis(projection);
@@ -502,8 +476,8 @@
   }
 
   function render() {
-    // El modulo puede abrirse antes de que Gasto publicitario termine de cargar; el evento tp:data-updated lo reintenta.
-    if (!window.TPObjectives?.snapshot?.()) {
+    // El modulo puede abrirse antes de que lleguen los datos; el evento tp:data-updated lo reintenta.
+    if (!window.TPData?.snapshot()) {
       renderWaiting();
       return;
     }
@@ -512,6 +486,7 @@
       renderEmpty();
       return;
     }
+    setPanelEmpty(false);
     const campaign = selectedCampaign(projection);
     state.campaign = campaign?.key || null;
     renderHeader(projection);
@@ -549,7 +524,7 @@
   function setScenarioValue(seriesKey, value) {
     if (!state.projection || !Number.isFinite(value)) return;
     const rounded = seriesKey === 'spend' ? Math.round(value * 100) / 100 : Math.round(value);
-    scenarioFor(state.projection.monthName, state.campaign)[seriesKey] = Math.max(0, rounded);
+    scenarioFor(state.projection.monthKey, state.campaign)[seriesKey] = Math.max(0, rounded);
     refreshAfterScenario();
   }
 
@@ -626,7 +601,7 @@
         input.checked = true;
       }
       document.querySelectorAll('#projection-series .series-toggle').forEach(label => {
-        label.classList.toggle('active', Boolean(state.visible[label.dataset.series]));
+        label.classList.toggle('active', Boolean(state.visible[label.querySelector('input')?.value]));
       });
       if (state.projection) renderChart(state.projection);
     });
@@ -639,7 +614,7 @@
 
     document.getElementById('projection-scenario')?.addEventListener('click', event => {
       if (!event.target.closest('#projection-reset') || !state.projection) return;
-      delete state.scenarios[state.projection.monthName]?.[state.campaign];
+      delete state.scenarios[state.projection.monthKey]?.[state.campaign];
       render();
     });
 

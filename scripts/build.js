@@ -61,65 +61,62 @@ function copyBrandAssets() {
   }
 }
 
-function main() {
+const DATA_ENDPOINT_RE = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
+const SNAPSHOT_FILE = path.join(ROOT, 'data', 'tp-meta-2026.json');
+
+// El repo es publico: la URL del Web App (secret TP_DATA_ENDPOINT) y los datos del cliente solo viven en
+// dist/, que se sirve con clave. El build baja el ultimo barrido y lo incrusta como copia de respaldo; si
+// Google no responde usa la copia local de data/ (gitignored) de un build anterior.
+async function loadSnapshot(endpoint) {
+  if (endpoint) {
+    try {
+      const response = await fetch(`${endpoint}?action=data`, { signal: AbortSignal.timeout(120000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      if (!payload || payload.ok === false || !Array.isArray(payload.months)) throw new Error('respuesta sin meses');
+      const text = JSON.stringify(payload);
+      fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
+      fs.writeFileSync(SNAPSHOT_FILE, text, 'utf8');
+      return text;
+    } catch (error) {
+      console.warn(`[build] no se pudo bajar el barrido del Web App (${error.message}); se usa la copia local`);
+    }
+  }
+  if (fs.existsSync(SNAPSHOT_FILE)) return fs.readFileSync(SNAPSHOT_FILE, 'utf8');
+  console.warn('[build] sin copia de datos: el tablero dependera solo de la lectura en vivo');
+  return 'null';
+}
+
+async function main() {
+  const endpoint = (process.env.TP_DATA_ENDPOINT || '').trim();
+  if (endpoint && !DATA_ENDPOINT_RE.test(endpoint)) throw new Error('TP_DATA_ENDPOINT no es una URL /exec de script.google.com');
+  if (!endpoint) console.warn('[build] falta TP_DATA_ENDPOINT; el tablero no podra leer Google en vivo');
+
   let html = readFile('index.html');
   // Al inlinear el CSS la ruta pasa a resolverse desde dist/index.html,
   // asi que '../assets/' tiene que quedar como 'assets/'.
   const css = readFile('css/dashboard.css').replace(/\.\.\/assets\//g, 'assets/');
-  const app = readFile('js/objectives.js');
-  const messagesCalculator = readFile('js/messages-calculator.js');
-  const navigation = readFile('js/navigation.js');
-  const sidebar = readFile('js/sidebar.js');
-  const reportsArchive = readFile('js/reports-archive.js');
-  const projections = readFile('js/projections.js');
-  const data = readFile('data/tp-ads-2026.json').replace(/</g, '\\u003c');
-  const driveReports = readFile('data/tp-drive-reports.json').replace(/</g, '\\u003c');
+  const metaData = (await loadSnapshot(endpoint)).replace(/</g, '\u003c');
 
-  html = html.replace(
-    new RegExp('<link rel=\"stylesheet\" href=\"css/dashboard\\.css(?:\\?v=[^\"]+)?\">'),
-    `<style>${css}</style>`
-  );
-  html = html.replace(
-    new RegExp('<script src=\"js/objectives\\.js(?:\\?v=[^\"]+)?\"><\\/script>'),
-    `<script>${app}</script>`
-  );
-  html = html.replace(
-    new RegExp('<script src="js\\/messages-calculator\\.js(?:\\?v=[^"]+)?"><\\/script>'),
-    `<script>${messagesCalculator}</script>`
-  );
-  html = html.replace(
-    new RegExp('<script src="js\\/navigation\\.js(?:\\?v=[^"]+)?"><\\/script>'),
-    `<script>${navigation}</script>`
-  );
-  html = html.replace(
-    new RegExp('<script src="js\\/sidebar\\.js(?:\\?v=[^"]+)?"><\\/script>'),
-    `<script>${sidebar}</script>`
-  );
-  html = html.replace(
-    new RegExp('<script src="js\\/projections\\.js(?:\\?v=[^"]+)?"><\\/script>'),
-    `<script>${projections}</script>`
-  );
-  html = html.replace(
-    new RegExp('<script src="js\\/reports-archive\\.js(?:\\?v=[^"]+)?"><\\/script>'),
-    `<script>${reportsArchive}</script>`
-  );
-  html = html.replace(
-    '</head>',
-    `<script>window.TP_ADS_DATA = ${data};window.TP_DRIVE_REPORTS = ${driveReports};</script></head>`
-  );
+  // Reemplazos con funcion: una cadena de reemplazo interpretaria "$'" o "$&" dentro del codigo o de los datos.
+  html = html.replace(/<link rel="stylesheet" href="css\/dashboard\.css(?:\?v=[^"]+)?">/, () => `<style>${css}</style>`);
+  for (const name of ['data-source', 'objectives', 'messages-calculator', 'navigation', 'sidebar', 'projections', 'reports-archive']) {
+    const pattern = new RegExp(`<script src="js/${name}\\.js(?:\\?v=[^"]+)?"></script>`);
+    if (!pattern.test(html)) throw new Error(`index.html no carga js/${name}.js`);
+    const code = readFile(`js/${name}.js`);
+    html = html.replace(pattern, () => `<script>${code}</script>`);
+  }
+  if (/<script src="js\//.test(html)) throw new Error('index.html carga un js/ que el build no incrusta');
+  const config = `window.TP_DATA_ENDPOINT = ${JSON.stringify(endpoint)};window.TP_META_DATA = ${metaData};`;
+  html = html.replace('</head>', () => `<script>${config}</script></head>`);
 
   // El navegador convierte CRLF en LF antes de calcular el hash CSP de cada <script>; si el HTML
   // conserva CRLF (archivos editados en Windows) los hashes no coinciden y el tablero no carga.
   html = html.replace(/\r\n?/g, '\n');
 
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
-  fs.mkdirSync(path.join(DIST_DIR, 'data'), { recursive: true });
+  fs.mkdirSync(DIST_DIR, { recursive: true });
   fs.writeFileSync(DIST_HTML, html, 'utf8');
-  // tp-ads-2026.json y tp-drive-reports.json ya van incrustados en el HTML. Solo se publican los
-  // meses cerrados de CLOSED_MONTH_URLS (objectives.js), que se piden por fetch sin respaldo inline.
-  for (const file of fs.readdirSync(path.join(ROOT, 'data')).filter(name => /^tp-[a-z]+-sheet-2026\.json$/.test(name))) {
-    fs.copyFileSync(path.join(ROOT, 'data', file), path.join(DIST_DIR, 'data', file));
-  }
 
   copyBrandAssets();
   writeHtaccess(html);
@@ -127,9 +124,7 @@ function main() {
   console.log(`[build] escrito dist/index.html (${(fs.statSync(DIST_HTML).size / 1024).toFixed(1)} KB)`);
 }
 
-try {
-  main();
-} catch (error) {
+main().catch(error => {
   console.error('[build] error:', error.message);
   process.exit(1);
-}
+});
