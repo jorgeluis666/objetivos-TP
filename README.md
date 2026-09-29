@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.14.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.15.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -32,6 +32,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Historico de Campanas: campanas finalizadas con su acumulado de todos los meses.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
+- Usuarios y Claves: directorio de las cuentas con acceso al tablero, sin contraseñas (ver "Usuarios y Claves").
 
 Los modulos Comparativo YoY, Distribucion, Productos Web y Usuarios y Claves se muestran
 deshabilitados hasta su futura implementacion.
@@ -127,6 +128,31 @@ hechos sobre la anterior se ignoran. Sin `localStorage` (modo privado) las edici
 y Exportar sigue funcionando.
 
 Ojo: mientras el repo sea publico, lo que se publique en la bitácora tambien lo es.
+
+## Usuarios y Claves
+
+Directorio de quien tiene acceso al tablero. Las claves las valida Apache (ver "Publicacion en el hosting")
+y **nunca** se guardan en el repo ni en el HTML: esta vista solo lleva nombre, usuario de acceso, rol,
+fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el build la incrusta como
+`window.TP_USUARIOS`).
+
+```json
+{
+  "updatedAt": "2026-09-29",
+  "users": [
+    { "id": "u01", "name": "Nombre Apellido", "user": "cliente-tp", "role": "cliente",
+      "status": "activo", "since": "2026-09-29" }
+  ]
+}
+```
+
+- `role`: `cliente`, `equipo` o `admin` (otro valor se lee como `cliente`).
+- `status`: `activo` o `suspendido`. `user` se guarda en minusculas y sin espacios ni `:`.
+- Se edita igual que la Bitácora: borrador en `localStorage` (`tp-usuarios-draft`), **Exportar** descarga
+  `tp-usuarios-2026.json`, se reemplaza el archivo en `data/`, commit y push a `main`.
+- Dar o quitar acceso de verdad se hace en cPanel > Privacidad de directorios; la vista muestra los pasos.
+
+Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de este directorio tambien lo son.
 
 ## Configuracion del Web App (Google Apps Script)
 

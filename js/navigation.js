@@ -31,6 +31,12 @@
       source: 'Fuente: Bitácora del equipo de Agencia Lima Retail',
       footer: 'Las ediciones quedan como borrador hasta exportar y publicar el archivo',
     },
+    'view-users': {
+      title: 'Usuarios y Claves',
+      caption: 'Cuentas con acceso al tablero',
+      source: 'Fuente: Directorio de accesos de Agencia Lima Retail',
+      footer: 'Las claves las valida el servidor; aqui no se guarda ninguna',
+    },
   };
 
   function storedView() {
@@ -78,6 +84,7 @@
     if (viewId === 'view-history') window.TPObjectives?.renderHistory?.();
     if (viewId === 'view-reports') window.ReportsArchive?.init();
     if (viewId === 'view-log') window.Bitacora?.init();
+    if (viewId === 'view-users') window.Usuarios?.init();
   }
 
   function initNavigation() {

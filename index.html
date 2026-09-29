@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.14.0">
+<link rel="stylesheet" href="css/dashboard.css?v=1.15.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.14.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.15.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -36,11 +36,10 @@
       <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="15" height="18" rx="2"/><line x1="3" y1="8" x2="7" y2="8"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="3" y1="16" x2="7" y2="16"/><line x1="10" y1="8" x2="16" y2="8"/><line x1="10" y1="12" x2="16" y2="12"/></svg></div>
       <div class="s-text"><div class="s-title-nav">Bitácora</div><div class="s-desc-nav">Cambios, comentarios y decisiones</div></div>
     </button>
-    <div class="s-group-lbl paused-label">Modulos pausados</div>
-    <button class="s-item disabled" type="button" disabled aria-disabled="true"><div class="s-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div class="s-text"><div class="s-title-nav">Comparativo YoY</div><div class="s-desc-nav">Evolucion interanual</div></div><span class="module-status">Proximamente</span></button>
-    <button class="s-item disabled" type="button" disabled aria-disabled="true"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="s-text"><div class="s-title-nav">Distribucion</div><div class="s-desc-nav">Inversion por plataforma</div></div><span class="module-status">Proximamente</span></button>
-    <button class="s-item disabled" type="button" disabled aria-disabled="true"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div><div class="s-text"><div class="s-title-nav">Productos Web</div><div class="s-desc-nav">Ranking y ventas</div></div><span class="module-status">Proximamente</span></button>
-    <button class="s-item disabled s-item-bottom" type="button" disabled aria-disabled="true"><div class="s-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="s-text"><div class="s-title-nav">Usuarios y Claves</div><div class="s-desc-nav">Accesos y alertas</div></div><span class="module-status">Proximamente</span></button>
+    <button class="s-item s-item-bottom" type="button" data-view-target="view-users">
+      <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="s-text"><div class="s-title-nav">Usuarios y Claves</div><div class="s-desc-nav">Accesos al tablero</div></div>
+    </button>
     <div class="s-modulo-activo"><div class="s-ma-label">CUENTA</div><div class="s-ma-name">Terminal Pesquero</div><div class="s-ma-desc">Control de pauta digital</div></div>
   </aside>
   <main class="main">
@@ -356,6 +355,42 @@
           <div id="log-list"></div>
         </div>
       </section>
+      <section class="view" id="view-users">
+        <div class="sec-lbl">06 - Usuarios y Claves</div>
+        <h1 class="section-title">Usuarios y Claves</h1>
+        <p class="section-desc">Directorio de las cuentas con acceso al tablero. Las claves las valida el servidor y nunca se guardan aquí: esta lista solo registra quién tiene acceso. Se edita como borrador en este navegador hasta exportar el archivo para publicarlo.</p>
+        <div class="panel log-panel">
+          <form class="log-form users-form" id="users-form" autocomplete="off">
+            <input class="log-text" type="text" name="name" placeholder="Nombre de la persona" aria-label="Nombre">
+            <input class="log-text" type="text" name="user" placeholder="Usuario de acceso" aria-label="Usuario de acceso" autocapitalize="none" spellcheck="false">
+            <select class="log-tag" name="role" aria-label="Rol"><option value="cliente">Cliente</option><option value="equipo">Equipo Lima Retail</option><option value="admin">Administrador</option></select>
+            <button class="refresh-sheet-btn" type="submit">Agregar</button>
+          </form>
+          <div class="log-toolbar">
+            <div class="chart-series-toggles log-filters" id="users-filter" role="group" aria-label="Filtrar usuarios">
+              <label class="series-toggle campaign-chip active" data-series="all"><input type="radio" name="users-status" value="all" checked>Todos</label>
+              <label class="series-toggle campaign-chip" data-series="activo"><input type="radio" name="users-status" value="activo">Activos</label>
+              <label class="series-toggle campaign-chip" data-series="suspendido"><input type="radio" name="users-status" value="suspendido">Suspendidos</label>
+            </div>
+            <div class="log-actions">
+              <span class="log-count" id="users-count"></span>
+              <button class="table-tool-btn" type="button" id="users-discard" hidden>Descartar borrador</button>
+              <button class="table-tool-btn" type="button" id="users-export">Exportar</button>
+            </div>
+          </div>
+          <div class="log-status" id="users-status"></div>
+          <div id="users-list"></div>
+        </div>
+        <div class="panel users-guide">
+          <div class="panel-title">Cómo dar acceso o cambiar una clave</div>
+          <ol>
+            <li>Agrega a la persona en esta lista, exporta el archivo y publícalo.</li>
+            <li>En cPanel &gt; <b>Privacidad de directorios</b> &gt; carpeta del tablero, crea el usuario con el mismo nombre de acceso y una clave larga y aleatoria. Ahí mismo se cambia la clave de una cuenta existente.</li>
+            <li>Para quitar el acceso, elimina el usuario en esa misma pantalla y marca a la persona como Suspendida.</li>
+            <li>Comparte la clave por un canal privado, nunca en el mismo mensaje que el enlace.</li>
+          </ol>
+        </div>
+      </section>
 
       <div class="site-footer"><span id="footer-source">Fuente: Meta Ads / descargas mensuales en Google Drive</span><span id="footer-status">Sincronizado por Agencia Lima Retail</span></div>
     </div>
@@ -378,14 +413,15 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/data-source.js?v=1.14.0"></script>
-<script src="js/objectives.js?v=1.14.0"></script>
-<script src="js/messages-calculator.js?v=1.14.0"></script>
-<script src="js/reports-archive.js?v=1.14.0"></script>
-<script src="js/bitacora.js?v=1.14.0"></script>
-<script src="js/projections.js?v=1.14.0"></script>
-<script src="js/navigation.js?v=1.14.0"></script>
-<script src="js/sidebar.js?v=1.14.0"></script>
+<script src="js/data-source.js?v=1.15.0"></script>
+<script src="js/objectives.js?v=1.15.0"></script>
+<script src="js/messages-calculator.js?v=1.15.0"></script>
+<script src="js/reports-archive.js?v=1.15.0"></script>
+<script src="js/bitacora.js?v=1.15.0"></script>
+<script src="js/usuarios.js?v=1.15.0"></script>
+<script src="js/projections.js?v=1.15.0"></script>
+<script src="js/navigation.js?v=1.15.0"></script>
+<script src="js/sidebar.js?v=1.15.0"></script>
 <!-- El acceso lo controla el servidor (deploy/.htaccess + HTTP Basic Auth). -->
 </body>
 </html>

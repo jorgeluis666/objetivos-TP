@@ -77,18 +77,6 @@ select {
   font-weight: 700;
 }
 
-.s-item.disabled {
-  cursor: not-allowed;
-}
-
-.module-status {
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 99px;
-  font-size: 7px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .s-ma-label {
   margin-bottom: 5px;
   font-size: 9px;
@@ -497,8 +485,6 @@ select {
     height: auto;
   }
 
-  .s-item.disabled,
-  .paused-label,
   .s-modulo-activo {
     display: none;
   }
@@ -1143,7 +1129,7 @@ select {
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.s-item:not(.disabled):hover {
+.s-item:hover {
   border-color: #a8c9ff;
   background: #f8fbff;
   box-shadow: 0 8px 20px rgba(37, 99, 235, .08);
@@ -1157,8 +1143,7 @@ select {
   box-shadow: 0 8px 24px rgba(37, 99, 235, .08);
 }
 
-.s-item.active::after,
-.s-item:not(.disabled)::after {
+.s-item::after {
   margin-left: auto;
   color: #94a3b8;
   content: "\203A";
@@ -1211,36 +1196,6 @@ select {
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.paused-label {
-  margin-top: 20px;
-}
-
-.s-item.disabled {
-  margin-bottom: 9px;
-  border-color: #e2e8f0;
-  color: #475569;
-  background: #ffffff;
-  opacity: .58;
-}
-
-.s-item.disabled .s-icon {
-  border-color: #dbe4f0;
-  color: #64748b;
-  background: #f8fafc;
-}
-
-.s-item.disabled .s-desc-nav {
-  color: #94a3b8;
-}
-
-.module-status {
-  margin-left: auto;
-  padding: 3px 6px;
-  border-color: #dbe4f0;
-  color: #94a3b8;
-  background: #f8fafc;
 }
 
 .s-modulo-activo {
@@ -1352,7 +1307,6 @@ select {
   .shell.sidebar-collapsed .s-brand > *,
   .shell.sidebar-collapsed .s-group-lbl,
   .shell.sidebar-collapsed .s-text,
-  .shell.sidebar-collapsed .module-status,
   .shell.sidebar-collapsed .s-modulo-activo {
     display: none;
   }
@@ -2655,5 +2609,134 @@ textarea.log-text {
   .log-item .log-tag {
     appearance: none;
     font-size: 10px;
+  }
+}
+
+/* ===== Usuarios y Claves: directorio de accesos ===== */
+.users-form {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) 170px auto;
+}
+
+.users-head,
+.users-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 160px 136px 116px 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.users-head {
+  margin-top: 16px;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid var(--border);
+  color: #526987;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.users-head span {
+  padding-left: 9px;
+}
+
+.users-item {
+  padding: 7px 2px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Igual que la Bitacora: sin borde ni fondo hasta pasar el mouse. */
+.users-item .log-date,
+.users-item .log-text,
+.users-item .log-tag {
+  border-color: transparent;
+  background: transparent;
+}
+
+.users-item:hover .log-date,
+.users-item:hover .log-text,
+.users-item:hover .log-tag {
+  border-color: var(--border);
+  background: #fff;
+}
+
+.users-item .log-tag {
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.users-item.done .log-text {
+  color: var(--muted);
+}
+
+.users-item .log-delete {
+  margin-top: 0;
+}
+
+.users-login {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.users-item .users-role.admin { color: #7c3aed; }
+.users-item .users-role.equipo { color: var(--brand-text); }
+.users-item .users-role.cliente { color: #475569; }
+.users-item .users-state.activo { color: var(--green-text); }
+.users-item .users-state.suspendido { color: var(--red); }
+
+.users-guide {
+  margin-top: 16px;
+}
+
+.users-guide ol {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* El ancho que manda es el de la lista, no el de la ventana: cambia tambien al minimizar el panel. */
+#users-list {
+  container-type: inline-size;
+}
+
+@container (max-width: 720px) {
+  .users-head {
+    display: none;
+  }
+
+  .users-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
+    gap: 4px;
+  }
+
+  .users-item .log-text:first-child {
+    grid-column: 1 / 3;
+    font-weight: 700;
+  }
+
+  .users-item .log-delete {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  /* La tercera columna es solo del boton eliminar: alta y estado bajan a una fila propia. */
+  .users-item .log-date {
+    grid-column: 1;
+  }
+
+  .users-item .users-state {
+    grid-column: 2;
+  }
+}
+
+@media(max-width:760px) {
+  .users-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .users-form .log-text:first-child {
+    grid-column: 1 / -1;
   }
 }
