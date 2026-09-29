@@ -2425,3 +2425,235 @@ p.delta {
 .projection-panel:not(.is-empty) .projection-empty {
   display: none;
 }
+
+/* ===== Bitacora: checklist mensual editable ===== */
+.log-panel {
+  margin-top: 20px;
+}
+
+.log-form,
+.log-item {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr) 118px 112px auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-form {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-date,
+.log-text,
+.log-tag {
+  height: 34px;
+  min-width: 0;
+  padding: 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.log-text::placeholder {
+  color: #94a3b8;
+}
+
+.log-date:focus,
+.log-text:focus,
+.log-tag:focus {
+  border-color: var(--brand);
+  outline: 2px solid var(--brand-soft);
+}
+
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.log-filters .series-toggle {
+  --campaign-color: var(--brand-text);
+}
+
+.log-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-actions [hidden] {
+  display: none;
+}
+
+.log-count {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.log-status {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.log-status.draft {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.log-group {
+  margin-top: 18px;
+}
+
+.log-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.log-progress {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.log-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log-item {
+  grid-template-columns: 20px 136px minmax(0, 1fr) 118px 112px 28px;
+  align-items: start;
+  padding: 7px 2px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Sin borde ni fondo hasta pasar el mouse: se lee como lista, no como formulario. */
+.log-item .log-date,
+.log-item .log-text,
+.log-item .log-tag {
+  border-color: transparent;
+  background: transparent;
+}
+
+.log-item:hover .log-date,
+.log-item:hover .log-text,
+.log-item:hover .log-tag {
+  border-color: var(--border);
+  background: #fff;
+}
+
+.log-check {
+  width: 16px;
+  height: 16px;
+  margin: 9px 0 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+/* Hecho = gris, sin tachado: casi todo el historial queda marcado y el tachado lo volveria ilegible. */
+.log-item.done .log-text {
+  color: var(--muted);
+}
+
+textarea.log-text {
+  display: block;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  overflow: hidden;
+  line-height: 1.45;
+  resize: none;
+}
+
+.log-item .log-tag {
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.log-item .log-tag.cambio { color: var(--brand-text); }
+.log-item .log-tag.comentario { color: #b45309; }
+.log-item .log-tag.decision { color: var(--green-text); }
+.log-item .log-tag.platform.general { color: #475569; }
+.log-item .log-tag.platform.meta { color: #1d4ed8; }
+.log-item .log-tag.platform.tiktok { color: #be185d; }
+
+.log-delete {
+  width: 28px;
+  height: 28px;
+  margin-top: 3px;
+  border: 0;
+  border-radius: 6px;
+  color: #94a3b8;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.log-delete:hover {
+  color: var(--red);
+  background: #fef2f2;
+}
+
+.log-none {
+  padding: 28px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media(max-width:760px) {
+  .log-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .log-form .log-text {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+
+  .log-item {
+    grid-template-columns: 20px 94px minmax(0, 1fr) minmax(0, 1fr) 28px;
+    gap: 4px;
+  }
+
+  .log-item .log-text {
+    grid-column: 2 / -1;
+    order: -1;
+  }
+
+  .log-item .log-check {
+    order: -2;
+  }
+
+  .log-item .log-date {
+    grid-column: 2;
+  }
+
+  .log-item .log-date,
+  .log-item .log-tag {
+    padding: 0 4px;
+    font-size: 11px;
+  }
+
+  /* Sin la flecha nativa las etiquetas caben completas a 375 px. */
+  .log-item .log-tag {
+    appearance: none;
+    font-size: 10px;
+  }
+}

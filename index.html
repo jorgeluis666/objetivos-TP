@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.13.1">
+<link rel="stylesheet" href="css/dashboard.css?v=1.14.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.13.1</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.14.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -31,6 +31,10 @@
     <button class="s-item" type="button" data-view-target="view-reports">
       <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
       <div class="s-text"><div class="s-title-nav">Archivo de Reportes</div><div class="s-desc-nav">Documentos en Drive</div></div>
+    </button>
+    <button class="s-item" type="button" data-view-target="view-log">
+      <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="15" height="18" rx="2"/><line x1="3" y1="8" x2="7" y2="8"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="3" y1="16" x2="7" y2="16"/><line x1="10" y1="8" x2="16" y2="8"/><line x1="10" y1="12" x2="16" y2="12"/></svg></div>
+      <div class="s-text"><div class="s-title-nav">Bitácora</div><div class="s-desc-nav">Cambios, comentarios y decisiones</div></div>
     </button>
     <div class="s-group-lbl paused-label">Modulos pausados</div>
     <button class="s-item disabled" type="button" disabled aria-disabled="true"><div class="s-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div class="s-text"><div class="s-title-nav">Comparativo YoY</div><div class="s-desc-nav">Evolucion interanual</div></div><span class="module-status">Proximamente</span></button>
@@ -322,6 +326,37 @@
         </div>
       </section>
 
+      <section class="view" id="view-log">
+        <div class="sec-lbl">05 - Bitácora</div>
+        <h1 class="section-title">Bitácora</h1>
+        <p class="section-desc">Checklist mensual de cambios, comentarios y decisiones. Agrega o edita ítems aquí mismo: se guardan como borrador en este navegador hasta exportar el archivo para publicarlo.</p>
+        <div class="panel log-panel">
+          <form class="log-form" id="log-form" autocomplete="off">
+            <input class="log-date" type="date" name="date" aria-label="Fecha" required>
+            <input class="log-text" type="text" name="text" placeholder="Nuevo cambio, comentario o decisión" aria-label="Detalle">
+            <select class="log-tag" name="type" aria-label="Tipo"><option value="cambio">Cambio</option><option value="comentario">Comentario</option><option value="decision">Decisión</option></select>
+            <select class="log-tag" name="platform" aria-label="Plataforma"><option value="general">General</option><option value="meta">Meta Ads</option><option value="tiktok">TikTok Ads</option></select>
+            <button class="refresh-sheet-btn" type="submit">Agregar</button>
+          </form>
+          <div class="log-toolbar">
+            <div class="chart-series-toggles log-filters" id="log-type-filter" role="group" aria-label="Filtrar ítems">
+              <label class="series-toggle campaign-chip active" data-series="all"><input type="radio" name="log-type" value="all" checked>Todo</label>
+              <label class="series-toggle campaign-chip" data-series="pending"><input type="radio" name="log-type" value="pending">Pendientes</label>
+              <label class="series-toggle campaign-chip" data-series="cambio"><input type="radio" name="log-type" value="cambio">Cambios</label>
+              <label class="series-toggle campaign-chip" data-series="comentario"><input type="radio" name="log-type" value="comentario">Comentarios</label>
+              <label class="series-toggle campaign-chip" data-series="decision"><input type="radio" name="log-type" value="decision">Decisiones</label>
+            </div>
+            <div class="log-actions">
+              <span class="log-count" id="log-count"></span>
+              <button class="table-tool-btn" type="button" id="log-discard" hidden>Descartar borrador</button>
+              <button class="table-tool-btn" type="button" id="log-export">Exportar</button>
+            </div>
+          </div>
+          <div class="log-status" id="log-status"></div>
+          <div id="log-list"></div>
+        </div>
+      </section>
+
       <div class="site-footer"><span id="footer-source">Fuente: Meta Ads / descargas mensuales en Google Drive</span><span id="footer-status">Sincronizado por Agencia Lima Retail</span></div>
     </div>
   </main>
@@ -343,13 +378,14 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/data-source.js?v=1.13.1"></script>
-<script src="js/objectives.js?v=1.13.1"></script>
-<script src="js/messages-calculator.js?v=1.13.1"></script>
-<script src="js/reports-archive.js?v=1.13.1"></script>
-<script src="js/projections.js?v=1.13.1"></script>
-<script src="js/navigation.js?v=1.13.1"></script>
-<script src="js/sidebar.js?v=1.13.1"></script>
+<script src="js/data-source.js?v=1.14.0"></script>
+<script src="js/objectives.js?v=1.14.0"></script>
+<script src="js/messages-calculator.js?v=1.14.0"></script>
+<script src="js/reports-archive.js?v=1.14.0"></script>
+<script src="js/bitacora.js?v=1.14.0"></script>
+<script src="js/projections.js?v=1.14.0"></script>
+<script src="js/navigation.js?v=1.14.0"></script>
+<script src="js/sidebar.js?v=1.14.0"></script>
 <!-- El acceso lo controla el servidor (deploy/.htaccess + HTTP Basic Auth). -->
 </body>
 </html>

@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.13.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.14.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -31,6 +31,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Proyecciones: cierre de mes estimado por objetivo (resultados y gasto) y calculadora de inversion por CPL.
 - Historico de Campanas: campanas finalizadas con su acumulado de todos los meses.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
+- Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 
 Los modulos Comparativo YoY, Distribucion, Productos Web y Usuarios y Claves se muestran
 deshabilitados hasta su futura implementacion.
@@ -90,6 +91,42 @@ con los reportes mensuales y parciales de la carpeta de reportes:
 
 La cobertura de un reporte sale del tramo de su nombre (`1-27Sep2026` = hasta el 27) o, si es mensual, del
 dia anterior a su ultima edicion; si se edito despues del mes, lo cubre completo.
+
+## Bitácora
+
+Checklist por mes de los cambios, comentarios y decisiones de la cuenta. La version publicada es
+`data/tp-bitacora-2026.json` (versionado en el repo; `npm run build` lo incrusta como `window.TP_BITACORA`
+porque `dist/` no lleva `data/`). En desarrollo se lee con `fetch`.
+
+```json
+{
+  "year": 2026,
+  "updatedAt": "2026-09-28",
+  "items": [
+    { "id": "b01", "date": "2026-08-04", "type": "cambio", "platform": "meta", "done": true,
+      "text": "Se activa Campaña pedidos WhatsApp desde el 4 de agosto" }
+  ]
+}
+```
+
+- `date` (`YYYY-MM-DD`) define el mes en que se agrupa el item.
+- `type`: `cambio`, `comentario` o `decision` (otro valor se lee como `comentario`).
+- `platform`: `general`, `meta` o `tiktok` (otro valor se lee como `general`). La lista vive en
+  `js/bitacora.js` (`PLATFORMS`) y en el select del formulario de `index.html`.
+- `done`: casilla marcada (hecho, aplicado o revisado). Los items nuevos usan `id` = `b` + timestamp en base 36.
+
+Flujo editar → exportar → publicar:
+
+1. En la vista Bitácora se agregan, marcan, editan o eliminan items. Cada edicion queda como borrador en
+   `localStorage` (`tp-bitacora-draft`) de ese navegador; "Descartar borrador" vuelve a lo publicado.
+2. **Exportar** descarga `tp-bitacora-2026.json` con `updatedAt` = hoy y los items ordenados por fecha.
+3. Reemplazar `data/tp-bitacora-2026.json` con el archivo descargado, commit y push a `main` (el deploy lo publica).
+
+El borrador guarda el `updatedAt` sobre el que se hizo: al publicar una version nueva, los borradores
+hechos sobre la anterior se ignoran. Sin `localStorage` (modo privado) las ediciones duran hasta recargar
+y Exportar sigue funcionando.
+
+Ojo: mientras el repo sea publico, lo que se publique en la bitácora tambien lo es.
 
 ## Configuracion del Web App (Google Apps Script)
 
