@@ -193,7 +193,8 @@ URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la 
 (`.github/workflows/deploy-pages.yml`); no hay que volver a tocar el DNS ni la configuracion de Pages.
 
 - Pages publica con Actions (sube `dist/`), asi que el dominio propio se configura en **Settings > Pages >
-  Custom domain** y queda guardado en el repo. GitHub ignora cualquier archivo `CNAME` en ese modo: no hace falta.
+  Custom domain** y queda guardado en el repo. Ademas `CNAME` (raiz) lleva el dominio y `build.js` lo copia a
+  `dist/`, igual que en el tablero de Casiopia.
 - DNS en Banahosting (cPanel > Zone Editor > `limaretail.com`): registro **CNAME** `terminalpesquero` ->
   `jorgeluis666.github.io`. La URL vieja `https://jorgeluis666.github.io/objetivos-TP/` redirige (301) al dominio.
 - **Clave:** Pages no tiene Basic Auth, asi que `scripts/build.js` cifra el tablero completo (datos, JS y URL del

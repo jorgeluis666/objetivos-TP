@@ -144,6 +144,8 @@ async function main() {
   if (pagePassword) console.log('[build] dist/index.html cifrado con TP_PAGE_PASSWORD');
 
   copyBrandAssets();
+  // Dominio propio en GitHub Pages; va junto al sitio igual que en el tablero de Casiopia.
+  fs.copyFileSync(path.join(ROOT, 'CNAME'), path.join(DIST_DIR, 'CNAME'));
   writeHtaccess(html);
 
   console.log(`[build] escrito dist/index.html (${(fs.statSync(DIST_HTML).size / 1024).toFixed(1)} KB)`);
