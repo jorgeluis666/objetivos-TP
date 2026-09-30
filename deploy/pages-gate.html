@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!-- Plantilla: scripts/build.js la usa cuando hay TP_PAGE_PASSWORD (GitHub Pages) y rellena el marcador de
+     gate-payload con el tablero cifrado (AES-GCM, llave PBKDF2-SHA256 de la clave). Sin la clave el HTML no revela nada. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Terminal Pesquero | Acceso</title>
+<link rel="icon" href="assets/favicon.png">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100vh; background: #f8fafc; color: #0f172a;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { display: grid; place-items: center; padding: 16px; }
+  .gate { width: 100%; max-width: 360px; padding: 32px 28px; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, .06); text-align: center; }
+  .gate img { max-width: 180px; max-height: 64px; margin-bottom: 18px; }
+  h1 { margin: 0 0 6px; font-size: 18px; }
+  p { margin: 0 0 20px; color: #64748b; font-size: 14px; }
+  input, button { width: 100%; padding: 11px 12px; font: inherit; font-size: 15px; border-radius: 9px; }
+  input { border: 1px solid #e2e8f0; margin-bottom: 12px; }
+  input:focus { outline: 2px solid #26B8CF; outline-offset: 1px; border-color: #26B8CF; }
+  button { border: 0; background: #26B8CF; color: #fff; font-weight: 600; cursor: pointer; }
+  button:hover { background: #1F97AA; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .error { min-height: 20px; margin: 12px 0 0; color: #dc2626; font-size: 13px; }
+</style>
+</head>
+<body>
+<form class="gate" id="gate" autocomplete="off">
+  <img src="assets/logo-terminal-pesquero.png" alt="Terminal Pesquero">
+  <h1>Gasto publicitario 2026</h1>
+  <p>Ingresa la clave para ver el tablero.</p>
+  <input type="password" id="gate-password" aria-label="Clave" placeholder="Clave" required autofocus>
+  <button type="submit" id="gate-submit">Entrar</button>
+  <div class="error" id="gate-error" role="alert"></div>
+</form>
+<script type="application/json" id="gate-payload">__PAYLOAD__</script>
+<script>
+// IIFE: document.open() conserva el mismo window, y un const global chocaria con los scripts del tablero.
+(function () {
+  var payload = JSON.parse(document.getElementById('gate-payload').textContent);
+  var storageKey = 'tp-gate-key-' + payload.salt;
+  var bytes = function (b64) { return Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); };
+  var toB64 = function (arr) { return btoa(String.fromCharCode.apply(null, arr)); };
+
+  function derive(password) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFC')), 'PBKDF2', false, ['deriveBits'])
+      .then(function (base) {
+        return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes(payload.salt), iterations: payload.iterations }, base, 256);
+      })
+      .then(function (bits) { return new Uint8Array(bits); });
+  }
+
+  function show(rawKey) {
+    return crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt'])
+      .then(function (key) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(payload.iv) }, key, bytes(payload.data)); })
+      .then(function (plain) {
+        // La llave (no la clave) queda en sessionStorage para no pedirla en cada recarga de esta pestana.
+        try { sessionStorage.setItem(storageKey, toB64(rawKey)); } catch (e) {}
+        var html = new TextDecoder().decode(plain);
+        document.open();
+        document.write(html);
+        document.close();
+      });
+  }
+
+  var form = document.getElementById('gate');
+  var input = document.getElementById('gate-password');
+  var submit = document.getElementById('gate-submit');
+  var error = document.getElementById('gate-error');
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!window.crypto || !crypto.subtle) { error.textContent = 'Este navegador no puede abrir el tablero.'; return; }
+    submit.disabled = true;
+    error.textContent = '';
+    derive(input.value).then(show).catch(function () {
+      submit.disabled = false;
+      error.textContent = 'Clave incorrecta.';
+      input.select();
+    });
+  });
+
+  // Con la llave de esta sesion se abre solo, pero despues de 'load': si document.open() corre mientras
+  // el parser sigue activo no reemplaza la pagina y el tablero se mezcla con este formulario.
+  var saved = null;
+  try { saved = sessionStorage.getItem(storageKey); } catch (e) {}
+  if (saved) {
+    form.style.visibility = 'hidden';
+    window.addEventListener('load', function () {
+      show(bytes(saved)).catch(function () {
+        try { sessionStorage.removeItem(storageKey); } catch (e) {}
+        form.style.visibility = '';
+      });
+    }, { once: true });
+  }
+})();
+</script>
+</body>
+</html>

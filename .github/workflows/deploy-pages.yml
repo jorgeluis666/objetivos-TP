@@ -1,7 +1,8 @@
 name: Publicar en GitHub Pages
 
-# Pagina publica para validar el tablero: compila con la URL del Web App (secret TP_DATA_ENDPOINT) y
-# publica dist/ en GitHub Pages. No lleva clave: cualquiera con el enlace ve los datos.
+# Publica el tablero en https://terminalpesquero.limaretail.com (dominio configurado en Settings > Pages;
+# con Actions GitHub ignora el archivo CNAME). Compila con la URL del Web App (secret TP_DATA_ENDPOINT) y
+# cifra dist/index.html con el secret TP_PAGE_PASSWORD: sin esa clave el HTML publicado no se puede leer.
 on:
   push:
     branches: [main]
@@ -29,8 +30,11 @@ jobs:
       - name: Build
         env:
           TP_DATA_ENDPOINT: ${{ secrets.TP_DATA_ENDPOINT }}
+          TP_PAGE_PASSWORD: ${{ secrets.TP_PAGE_PASSWORD }}
         run: |
           if [ -z "$TP_DATA_ENDPOINT" ]; then echo "::error::Falta el secret TP_DATA_ENDPOINT"; exit 1; fi
+          # Sin clave no se publica: el tablero quedaria abierto a cualquiera con el enlace.
+          if [ -z "$TP_PAGE_PASSWORD" ]; then echo "::error::Falta el secret TP_PAGE_PASSWORD"; exit 1; fi
           node scripts/build.js
           # .htaccess es para el hosting de Lima Retail; GitHub Pages no lo usa.
           rm -f dist/.htaccess

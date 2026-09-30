@@ -185,6 +185,26 @@ npm run build    # genera dist/ con todo embebido (con TP_DATA_ENDPOINT baja los
 
 El resultado se genera en `dist/`: `index.html` (CSS, JS y la copia de `data/tp-meta-2026.json`
 incrustados), `assets/` y `.htaccess`. Nada mas: `scripts/`, `data/` y el resto del repo nunca se publican.
+Con `TP_PAGE_PASSWORD=<clave> npm run build` el `index.html` sale cifrado, como en GitHub Pages.
+
+## Publicacion en terminalpesquero.limaretail.com (GitHub Pages)
+
+URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la actualiza sola
+(`.github/workflows/deploy-pages.yml`); no hay que volver a tocar el DNS ni la configuracion de Pages.
+
+- Pages publica con Actions (sube `dist/`), asi que el dominio propio se configura en **Settings > Pages >
+  Custom domain** y queda guardado en el repo. GitHub ignora cualquier archivo `CNAME` en ese modo: no hace falta.
+- DNS en Banahosting (cPanel > Zone Editor > `limaretail.com`): registro **CNAME** `terminalpesquero` ->
+  `jorgeluis666.github.io`. La URL vieja `https://jorgeluis666.github.io/objetivos-TP/` redirige (301) al dominio.
+- **Clave:** Pages no tiene Basic Auth, asi que `scripts/build.js` cifra el tablero completo (datos, JS y URL del
+  Web App) con AES-256-GCM y una llave PBKDF2-SHA256 (600 000 iteraciones) derivada del secret
+  **`TP_PAGE_PASSWORD`**. `deploy/pages-gate.html` pide la clave y lo descifra en el navegador; sin ella el HTML
+  publicado no revela nada. Si falta el secret, el workflow falla en vez de publicar el tablero sin clave.
+- Es una sola clave compartida. Como el HTML cifrado es publico, se puede atacar sin limite de intentos: usar
+  una clave larga y aleatoria (16+ caracteres). Para cambiarla: editar el secret `TP_PAGE_PASSWORD` y volver a
+  ejecutar el workflow (Actions > Publicar en GitHub Pages > Run workflow).
+- Tras entrar, la llave queda en `sessionStorage` de esa pestana para no pedir la clave al recargar; cada deploy
+  genera una sal nueva, asi que despues de publicar se vuelve a pedir.
 
 ## Publicacion en el hosting de Lima Retail
 

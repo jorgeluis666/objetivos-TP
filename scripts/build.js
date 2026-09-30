@@ -61,7 +61,29 @@ function copyBrandAssets() {
   }
 }
 
-const DATA_ENDPOINT_RE = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
+// GitHub Pages no tiene Basic Auth: con TP_PAGE_PASSWORD el tablero se cifra (AES-256-GCM, llave
+// PBKDF2-SHA256) dentro de deploy/pages-gate.html, que lo descifra en el navegador con la clave.
+// La salida es compatible con WebCrypto: el tag de GCM va pegado al final del texto cifrado.
+const PBKDF2_ITERATIONS = 600000;
+
+function encryptPage(html, password) {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.pbkdf2Sync(password.normalize('NFC'), salt, PBKDF2_ITERATIONS, 32, 'sha256');
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([cipher.update(html, 'utf8'), cipher.final(), cipher.getAuthTag()]);
+  const payload = JSON.stringify({
+    iterations: PBKDF2_ITERATIONS,
+    salt: salt.toString('base64'),
+    iv: iv.toString('base64'),
+    data: data.toString('base64'),
+  });
+  const template = readFile('deploy/pages-gate.html');
+  if (template.split('__PAYLOAD__').length !== 2) throw new Error('deploy/pages-gate.html debe contener __PAYLOAD__ exactamente una vez');
+  return template.replace('__PAYLOAD__', () => payload).replace(/\r\n?/g, '\n');
+}
+
+const DATA_ENDPOINT_RE =/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
 const SNAPSHOT_FILE = path.join(ROOT, 'data', 'tp-meta-2026.json');
 
 // El repo es publico: la URL del Web App (secret TP_DATA_ENDPOINT) y los datos del cliente solo viven en
@@ -117,7 +139,9 @@ async function main() {
 
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(DIST_DIR, { recursive: true });
-  fs.writeFileSync(DIST_HTML, html, 'utf8');
+  const pagePassword = process.env.TP_PAGE_PASSWORD || '';
+  fs.writeFileSync(DIST_HTML, pagePassword ? encryptPage(html, pagePassword) : html, 'utf8');
+  if (pagePassword) console.log('[build] dist/index.html cifrado con TP_PAGE_PASSWORD');
 
   copyBrandAssets();
   writeHtaccess(html);
