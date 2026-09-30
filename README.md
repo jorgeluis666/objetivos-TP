@@ -200,6 +200,8 @@ URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la 
   Web App) con AES-256-GCM y una llave PBKDF2-SHA256 (600 000 iteraciones) derivada del secret
   **`TP_PAGE_PASSWORD`**. `deploy/pages-gate.html` pide la clave y lo descifra en el navegador; sin ella el HTML
   publicado no revela nada. Si falta el secret, el workflow falla en vez de publicar el tablero sin clave.
+  La pantalla usa el mismo diseno que el acceso de los demas tableros de la agencia (`auth-login.js` de
+  Rekluta, fondo `assets/login-bg.jpg`), pero a diferencia de ese la clave no esta escrita en el codigo.
 - Es una sola clave compartida. Como el HTML cifrado es publico, se puede atacar sin limite de intentos: usar
   una clave larga y aleatoria (16+ caracteres). Para cambiarla: editar el secret `TP_PAGE_PASSWORD` y volver a
   ejecutar el workflow (Actions > Publicar en GitHub Pages > Run workflow).
