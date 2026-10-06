@@ -5,7 +5,7 @@
       title: 'Gasto publicitario 2026',
       caption: 'Agencia Lima Retail',
       source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
-      footer: 'Barrido automatico lunes, miercoles y viernes',
+      footer: 'Barrido automatico todos los dias a las 10:00',
     },
     'view-messages': {
       title: 'Proyecciones',

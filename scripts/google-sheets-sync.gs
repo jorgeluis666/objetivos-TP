@@ -6,7 +6,7 @@
 const DATA_FOLDER_ID = '1EVeILJ9UBCMpbe5DUyiyoSOSsJ8woLx7';
 const REPORTS_FOLDER_ID = '19IDo_fygI4JRfHvs665wGmAZ7egbDeiO';
 const TIMEZONE = 'America/Lima';
-const SWEEP_HOUR = 8;
+const SWEEP_HOUR = 10;
 const SWEEP_HANDLER = 'sweepScheduled';
 const SNAPSHOT_PROPERTY = 'SNAPSHOT_FILE_ID';
 const SNAPSHOT_NAME = 'Terminal Pesquero - barrido del tablero.json';
@@ -50,7 +50,7 @@ function doGet(event) {
   }
 }
 
-// Disparador de lunes, miercoles y viernes.
+// Disparador diario.
 function sweepScheduled() {
   sweep_('automatico');
 }
@@ -60,9 +60,7 @@ function installSweepTriggers() {
   ScriptApp.getProjectTriggers()
     .filter(trigger => trigger.getHandlerFunction() === SWEEP_HANDLER)
     .forEach(trigger => ScriptApp.deleteTrigger(trigger));
-  [ScriptApp.WeekDay.MONDAY, ScriptApp.WeekDay.WEDNESDAY, ScriptApp.WeekDay.FRIDAY].forEach(day => {
-    ScriptApp.newTrigger(SWEEP_HANDLER).timeBased().onWeekDay(day).atHour(SWEEP_HOUR).inTimezone(TIMEZONE).create();
-  });
+  ScriptApp.newTrigger(SWEEP_HANDLER).timeBased().everyDays(1).atHour(SWEEP_HOUR).inTimezone(TIMEZONE).create();
   logSnapshot_(sweep_('instalacion'));
 }
 
@@ -72,7 +70,7 @@ function probarBarrido() {
 }
 
 function logSnapshot_(snapshot) {
-  console.log('Barrido ' + snapshot.origin + ' ' + snapshot.sweptAt + ' | L/M/V ' + SWEEP_HOUR + ':00 (' + TIMEZONE + ')');
+  console.log('Barrido ' + snapshot.origin + ' ' + snapshot.sweptAt + ' | diario ' + SWEEP_HOUR + ':00 (' + TIMEZONE + ')');
   snapshot.months.forEach(month => {
     if (month.error) {
       console.log(month.name + ' ' + month.year + ': ERROR ' + month.error);

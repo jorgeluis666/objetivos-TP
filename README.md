@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.15.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.15.2`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -50,7 +50,7 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   guarda el barrido en un JSON de Drive. `js/data-source.js` (`window.TPData`) lo pide al abrir el
   tablero, cada hora y al volver a la pestana, y lo reparte a todos los modulos con el evento
   `tp:data-updated`.
-- Barrido automatico: lunes, miercoles y viernes entre 8:00 y 9:00 (hora de Lima), aunque nadie abra el
+- Barrido automatico: todos los dias entre 10:00 y 11:00 (hora de Lima), aunque nadie abra el
   tablero. El boton **Actualizar** (en Gasto publicitario, Proyecciones y Archivo de Reportes) hace un
   barrido en el momento.
 - El repo es publico, asi que ni la URL del Web App ni los datos del cliente se guardan en el:
@@ -159,7 +159,7 @@ Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de e
 1. En [script.google.com](https://script.google.com) crear un proyecto independiente (no dentro de un Sheet)
    con la cuenta duena de las dos carpetas, pegar `scripts/google-sheets-sync.gs` y poner la zona horaria del
    proyecto en Lima.
-2. Ejecutar una vez `installSweepTriggers()`: programa el barrido de lunes, miercoles y viernes y hace el
+2. Ejecutar una vez `installSweepTriggers()`: programa el barrido diario de las 10:00 y hace el
    primero. `probarBarrido()` muestra en el registro las filas, el gasto y el rango de fechas de cada mes.
 3. Implementar > Nueva implementacion > Aplicacion web, ejecutar como "Yo" y acceso "Cualquier persona"
    (quien tenga la URL puede leer los numeros de las campanas; la URL solo esta dentro del tablero, que va con clave).

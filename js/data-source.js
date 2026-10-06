@@ -1,7 +1,7 @@
 (function () {
   // Web App de scripts/google-sheets-sync.gs (proyecto independiente en script.google.com). Lee la carpeta de
   // Drive con una descarga de Meta Ads por mes y la carpeta de reportes. ?action=data devuelve el ultimo
-  // barrido (lunes, miercoles y viernes 8:00) y ?action=data&fresh=1 barre en el momento (boton Actualizar).
+  // barrido (todos los dias a las 10:00) y ?action=data&fresh=1 barre en el momento (boton Actualizar).
   // El repo es publico: la URL no se guarda aqui. scripts/build.js la toma del secret TP_DATA_ENDPOINT y la
   // incrusta como window.TP_DATA_ENDPOINT en dist/index.html, que solo se sirve con clave. Nunca se lee de la
   // URL ni de localStorage: un enlace manipulado podria desviar el tablero a otro origen.
@@ -15,10 +15,16 @@
   const POLL_MS = 60 * 60 * 1000;
   const VISIBILITY_REFETCH_MS = 5 * 60 * 1000;
   const TIMEZONE = 'America/Lima';
-  // Lima no tiene horario de verano: 8:00 en Lima son las 13:00 UTC.
+  // Lima no tiene horario de verano: 10:00 en Lima son las 15:00 UTC.
   const LIMA_OFFSET_HOURS = -5;
-  const SWEEP_WEEKDAYS = [1, 3, 5];
-  const SWEEP_HOUR = 8;
+  const SWEEP_HOUR = 10;
+  const SWEEP_ORIGINS = {
+    automatico: 'barrido automatico',
+    manual: 'barrido manual',
+    instalacion: 'barrido de instalacion',
+    prueba: 'barrido de prueba',
+    inicial: 'primera lectura',
+  };
   const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const TEXT_FIELDS = ['day', 'campaign', 'adSet', 'ad', 'objective', 'resultType', 'preview'];
@@ -91,12 +97,12 @@
     }
   }
 
-  // Proximo barrido programado en Apps Script (installSweepTriggers): lunes, miercoles y viernes entre 8:00 y 9:00.
+  // Proximo barrido programado en Apps Script (installSweepTriggers): todos los dias entre 10:00 y 11:00.
   function nextSweep(now = new Date()) {
     const today = limaParts(now);
-    for (let offset = 0; offset <= 7; offset += 1) {
+    for (let offset = 0; offset <= 1; offset += 1) {
       const slot = new Date(Date.UTC(today.year, today.month, today.day + offset, SWEEP_HOUR - LIMA_OFFSET_HOURS, 0));
-      if (slot > now && SWEEP_WEEKDAYS.includes(limaParts(slot).weekday)) return slot;
+      if (slot > now) return slot;
     }
     return null;
   }
@@ -502,7 +508,9 @@
     const dataPart = month && month.lastDay ? `Datos al ${month.lastDay} de ${month.name.toLowerCase()}` : 'Sin datos';
     if (state.error) return `${dataPart} | sin conexion con Google`;
     if (data.source === 'local') return `${dataPart} | copia guardada`;
-    return data.sweptAt ? `${dataPart} | barrido ${formatStamp(data.sweptAt)}` : dataPart;
+    if (!data.sweptAt) return dataPart;
+    // El origen deja ver de un vistazo si el ultimo barrido fue el automatico o el boton Actualizar.
+    return `${dataPart} | ${SWEEP_ORIGINS[data.origin] || 'barrido'} ${formatStamp(data.sweptAt)}`;
   }
 
   function updateStatusLabel(text) {

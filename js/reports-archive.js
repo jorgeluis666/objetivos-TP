@@ -276,7 +276,7 @@
     const next = tp.nextSweep();
     const parts = [
       `<span><b>Ultimo barrido:</b> ${snapshot.sweptAt ? `${esc(tp.formatStamp(snapshot.sweptAt))}${ORIGINS[snapshot.origin] ? ` (${ORIGINS[snapshot.origin]})` : ''}` : 'sin registro'}</span>`,
-      `<span><b>Proximo barrido automatico:</b> ${next ? `${esc(tp.formatStamp(next))} (lunes, miercoles y viernes entre 8:00 y 9:00)` : '-'}</span>`,
+      `<span><b>Proximo barrido automatico:</b> ${next ? `${esc(tp.formatStamp(next))} (todos los dias entre 10:00 y 11:00)` : '-'}</span>`,
       `<span><b>Fuente:</b> ${snapshot.source === 'live' ? 'Google Drive en vivo' : 'copia guardada en el tablero'}</span>`,
     ];
     if (status.error) parts.push(`<span class="sync-error"><b>Sin conexion con Google:</b> ${esc(status.error)}. Se muestran los ultimos datos leidos.</span>`);
