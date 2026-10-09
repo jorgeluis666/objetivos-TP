@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.16.2">
+<link rel="stylesheet" href="css/dashboard.css?v=1.16.3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.16.2</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.16.3</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -348,7 +348,7 @@
       </section>
       <section class="view" id="view-users">
         <h1 class="section-title">Usuarios y Claves</h1>
-        <p class="section-desc">Directorio de las cuentas con acceso al tablero. Las claves las valida el servidor y nunca se guardan aquí: esta lista solo registra quién tiene acceso. Se edita como borrador en este navegador hasta exportar el archivo para publicarlo.</p>
+        <p class="section-desc">Directorio de quién tiene acceso al tablero. El tablero se abre con una sola clave compartida que nunca se guarda aquí: esta lista solo registra a quién se le entregó. Se edita como borrador en este navegador hasta exportar el archivo para publicarlo.</p>
         <div class="panel log-panel">
           <form class="log-form users-form" id="users-form" autocomplete="off">
             <input class="log-text" type="text" name="name" placeholder="Nombre de la persona" aria-label="Nombre">
@@ -372,12 +372,12 @@
           <div id="users-list"></div>
         </div>
         <div class="panel users-guide">
-          <div class="panel-title">Cómo dar acceso o cambiar una clave</div>
+          <div class="panel-title">Cómo dar acceso o cambiar la clave</div>
           <ol>
-            <li>Agrega a la persona en esta lista, exporta el archivo y publícalo.</li>
-            <li>En cPanel &gt; <b>Privacidad de directorios</b> &gt; carpeta del tablero, crea el usuario con el mismo nombre de acceso y una clave larga y aleatoria. Ahí mismo se cambia la clave de una cuenta existente.</li>
-            <li>Para quitar el acceso, elimina el usuario en esa misma pantalla y marca a la persona como Suspendida.</li>
-            <li>Comparte la clave por un canal privado, nunca en el mismo mensaje que el enlace.</li>
+            <li><b>Dar acceso:</b> agrega a la persona en esta lista, exporta el archivo y publícalo. Después compártele la clave por un canal privado, nunca en el mismo mensaje que el enlace.</li>
+            <li>La clave es <b>una sola para todos</b> y vive en el secret <b>TP_PAGE_PASSWORD</b> de GitHub: no está en esta lista ni en el HTML publicado.</li>
+            <li><b>Cambiarla:</b> GitHub &gt; Settings &gt; Secrets and variables &gt; Actions &gt; editar <b>TP_PAGE_PASSWORD</b> (larga y aleatoria, 16 caracteres o más) y luego Actions &gt; "Publicar en GitHub Pages" &gt; Run workflow.</li>
+            <li><b>Quitar acceso:</b> marca a la persona como Suspendida y cambia la clave, porque es compartida; luego pásale la nueva al resto.</li>
           </ol>
         </div>
       </section>
@@ -403,14 +403,14 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/data-source.js?v=1.16.2"></script>
-<script src="js/objectives.js?v=1.16.2"></script>
-<script src="js/messages-calculator.js?v=1.16.2"></script>
-<script src="js/reports-archive.js?v=1.16.2"></script>
-<script src="js/bitacora.js?v=1.16.2"></script>
-<script src="js/usuarios.js?v=1.16.2"></script>
-<script src="js/projections.js?v=1.16.2"></script>
-<script src="js/navigation.js?v=1.16.2"></script>
-<script src="js/sidebar.js?v=1.16.2"></script>
+<script src="js/data-source.js?v=1.16.3"></script>
+<script src="js/objectives.js?v=1.16.3"></script>
+<script src="js/messages-calculator.js?v=1.16.3"></script>
+<script src="js/reports-archive.js?v=1.16.3"></script>
+<script src="js/bitacora.js?v=1.16.3"></script>
+<script src="js/usuarios.js?v=1.16.3"></script>
+<script src="js/projections.js?v=1.16.3"></script>
+<script src="js/navigation.js?v=1.16.3"></script>
+<script src="js/sidebar.js?v=1.16.3"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.16.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.16.3`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -152,7 +152,8 @@ fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el
 - `status`: `activo` o `suspendido`. `user` se guarda en minusculas y sin espacios ni `:`.
 - Se edita igual que la Bitácora: borrador en `localStorage` (`tp-usuarios-draft`), **Exportar** descarga
   `tp-usuarios-2026.json`, se reemplaza el archivo en `data/`, commit y push a `main`.
-- Dar o quitar acceso de verdad se hace en cPanel > Privacidad de directorios; la vista muestra los pasos.
+- La clave es una sola para todos (secret `TP_PAGE_PASSWORD`): dar acceso es entregarla, y quitarselo a
+  alguien obliga a cambiarla y repartir la nueva. La vista muestra los pasos.
 
 Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de este directorio tambien lo son.
 
