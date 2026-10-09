@@ -541,11 +541,75 @@
     return `${day} ${data().SHORT_MONTHS[month - 1]}${withYear ? ` ${year}` : ''}`;
   }
 
+  function periodLabel(first, last) {
+    if (first === last) return shortDate(first);
+    return `${shortDate(first, first.slice(0, 4) !== last.slice(0, 4))} - ${shortDate(last)}`;
+  }
+
+  // Resumen de todas las campanas que trae el barrido de Drive, activas y finalizadas: una columna por
+  // descarga mensual de Meta con el gasto de la campana en ese archivo.
+  function renderHistorySummary(snapshot, all) {
+    const head = document.getElementById('history-summary-head');
+    const body = document.getElementById('history-summary-body');
+    const sub = document.getElementById('history-summary-sub');
+    if (!head || !body) return;
+    const months = snapshot.months.filter(month => month.hasData);
+    head.innerHTML = `<tr><th>Campaña</th><th>Objetivo</th><th>Estado</th>${months.map(month => {
+      const partial = !month.complete && !month.past;
+      return `<th class="num" title="${esc(month.fileName || `${month.name} ${month.year}`)}">${month.shortName}${partial ? ` (al ${month.lastDay})` : ''}</th>`;
+    }).join('')}<th class="num">Gasto total</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Anuncios</th><th>Periodo</th></tr>`;
+    const span = 8 + months.length;
+    if (!all.length) {
+      if (sub) sub.textContent = 'Las descargas de Meta en Drive no tienen campanas con gasto o impresiones.';
+      body.innerHTML = `<tr><td colspan="${span}" class="table-empty">Sin campanas en las descargas cargadas.</td></tr>`;
+      return;
+    }
+    const active = all.filter(item => !item.finished).length;
+    const range = months.length > 1 ? `${months[0].name} a ${months[months.length - 1].name}` : months[0].name;
+    if (sub) {
+      sub.textContent = `${all.length} campanas en ${months.length} ${months.length === 1 ? 'descarga' : 'descargas'} de Meta (${range} ${snapshot.year}): ${active} ${active === 1 ? 'activa' : 'activas'} y ${all.length - active} ${all.length - active === 1 ? 'finalizada' : 'finalizadas'}. Cada mes es el gasto de su archivo en Drive.`;
+    }
+    const spendIn = (rows, key) => rows.reduce((sum, row) => (row.day.startsWith(key) ? sum + row.spend : sum), 0);
+    const allRows = all.flatMap(item => item.rows);
+    const total = data().metrics.summarize(allRows);
+    const first = all.reduce((min, item) => (item.first < min ? item.first : min), all[0].first);
+    const last = all.reduce((max, item) => (item.last > max ? item.last : max), all[0].last);
+    body.innerHTML = all.map(item => `
+      <tr>
+        <td class="campaign-name">${esc(item.name)}</td>
+        <td><span class="objective-label" style="--campaign-color:${item.color}"><i class="campaign-dot"></i>${esc(item.groupLabel)}</span></td>
+        <td>${item.finished ? '<span class="type-pill slate">Finalizada</span>' : '<span class="type-pill green">Activa</span>'}</td>
+        ${months.map(month => `<td class="num">${item.months.includes(month.key) ? fmt('money', spendIn(item.rows, month.key)) : '<span class="no-data">-</span>'}</td>`).join('')}
+        <td class="num"><b>${fmt('money', item.spend)}</b></td>
+        <td class="num history-results"><b>${fmt('count', item.results)}</b><small>${esc(item.resultLabel)}</small></td>
+        <td class="num">${fmt('unitCost', item.costPerResult)}</td>
+        <td class="num">${fmt('count', item.ads.length)}</td>
+        <td class="date-col">${periodLabel(item.first, item.last)}</td>
+      </tr>`).join('') + `
+      <tr class="total-row">
+        <td class="campaign-name">Total de las descargas</td>
+        <td></td><td></td>
+        ${months.map(month => `<td class="num">${fmt('money', spendIn(allRows, month.key))}</td>`).join('')}
+        <td class="num">${fmt('money', total.spend)}</td>
+        <td class="num"><span class="no-data" title="Cada objetivo mide su propio resultado">No se suman</span></td>
+        <td></td><td></td>
+        <td class="date-col">${periodLabel(first, last)}</td>
+      </tr>`;
+  }
+
+  function historyAdChip(ad) {
+    const url = data().safeUrl(ad.preview);
+    return url
+      ? `<a class="history-ad-link" href="${url}" target="_blank" rel="noopener noreferrer">${esc(ad.ad)}</a>`
+      : `<span class="history-ad-muted">${esc(ad.ad)}</span>`;
+  }
+
   function renderHistory() {
     const body = document.getElementById('history-body');
     const snapshot = data()?.snapshot();
     if (!body || !snapshot) return;
     const all = campaignHistory(snapshot);
+    renderHistorySummary(snapshot, all);
     const rows = all.filter(item => item.finished);
     const active = all.filter(item => !item.finished);
     const totals = data().metrics.summarize(rows.flatMap(item => item.rows));
@@ -575,12 +639,10 @@
         <td class="num">${fmt('money', item.spend)}</td>
         <td class="num">${fmt('count', item.impressions)}</td>
         <td class="num">${fmt('count', item.reach)}</td>
-        <td>${item.ads.map(ad => {
-          const url = data().safeUrl(ad.preview);
-          return url
-            ? `<a class="history-ad-link" href="${url}" target="_blank" rel="noopener noreferrer">${esc(ad.ad)}</a>`
-            : `<span class="history-ad-muted">${esc(ad.ad)}</span>`;
-        }).join('')}</td>
+        <td>${item.ads.length > 2
+          // Con muchos anuncios la lista se pliega: abierta estiraba la fila una linea por anuncio.
+          ? `<details class="history-ads"><summary>${item.ads.length} anuncios</summary><div class="history-ads-list">${item.ads.map(historyAdChip).join('')}</div></details>`
+          : item.ads.map(historyAdChip).join('')}</td>
         <td class="date-col">${shortDate(item.first)}</td>
         <td class="date-col">${shortDate(item.last)}</td>
         <td class="date-col">${item.months.map(key => data().monthByKey(key)?.shortName || key).join(', ')}</td>
@@ -690,7 +752,7 @@
       if (title) title.textContent = 'Sin datos de Meta';
       const sub = document.getElementById('period-sub');
       if (sub) sub.textContent = message;
-      [['distribution-body', 13], ['campaigns-body', 15], ['history-body', 12]].forEach(([id, span]) => {
+      [['distribution-body', 13], ['campaigns-body', 15], ['history-summary-body', 8], ['history-body', 12]].forEach(([id, span]) => {
         const body = document.getElementById(id);
         if (body) body.innerHTML = `<tr><td class="table-empty" colspan="${span}">${esc(message)}</td></tr>`;
       });

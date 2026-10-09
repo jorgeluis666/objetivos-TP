@@ -569,12 +569,72 @@ select {
   margin-top: 20px;
 }
 
+.history-summary-panel,
 .history-panel {
   margin-top: 18px;
 }
 
 .history-table {
   min-width: 980px;
+}
+
+.history-summary-table {
+  min-width: 1080px;
+}
+
+.history-summary-table :is(th, td) {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+/* Una columna por mes con descarga: hacia fin de año la tabla se desplaza y el nombre queda anclado. */
+.history-summary-table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: inset -1px 0 0 var(--border);
+}
+
+.history-summary-table thead th:first-child,
+.history-summary-table .total-row td:first-child {
+  background: #f8fafc;
+}
+
+@media(max-width:760px) {
+  .history-summary-table :is(th, td):first-child {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+.history-results b {
+  display: block;
+  color: var(--ink);
+}
+
+.history-results small {
+  display: block;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.history-ads summary {
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Ancho fijo al abrir: sin el, la columna no crece y queda un anuncio por linea. */
+.history-ads-list {
+  display: flex;
+  flex-wrap: wrap;
+  width: 360px;
+  margin-top: 6px;
 }
 
 .history-ad-link,
