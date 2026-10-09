@@ -328,6 +328,31 @@
       .sort((a, b) => b.spend - a.spend);
   }
 
+  // Conjuntos de anuncios. Como los anuncios, un conjunto es su nombre dentro de un objetivo: asi se compara con
+  // el mes anterior aunque la campana cambie de nombre ("LR" -> "LR - Gasto total"). share es sobre las filas dadas.
+  function adSets(rows) {
+    const totalSpend = rows.reduce((sum, row) => sum + row.spend, 0);
+    return [...groupRows(rows, row => `${row.group}|${normalize(row.adSet)}`).entries()]
+      .map(([key, items]) => {
+        const totals = summarize(items);
+        const resultType = dominantType(items);
+        const activeRows = items.filter(row => row.spend > 0 || row.impressions > 0);
+        return {
+          key,
+          group: items[0].group,
+          name: items[0].adSet,
+          campaigns: [...new Set(items.map(row => row.campaign).filter(Boolean))],
+          adCount: new Set(activeRows.map(row => normalize(row.ad))).size,
+          active: activeRows.length > 0,
+          resultType,
+          resultLabel: resultLabel(resultType),
+          share: totalSpend > 0 ? (totals.spend / totalSpend) * 100 : 0,
+          ...totals,
+        };
+      })
+      .sort((a, b) => b.spend - a.spend);
+  }
+
   // Como en el ranking del reporte, un anuncio es su nombre dentro de un objetivo: si la misma pieza corre en
   // varios conjuntos (Remarketing, Nuevo publico) se suma, y asi se puede comparar con el mes anterior.
   function ads(rows) {
@@ -639,7 +664,7 @@
     nextSweep,
     formatStamp,
     limaParts,
-    metrics: { summarize, objectives, campaigns, ads, rowsBetween, dailyValues, cumulative, period, yearPeriod, change, resultLabel, dayLabel, rangeLabel },
+    metrics: { summarize, objectives, campaigns, adSets, ads,rowsBetween, dailyValues, cumulative, period, yearPeriod, change, resultLabel, dayLabel, rangeLabel },
     fmt,
     esc,
     safeUrl,

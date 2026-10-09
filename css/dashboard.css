@@ -2143,8 +2143,8 @@ p.delta {
   gap: 10px;
 }
 
-/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. Es un boton que elige
-   el objetivo del grafico de abajo; la elegida lleva borde de 1px en su color y un fondo apenas tenido. */
+/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. Es un boton que lleva al
+   cuadro de su campana. */
 .objective-card {
   display: block;
   width: 100%;
@@ -2161,11 +2161,6 @@ p.delta {
 
 .objective-card:hover {
   border-color: #94a3b8;
-}
-
-.objective-card.active {
-  border-color: var(--campaign-color);
-  background: color-mix(in srgb, var(--campaign-color) 4%, #fff);
 }
 
 .objective-card:focus-visible {
@@ -2213,7 +2208,7 @@ p.delta {
   font-size: 10px;
 }
 
-/* Grafico de los principales KPIs dentro del panel de objetivos, separado de las tarjetas por una linea. */
+/* Grafico total de la cuenta dentro del panel de objetivos, separado de las tarjetas por una linea. */
 .objective-chart {
   margin-top: 16px;
   padding: 16px 0 0;
@@ -2226,7 +2221,6 @@ p.delta {
 
 /* Minimizado queda solo el titulo con el boton para abrirlo. */
 .chart-panel.is-collapsed .chart-metrics,
-.chart-panel.is-collapsed .chart-kpis,
 .chart-panel.is-collapsed #chart-modes {
   display: none;
 }
@@ -2242,20 +2236,17 @@ p.delta {
   transition: transform .15s ease;
 }
 
-.chart-panel.is-collapsed .chart-toggle svg {
+.chart-panel.is-collapsed .chart-toggle svg,
+.campaign-block.is-collapsed .chart-toggle svg {
   transform: rotate(180deg);
 }
 
-/* KPIs del objetivo graficado: los que antes iban en su tarjeta. */
+/* KPIs de cada cuadro de campana, con su variacion contra el mes anterior al lado del valor. */
 .chart-kpis {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 28px;
-  margin: 0 0 14px;
-}
-
-.chart-kpis[hidden] {
-  display: none;
+  gap: 10px 32px;
+  margin: 0 0 16px;
 }
 
 .chart-kpis dt {
@@ -2267,10 +2258,107 @@ p.delta {
 }
 
 .chart-kpis dd {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   color: var(--ink);
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.chart-kpis dd .delta {
+  margin-left: 6px;
+  font-size: 10px;
   font-weight: 700;
+}
+
+/* ===== Cuadro de cada campana ===== */
+/* minmax(0, 1fr): sin el, la tabla de conjuntos (min-width) ensancharia la columna y la pagina. */
+.campaign-blocks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.campaign-blocks:empty {
+  display: none;
+}
+
+.campaign-block {
+  scroll-margin-top: 16px;
+}
+
+.campaign-block-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.campaign-block-title .campaign-dot {
+  margin-right: -4px;
+}
+
+.campaign-block-title em {
+  color: #94a3b8;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Minimizado quedan el titulo y los KPIs; se ocultan grafico, conjuntos y la vista del grafico. */
+.campaign-block.is-collapsed .campaign-block-body,
+.campaign-block.is-collapsed [data-campaign-modes] {
+  display: none;
+}
+
+.campaign-block.is-collapsed .chart-kpis {
+  margin-bottom: 0;
+}
+
+.h-300 {
+  height: 300px;
+}
+
+.adset-head {
+  margin: 18px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.adset-table {
+  min-width: 760px;
+}
+
+/* Encabezados en dos lineas para que la tabla entre en el cuadro sin desplazarse en pantallas comunes. */
+.adset-table th,
+.adset-table th.num {
+  white-space: normal;
+  vertical-align: bottom;
+}
+
+.adset-table th,
+.adset-table td {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.adset-table .campaign-name {
+  min-width: 120px;
+}
+
+.adset-table .campaign-name small {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.adset-table .share-bar {
+  width: 44px;
 }
 
 .reoriented {
@@ -2303,7 +2391,8 @@ p.delta {
   margin: -4px 0 14px;
 }
 
-.chart-panel .chart-controls {
+.chart-panel .chart-controls,
+.campaign-block .chart-controls {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
