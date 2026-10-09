@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.16.3`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.16.4`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -149,7 +149,8 @@ fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el
 ```
 
 - `role`: `cliente`, `equipo` o `admin` (otro valor se lee como `cliente`).
-- `status`: `activo` o `suspendido`. `user` se guarda en minusculas y sin espacios ni `:`.
+- `status`: `activo` o `suspendido`. `user` es el usuario o correo con que se identifica a la persona
+  (no es una cuenta del servidor) y se guarda en minusculas y sin espacios ni `:`.
 - Se edita igual que la Bitácora: borrador en `localStorage` (`tp-usuarios-draft`), **Exportar** descarga
   `tp-usuarios-2026.json`, se reemplaza el archivo en `data/`, commit y push a `main`.
 - La clave es una sola para todos (secret `TP_PAGE_PASSWORD`): dar acceso es entregarla, y quitarselo a

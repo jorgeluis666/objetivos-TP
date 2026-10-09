@@ -17,7 +17,7 @@
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const newId = () => `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
-  // Nombre de acceso normalizado: sin espacios ni ':'.
+  // Identificador de la persona (usuario o correo), normalizado: sin espacios ni ':'.
   const cleanLogin = value => String(value || '').trim().toLowerCase().replace(/[\s:]+/g, '');
 
   function clean(user) {
@@ -82,7 +82,7 @@
   function renderUser(user) {
     return `<li class="users-item${user.status === 'suspendido' ? ' done' : ''}" data-id="${esc(user.id)}">
       <input class="log-text" type="text" data-field="name" value="${esc(user.name)}" placeholder="Nombre" aria-label="Nombre">
-      <input class="log-text users-login" type="text" data-field="user" value="${esc(user.user)}" placeholder="usuario" aria-label="Usuario de acceso" autocapitalize="none" spellcheck="false">
+      <input class="log-text users-login" type="text" data-field="user" value="${esc(user.user)}" placeholder="usuario o correo" aria-label="Usuario o correo" autocapitalize="none" spellcheck="false">
       <select class="log-tag users-role ${esc(user.role)}" data-field="role" aria-label="Rol">${options(ROLES, user.role)}</select>
       <input class="log-date" type="date" data-field="since" value="${esc(user.since)}" aria-label="Fecha de alta" title="Fecha de alta">
       <select class="log-tag users-state ${esc(user.status)}" data-field="status" aria-label="Estado">${options(STATUSES, user.status)}</select>
@@ -108,7 +108,7 @@
       .filter(user => state.status === 'all' || user.status === state.status)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
     list.innerHTML = visible.length
-      ? `<div class="users-head" aria-hidden="true"><span>Nombre</span><span>Usuario</span><span>Rol</span><span>Alta</span><span>Estado</span><span></span></div>
+      ? `<div class="users-head" aria-hidden="true"><span>Nombre</span><span>Usuario o correo</span><span>Rol</span><span>Alta</span><span>Estado</span><span></span></div>
         <ul class="log-items">${visible.map(renderUser).join('')}</ul>`
       : `<div class="log-none">${state.users.length ? 'No hay usuarios con este filtro.' : 'Todavía no hay usuarios registrados.'}</div>`;
     const active = state.users.filter(user => user.status === 'activo').length;
@@ -140,7 +140,7 @@
       if (!name) { form.elements.name.focus(); return; }
       if (!login) { form.elements.user.focus(); return; }
       if (state.users.some(user => user.user === login)) {
-        window.alert(`El usuario "${login}" ya está en la lista.`);
+        window.alert(`"${login}" ya está en la lista.`);
         form.elements.user.focus();
         return;
       }
