@@ -208,19 +208,17 @@
         const arrow = direction === 'good' ? '&#9650;' : direction === 'bad' ? '&#9660;' : '&#9679;';
         comparison = `<p class="delta ${direction}">${arrow} ${change == null ? '-' : fmt('pct', Math.abs(change))} | ${esc(period.compare.month.shortName)}: ${fmt('count', before.results)}</p>`;
       }
+      // Solo los datos de la campana: inversion, costo por resultado, alcance y CPM del objetivo elegido van en
+      // el grafico de abajo, que se cambia pulsando la tarjeta.
+      const metricKey = `obj:${objective.key}`;
+      const selected = state.metric === metricKey;
       return `
-        <article class="objective-card" style="--campaign-color:${objective.color}">
+        <button type="button" class="objective-card${selected ? ' active' : ''}" data-metric="${esc(metricKey)}" aria-pressed="${selected}" style="--campaign-color:${objective.color}" title="Ver ${esc(objective.label)} en el grafico">
           <header><span><i class="campaign-dot"></i>${esc(objective.label)}</span><em>${fmt('pct', objective.share)} de la inversion</em></header>
           <strong>${fmt('count', objective.results)}</strong>
           <small>${esc(objective.resultLabel)}</small>
-          <dl>
-            <div><dt>Inversion</dt><dd>${fmt('money', objective.spend)}</dd></div>
-            <div><dt>Costo por resultado</dt><dd>${fmt('unitCost', objective.costPerResult)}</dd></div>
-            <div><dt>Alcance</dt><dd>${fmt('count', objective.reach)}</dd></div>
-            <div><dt>CPM</dt><dd>${fmt('money', objective.cpm)}</dd></div>
-          </dl>
           ${comparison}
-        </article>`;
+        </button>`;
     }).join('') || '<div class="empty-state"><strong>Sin resultados</strong>No hay campanas con gasto en el periodo.</div>';
 
     // Campanas del mes anterior que ya no corren en este tramo (lamina "Reorientadas" del reporte).
@@ -276,13 +274,28 @@
     }
   }
 
+  // KPIs del objetivo graficado en el periodo elegido (los que antes iban en su tarjeta).
+  function renderChartKpis(metric) {
+    const host = document.getElementById('chart-kpis');
+    if (!host) return;
+    const period = metric?.group ? currentPeriod() : null;
+    const objective = period && data().metrics.objectives(period.rows).find(item => item.key === metric.group);
+    host.hidden = !objective;
+    host.innerHTML = objective ? [
+      ['Periodo', period.label],
+      ['Inversion', fmt('money', objective.spend)],
+      ['Costo por resultado', fmt('unitCost', objective.costPerResult)],
+      ['Alcance', fmt('count', objective.reach)],
+      ['CPM', fmt('money', objective.cpm)],
+    ].map(([label, value]) => `<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('') : '';
+  }
+
   function renderChart() {
     const month = selectedMonth();
     const panel = document.getElementById('chart-panel');
     const toggle = document.getElementById('chart-toggle-btn');
     panel?.classList.toggle('is-collapsed', state.chartCollapsed);
     if (toggle) {
-      toggle.textContent = state.chartCollapsed ? '+' : '-';
       toggle.setAttribute('aria-expanded', String(!state.chartCollapsed));
       toggle.setAttribute('title', state.chartCollapsed ? 'Expandir grafico' : 'Minimizar grafico');
     }
@@ -294,6 +307,12 @@
     const modes = annual ? MODES.filter(item => item.key === 'monthly') : MODES;
     const mode = annual ? modes[0] : MODES.find(item => item.key === state.mode);
     renderChartControls(metrics, modes, mode.key);
+    // La tarjeta del objetivo graficado queda marcada (tambien cuando se elige con los chips).
+    document.querySelectorAll('#objective-cards .objective-card').forEach(card => {
+      const selected = card.dataset.metric === state.metric;
+      card.classList.toggle('active', selected);
+      card.setAttribute('aria-pressed', String(selected));
+    });
     const metric = metrics.find(item => item.key === state.metric);
     const title = document.getElementById('chart-title');
     const sub = document.getElementById('chart-sub');
@@ -337,6 +356,7 @@
         : 'Valor de cada dia del mes elegido frente al mes anterior.';
     }
     if (legend) legend.innerHTML = legendItems.join('');
+    renderChartKpis(metric);
     if (state.chartCollapsed) return;
 
     const canvas = document.getElementById('chart-monthly');
@@ -805,6 +825,19 @@
       if (!input) return;
       state.metric = input.value;
       saveSetting(CHART_METRIC_KEY, state.metric);
+      renderChart();
+    });
+    // Pulsar una tarjeta de objetivo grafica su resultado; pulsarla de nuevo vuelve a la inversion.
+    document.getElementById('objective-cards')?.addEventListener('click', event => {
+      const card = event.target.closest('.objective-card[data-metric]');
+      if (!card) return;
+      state.metric = state.metric === card.dataset.metric ? 'spend' : card.dataset.metric;
+      saveSetting(CHART_METRIC_KEY, state.metric);
+      // Con el grafico minimizado, elegir un objetivo lo vuelve a abrir.
+      if (state.chartCollapsed) {
+        state.chartCollapsed = false;
+        saveSetting(CHART_COLLAPSED_KEY, false);
+      }
       renderChart();
     });
     document.getElementById('chart-modes')?.addEventListener('change', event => {

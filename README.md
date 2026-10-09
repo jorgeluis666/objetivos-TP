@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.21.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.22.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -23,11 +23,13 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Resumen ejecutivo: el periodo y debajo inversion, impresiones, alcance, frecuencia y CPM en una sola
     tarjeta, con la variacion contra el mismo tramo del mes anterior (por ejemplo 1-28 Sep vs 1-28 Ago;
     un mes cerrado se compara completo).
-  - Resultados por objetivo (Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...), cada uno con su
-    propio resultado, costo por resultado, alcance, CPM y variacion. Debajo, las campanas del mes
-    anterior que ya no tienen gasto (reorientadas).
-  - Grafico lineal: inversion, impresiones, alcance o los resultados de un objetivo; acumulado del mes,
-    por dia (contra el mes anterior en el mismo dia) o por mes.
+  - Resultados por objetivo (Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): una tarjeta por
+    objetivo con su resultado, su parte de la inversion y la variacion. Debajo, en el mismo panel, el
+    grafico de los principales KPIs: inversion, impresiones, alcance o los resultados de un objetivo
+    (pulsar su tarjeta lo grafica y muestra su inversion, costo por resultado, alcance y CPM); acumulado
+    del mes, por dia (contra el mes anterior en el mismo dia) o por mes. El boton de la derecha lo
+    minimiza y el estado se recuerda. Al final, las campanas del mes anterior que ya no tienen gasto
+    (reorientadas).
   - Distribucion de inversion por campana y ranking de anuncios por objetivo (con el lider marcado,
     resultados del mes anterior y enlace a la vista previa). La tabla de anuncios tiene cabecera fija,
     columnas Objetivo / Anuncio ancladas, filtro por objetivo, pantalla completa (`Esc` para salir) y

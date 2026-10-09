@@ -2143,12 +2143,34 @@ p.delta {
   gap: 10px;
 }
 
-/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. */
+/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. Es un boton que elige
+   el objetivo del grafico de abajo; la elegida lleva borde de 1px en su color y un fondo apenas tenido. */
 .objective-card {
+  display: block;
+  width: 100%;
   padding: 14px 15px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  color: inherit;
   background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.objective-card:hover {
+  border-color: #94a3b8;
+}
+
+.objective-card.active {
+  border-color: var(--campaign-color);
+  background: color-mix(in srgb, var(--campaign-color) 4%, #fff);
+}
+
+.objective-card:focus-visible {
+  outline: 2px solid var(--campaign-color);
+  outline-offset: 2px;
 }
 
 .objective-card header {
@@ -2186,16 +2208,57 @@ p.delta {
   font-weight: 600;
 }
 
-.objective-card dl {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 12px;
-  margin: 12px 0 0;
-  padding-top: 10px;
+.objective-card p.delta {
+  margin: 10px 0 0;
+  font-size: 10px;
+}
+
+/* Grafico de los principales KPIs dentro del panel de objetivos, separado de las tarjetas por una linea. */
+.objective-chart {
+  margin-top: 16px;
+  padding: 16px 0 0;
   border-top: 1px solid var(--border);
 }
 
-.objective-card dt {
+.objective-chart.is-collapsed {
+  padding-bottom: 0;
+}
+
+/* Minimizado queda solo el titulo con el boton para abrirlo. */
+.chart-panel.is-collapsed .chart-metrics,
+.chart-panel.is-collapsed .chart-kpis,
+.chart-panel.is-collapsed #chart-modes {
+  display: none;
+}
+
+.chart-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .15s ease;
+}
+
+.chart-panel.is-collapsed .chart-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* KPIs del objetivo graficado: los que antes iban en su tarjeta. */
+.chart-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0 0 14px;
+}
+
+.chart-kpis[hidden] {
+  display: none;
+}
+
+.chart-kpis dt {
   color: #94a3b8;
   font-size: 9px;
   font-weight: 700;
@@ -2203,16 +2266,11 @@ p.delta {
   letter-spacing: .04em;
 }
 
-.objective-card dd {
+.chart-kpis dd {
   margin: 2px 0 0;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-}
-
-.objective-card p.delta {
-  margin: 10px 0 0;
-  font-size: 10px;
 }
 
 .reoriented {
