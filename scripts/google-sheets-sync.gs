@@ -1,4 +1,5 @@
 // Web App del tablero de Terminal Pesquero. Proyecto independiente de script.google.com.
+// Al cambiar este archivo: pegarlo en el proyecto y Implementar > Administrar implementaciones > editar > Nueva version.
 // DATA_FOLDER_ID: un Google Sheet por mes, descarga directa de Meta Ads ("Raw Data Report": una fila por
 // dia x edad x sexo x anuncio). Nombre: "Terminal Pesquero - Septiembre 2026".
 // REPORTS_FOLDER_ID: reportes (PDF / video) del modulo Archivo de Reportes.
@@ -16,22 +17,23 @@ const MONTH_PATTERNS = [
   /\bene(?:ro)?\b/, /\bfeb(?:rero)?\b/, /\bmar(?:zo)?\b/, /\babr(?:il)?\b/, /\bmay(?:o)?\b/, /\bjun(?:io)?\b/,
   /\bjul(?:io)?\b/, /\bago(?:sto)?\b/, /\bse(?:pt?|t)(?:iembre)?\b/, /\boct(?:ubre)?\b/, /\bnov(?:iembre)?\b/, /\bdic(?:iembre)?\b/,
 ];
-// Cabeceras de la descarga de Meta (normalizadas: minusculas y sin tildes).
+// Cabeceras de la descarga de Meta (normalizadas: minusculas y sin tildes). Meta renombra algunas entre
+// descargas (Octubre 2026: "Importe gastado" pasa a "Monto gastado"): se acepta cualquiera de la lista.
 const RAW_COLUMNS = {
-  day: 'dia',
-  ad: 'nombre del anuncio',
-  objective: 'objetivo',
-  spend: 'importe gastado (pen)',
-  impressions: 'impresiones',
-  reach: 'alcance',
-  clicks: 'clics en el enlace',
-  interactions: 'interacciones con la publicacion',
-  messages: 'conversaciones con mensajes iniciadas',
-  resultType: 'tipo de resultado',
-  results: 'resultados',
-  campaign: 'nombre de la campana',
-  adSet: 'nombre del conjunto de anuncios',
-  preview: 'enlace de vista previa',
+  day: ['dia'],
+  ad: ['nombre del anuncio'],
+  objective: ['objetivo'],
+  spend: ['importe gastado (pen)', 'monto gastado (pen)'],
+  impressions: ['impresiones'],
+  reach: ['alcance'],
+  clicks: ['clics en el enlace'],
+  interactions: ['interacciones con la publicacion'],
+  messages: ['conversaciones con mensajes iniciadas'],
+  resultType: ['tipo de resultado'],
+  results: ['resultados'],
+  campaign: ['nombre de la campana'],
+  adSet: ['nombre del conjunto de anuncios'],
+  preview: ['enlace de vista previa'],
 };
 const REQUIRED_RAW = ['day', 'ad', 'spend', 'impressions', 'reach', 'results', 'campaign'];
 const SUM_FIELDS = ['spend', 'impressions', 'reach', 'clicks', 'interactions', 'messages', 'results'];
@@ -150,23 +152,27 @@ function readMonths_() {
   return { months, ignored };
 }
 
-// La pestana con la descarga es la que tiene las cabeceras "Dia" e "Importe gastado (PEN)".
+// La pestana con la descarga es la que tiene las cabeceras "Dia" e "Importe gastado (PEN)" (o "Monto gastado").
 function rawValues_(spreadsheet) {
   const sheets = spreadsheet.getSheets();
   for (let i = 0; i < sheets.length; i += 1) {
     const values = sheets[i].getDataRange().getValues();
-    const headerRow = values.findIndex(row => row.some(cell => normalize_(cell) === RAW_COLUMNS.day) && row.some(cell => normalize_(cell) === RAW_COLUMNS.spend));
+    const headerRow = values.findIndex(row => row.some(cell => isColumn_('day', cell)) && row.some(cell => isColumn_('spend', cell)));
     if (headerRow >= 0) return values.slice(headerRow);
   }
-  throw new Error('No se encontro la descarga de Meta (columnas "Dia" e "Importe gastado (PEN)").');
+  throw new Error('No se encontro la descarga de Meta (columnas "Dia" e "Importe gastado (PEN)" o "Monto gastado (PEN)").');
+}
+
+function isColumn_(key, cell) {
+  return RAW_COLUMNS[key].indexOf(normalize_(cell)) >= 0;
 }
 
 // Suma edad y sexo. El alcance sumado es aproximado: Meta no permite sumar personas unicas entre filas.
 function aggregateRaw_(values, timeZone) {
-  const headers = values[0].map(normalize_);
+  const headers = values[0];
   const col = {};
-  Object.keys(RAW_COLUMNS).forEach(key => { col[key] = headers.indexOf(RAW_COLUMNS[key]); });
-  const missing = REQUIRED_RAW.filter(key => col[key] < 0).map(key => RAW_COLUMNS[key]);
+  Object.keys(RAW_COLUMNS).forEach(key => { col[key] = headers.findIndex(cell => isColumn_(key, cell)); });
+  const missing = REQUIRED_RAW.filter(key => col[key] < 0).map(key => RAW_COLUMNS[key].join(' / '));
   if (missing.length) throw new Error('Faltan columnas: ' + missing.join(', '));
 
   const groups = {};
