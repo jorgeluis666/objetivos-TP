@@ -1,6 +1,6 @@
 (function () {
-  // Directorio de las cuentas con acceso al tablero. Las claves las valida Apache (Basic Auth) y nunca
-  // pasan por aqui: esta lista solo registra quien tiene acceso. Lo publicado sale de
+  // Directorio de las cuentas con acceso al tablero. Ninguna clave pasa por aqui: esta lista solo
+  // registra quien tiene acceso (el tablero publicado se abre con la clave unica de TP_PAGE_PASSWORD). Lo publicado sale de
   // data/tp-usuarios-2026.json (incrustado por el build como window.TP_USUARIOS); las ediciones quedan
   // como borrador en este navegador hasta exportarlas, igual que la Bitacora.
   const DATA_URL = 'data/tp-usuarios-2026.json';
@@ -17,7 +17,7 @@
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const newId = () => `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
-  // Mismo criterio que un usuario de Basic Auth: sin espacios ni ':'.
+  // Nombre de acceso normalizado: sin espacios ni ':'.
   const cleanLogin = value => String(value || '').trim().toLowerCase().replace(/[\s:]+/g, '');
 
   function clean(user) {

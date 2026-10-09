@@ -36,8 +36,6 @@ jobs:
           # Sin clave no se publica: el tablero quedaria abierto a cualquiera con el enlace.
           if [ -z "$TP_PAGE_PASSWORD" ]; then echo "::error::Falta el secret TP_PAGE_PASSWORD"; exit 1; fi
           node scripts/build.js
-          # .htaccess es para el hosting de Lima Retail; GitHub Pages no lo usa.
-          rm -f dist/.htaccess
 
       - uses: actions/upload-pages-artifact@v3
         with:

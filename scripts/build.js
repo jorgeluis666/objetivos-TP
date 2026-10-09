@@ -12,38 +12,6 @@ function readFile(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 }
 
-// El acceso lo controla Apache (HTTP Basic Auth), no el navegador. HTPASSWD_PATH es la ruta absoluta
-// del archivo de claves en el servidor (la que crea cPanel > Privacidad de directorios). Si falta,
-// se deja un marcador: Apache responde 500 en vez de servir el tablero sin clave.
-function writeHtaccess(html) {
-  const htpasswdPath = (process.env.HTPASSWD_PATH || '').trim();
-  if (!htpasswdPath) console.warn('[build] falta HTPASSWD_PATH; dist/.htaccess queda con un marcador y el sitio no abrira');
-  // CSP con el hash de cada <script> inline, porque el build mete todo el JS dentro del HTML.
-  const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
-    .map(match => `'sha256-${crypto.createHash('sha256').update(match[1], 'utf8').digest('base64')}'`);
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' https://cdnjs.cloudflare.com ${hashes.join(' ')}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    'font-src https://fonts.gstatic.com',
-    "img-src 'self' data: https:",
-    "connect-src 'self' https://docs.google.com https://script.google.com https://script.googleusercontent.com",
-    'frame-src https://drive.google.com',
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "object-src 'none'",
-  ].join('; ');
-  const template = readFile('deploy/.htaccess');
-  for (const token of ['__HTPASSWD_PATH__', '__CSP__']) {
-    if (template.split(token).length !== 2) throw new Error(`deploy/.htaccess debe contener ${token} exactamente una vez`);
-  }
-  const output = template
-    .replace('__HTPASSWD_PATH__', htpasswdPath || '/RUTA/NO/CONFIGURADA/.htpasswd')
-    .replace('__CSP__', csp);
-  fs.writeFileSync(path.join(DIST_DIR, '.htaccess'), output, 'utf8');
-}
-
 // El logo y el favicon se referencian por URL, no se inlinean: sin esta copia
 // dist/ sale sin marca. La ruta del CSS se reescribe en main() porque al
 // inlinearlo el '../assets/' dejaria de resolver dentro de dist/.
@@ -148,7 +116,6 @@ async function main() {
   copyBrandAssets();
   // Dominio propio en GitHub Pages; va junto al sitio igual que en el tablero de Casiopia.
   fs.copyFileSync(path.join(ROOT, 'CNAME'), path.join(DIST_DIR, 'CNAME'));
-  writeHtaccess(html);
 
   console.log(`[build] escrito dist/index.html (${(fs.statSync(DIST_HTML).size / 1024).toFixed(1)} KB)`);
 }

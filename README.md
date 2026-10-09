@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.16.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.16.2`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -132,8 +132,9 @@ Ojo: mientras el repo sea publico, lo que se publique en la bitácora tambien lo
 
 ## Usuarios y Claves
 
-Directorio de quien tiene acceso al tablero. Las claves las valida Apache (ver "Publicacion en el hosting")
-y **nunca** se guardan en el repo ni en el HTML: esta vista solo lleva nombre, usuario de acceso, rol,
+Directorio de quien tiene acceso al tablero. El tablero publicado se abre con la clave unica de
+`TP_PAGE_PASSWORD` (ver "Publicacion en terminalpesquero.limaretail.com"); aqui **nunca** se guarda
+ninguna clave, ni en el repo ni en el HTML: esta vista solo lleva nombre, usuario de acceso, rol,
 fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el build la incrusta como
 `window.TP_USUARIOS`).
 
@@ -172,7 +173,7 @@ Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de e
 | --- | --- |
 | Carpetas de descargas de Meta y de reportes | `scripts/google-sheets-sync.gs` (`DATA_FOLDER_ID`, `REPORTS_FOLDER_ID`) |
 | URL del Web App | secret de GitHub `TP_DATA_ENDPOINT` (lo incrusta `scripts/build.js`) |
-| Acceso del cliente | cPanel + secrets de GitHub (ver "Publicacion en el hosting de Lima Retail") |
+| Clave de acceso al tablero | secret de GitHub `TP_PAGE_PASSWORD` (ver "Publicacion en terminalpesquero.limaretail.com") |
 | Logo | `assets/logo-terminal-pesquero.png` |
 | Favicon | `assets/favicon.png` |
 
@@ -185,7 +186,7 @@ npm run build    # genera dist/ con todo embebido (con TP_DATA_ENDPOINT baja los
 ```
 
 El resultado se genera en `dist/`: `index.html` (CSS, JS y la copia de `data/tp-meta-2026.json`
-incrustados), `assets/` y `.htaccess`. Nada mas: `scripts/`, `data/` y el resto del repo nunca se publican.
+incrustados), `assets/` y `CNAME`. Nada mas: `scripts/`, `data/` y el resto del repo nunca se publican.
 Con `TP_PAGE_PASSWORD=<clave> npm run build` el `index.html` sale cifrado, como en GitHub Pages.
 
 ## Publicacion en terminalpesquero.limaretail.com (GitHub Pages)
@@ -209,24 +210,3 @@ URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la 
   ejecutar el workflow (Actions > Publicar en GitHub Pages > Run workflow).
 - Tras entrar, la llave queda en `sessionStorage` de esa pestana para no pedir la clave al recargar; cada deploy
   genera una sal nueva, asi que despues de publicar se vuelve a pedir.
-
-## Publicacion en el hosting de Lima Retail
-
-El acceso lo controla Apache con HTTP Basic Auth (una cuenta por cliente). No hay contraseña en el HTML.
-`dist/.htaccess` se genera desde `deploy/.htaccess` con la ruta del archivo de claves y una CSP con el hash de cada script.
-
-Configuracion unica en cPanel:
-
-1. **Dominios** > activar **Forzar redireccion HTTPS** para el dominio o subdominio del cliente.
-2. **Privacidad de directorios** > carpeta del cliente > activar proteccion y crear el usuario del cliente
-   con una contraseña larga y aleatoria. cPanel crea el archivo de claves en
-   `/home/<usuario_cpanel>/.htpasswds/<ruta_de_la_carpeta>/passwd`.
-3. En GitHub > Settings > Secrets and variables > Actions, crear:
-   - `HTPASSWD_PATH`: la ruta absoluta del paso 2.
-   - `TP_DATA_ENDPOINT`: la URL `/exec` del Web App (ver "Configuracion del Web App").
-   - `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`: una cuenta FTP limitada a la carpeta del cliente.
-   - `FTP_SERVER_DIR`: carpeta destino relativa a esa cuenta, terminada en `/` (por ejemplo `./`).
-4. Desactivar GitHub Pages (Settings > Pages) y dejar el repositorio en privado: los datos del cliente no deben quedar publicos.
-
-Cada push a `main` ejecuta `.github/workflows/deploy-hosting.yml`, que compila y sube `dist/` por FTPS.
-Si falta `HTPASSWD_PATH` el build falla; si la ruta es incorrecta Apache responde 500 en vez de mostrar el tablero sin clave.
