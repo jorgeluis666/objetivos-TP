@@ -21,7 +21,7 @@
     },
     'view-history': {
       title: 'Histórico de Campañas',
-      caption: 'Resumen y campañas finalizadas',
+      caption: 'Campañas activas y finalizadas',
       source: 'Fuente: Meta Ads / todos los meses con descarga',
       footer: 'Todas las campañas de las descargas de Drive',
     },

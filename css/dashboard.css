@@ -569,26 +569,32 @@ select {
   margin-top: 20px;
 }
 
-.history-summary-panel,
 .history-panel {
   margin-top: 18px;
 }
 
+/* El filtro Todas / Activas / Finalizadas baja bajo el titulo cuando no cabe al lado. */
+.history-panel-head {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .history-table {
-  min-width: 980px;
+  min-width: 1180px;
 }
 
-.history-summary-table {
-  min-width: 1080px;
-}
-
-.history-summary-table :is(th, td) {
+.history-table :is(th, td) {
   padding-right: 10px;
   padding-left: 10px;
 }
 
+/* Encabezado largo en dos lineas para que la tabla entre sin desplazarse. */
+.history-table th.th-wrap {
+  white-space: normal;
+}
+
 /* Una columna por mes con descarga: hacia fin de año la tabla se desplaza y el nombre queda anclado. */
-.history-summary-table :is(th, td):first-child {
+.history-table :is(th, td):first-child {
   position: sticky;
   left: 0;
   z-index: 1;
@@ -596,13 +602,13 @@ select {
   box-shadow: inset -1px 0 0 var(--border);
 }
 
-.history-summary-table thead th:first-child,
-.history-summary-table .total-row td:first-child {
+.history-table thead th:first-child,
+.history-table .total-row td:first-child {
   background: #f8fafc;
 }
 
 @media(max-width:760px) {
-  .history-summary-table :is(th, td):first-child {
+  .history-table :is(th, td):first-child {
     position: static;
     box-shadow: none;
   }
@@ -619,6 +625,7 @@ select {
   color: #94a3b8;
   font-size: 9px;
   font-weight: 600;
+  white-space: normal;
 }
 
 .history-ads summary {
