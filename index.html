@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.19.0">
+<link rel="stylesheet" href="css/dashboard.css?v=1.20.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.19.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.20.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -245,6 +245,7 @@
       <section class="view" id="view-history">
         <h1 class="section-title">Histórico de Campañas</h1>
         <p class="section-desc">Resumen de todas las campañas de las descargas de Meta guardadas en Drive, mes por mes, y debajo las que dejaron de correr con su acumulado. Una campaña se da por finalizada cuando no tiene gasto ni impresiones en el último día con datos.</p>
+        <div class="month-tabs" id="history-month-tabs" role="group" aria-label="Mes del historico"></div>
         <div class="kpi-strip history-kpis" id="history-kpis" aria-label="KPIs historicos"></div>
         <div class="panel history-summary-panel">
           <div class="panel-head">
@@ -425,14 +426,14 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/data-source.js?v=1.19.0"></script>
-<script src="js/objectives.js?v=1.19.0"></script>
-<script src="js/messages-calculator.js?v=1.19.0"></script>
-<script src="js/reports-archive.js?v=1.19.0"></script>
-<script src="js/bitacora.js?v=1.19.0"></script>
-<script src="js/usuarios.js?v=1.19.0"></script>
-<script src="js/projections.js?v=1.19.0"></script>
-<script src="js/navigation.js?v=1.19.0"></script>
-<script src="js/sidebar.js?v=1.19.0"></script>
+<script src="js/data-source.js?v=1.20.0"></script>
+<script src="js/objectives.js?v=1.20.0"></script>
+<script src="js/messages-calculator.js?v=1.20.0"></script>
+<script src="js/reports-archive.js?v=1.20.0"></script>
+<script src="js/bitacora.js?v=1.20.0"></script>
+<script src="js/usuarios.js?v=1.20.0"></script>
+<script src="js/projections.js?v=1.20.0"></script>
+<script src="js/navigation.js?v=1.20.0"></script>
+<script src="js/sidebar.js?v=1.20.0"></script>
 </body>
 </html>

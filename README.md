@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.19.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.20.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -35,6 +35,10 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Proyecciones: cierre de mes estimado por objetivo (resultados y gasto).
 - Calculadora de Inversión: facturacion objetivo, ventas necesarias e inversion en mensajes por CPL (ver "Calculadora de Inversión").
 - Historico de Campanas: campanas finalizadas con su acumulado de todos los meses.
+  - Pestanas de Enero a Diciembre y "Todos" (por defecto), como las de Gasto publicitario. Un mes deja en el
+    resumen solo las campanas que corrieron en su archivo, con el gasto, resultados, anuncios y dias activos de
+    ese mes (y el gasto acumulado al final); en la tabla de finalizadas y sus indicadores quedan las campanas
+    que terminaron ese mes, con su acumulado completo.
   - Resumen de campanas en Drive: todas las campanas de las descargas de Meta (activas y finalizadas) con
     su estado, el gasto de cada mes segun su archivo (el nombre del archivo aparece al pasar el mouse sobre el
     mes), gasto total, resultados, costo por resultado, cantidad de anuncios y periodo.

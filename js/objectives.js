@@ -8,6 +8,8 @@
   const PREVIOUS_COLOR = '#94a3b8';
   // Pestana "Anual" junto a las de mes: acumula todos los meses del año con descarga.
   const YEAR_KEY = 'anual';
+  // Pestana "Todos" del Historico de Campanas: todas las descargas, sin filtrar por mes.
+  const HISTORY_ALL = 'todos';
   const BASE_METRICS = [
     { key: 'spend', label: 'Inversion', unit: 'money', color: '#2563eb', field: 'spend' },
     { key: 'impressions', label: 'Impresiones', unit: 'count', color: '#0891b2', field: 'impressions' },
@@ -36,6 +38,7 @@
     tableCompact: readSetting(TABLE_COMPACT_KEY, 'false') === 'true',
     tableFullscreen: false,
     adsObjective: 'all',
+    historyMonth: HISTORY_ALL,
     chart: null,
     tabsHome: null,
     wired: false,
@@ -84,19 +87,28 @@
   }
 
   // ── Pestanas de mes y periodo ────────────────────────────────────────────
+  // Enero a Diciembre y una ultima pestana que junta todos los meses (Anual aqui, Todos en el Historico).
+  function monthTabsHtml(snapshot, selectedKey, last) {
+    return data().MONTHS.map((name, index) => {
+      const key = `${snapshot.year}-${String(index + 1).padStart(2, '0')}`;
+      const month = data().monthByKey(key);
+      const available = Boolean(month?.hasData);
+      const selected = selectedKey === key;
+      return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${key}" aria-pressed="${selected}" ${available ? '' : 'disabled title="Sin descarga de Meta en la carpeta"'}>${name}${key === snapshot.latestKey ? '<span class="current-dot"></span>' : ''}</button>`;
+    }).join('') + `<button type="button" class="month-tab year-tab ${last.selected ? 'active' : ''}" data-month="${last.key}" aria-pressed="${last.selected}" title="${esc(last.available ? last.title : 'Sin descargas de Meta en la carpeta')}"${last.available ? '' : ' disabled'}>${last.label}</button>`;
+  }
+
   function renderTabs(snapshot) {
     const host = document.getElementById('month-tabs');
     if (!host) return;
     const annual = annualView();
-    const current = annual ? null : selectedMonth();
-    const yearAvailable = Boolean(data().metrics.yearPeriod());
-    host.innerHTML = data().MONTHS.map((name, index) => {
-      const key = `${snapshot.year}-${String(index + 1).padStart(2, '0')}`;
-      const month = data().monthByKey(key);
-      const available = Boolean(month?.hasData);
-      const selected = current?.key === key;
-      return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${key}" aria-pressed="${selected}" ${available ? '' : 'disabled title="Sin descarga de Meta en la carpeta"'}>${name}${key === snapshot.latestKey ? '<span class="current-dot"></span>' : ''}</button>`;
-    }).join('') + `<button type="button" class="month-tab year-tab ${annual ? 'active' : ''}" data-month="${YEAR_KEY}" aria-pressed="${annual}" title="${yearAvailable ? `Acumulado ${snapshot.year} de los meses con descarga de Meta` : 'Sin descargas de Meta en la carpeta'}"${yearAvailable ? '' : ' disabled'}>Anual</button>`;
+    host.innerHTML = monthTabsHtml(snapshot, annual ? null : selectedMonth()?.key, {
+      key: YEAR_KEY,
+      label: 'Anual',
+      title: `Acumulado ${snapshot.year} de los meses con descarga de Meta`,
+      available: Boolean(data().metrics.yearPeriod()),
+      selected: annual,
+    });
   }
 
   function renderPeriod(period) {
@@ -546,14 +558,37 @@
     return `${shortDate(first, first.slice(0, 4) !== last.slice(0, 4))} - ${shortDate(last)}`;
   }
 
+  // Mes elegido en las pestanas del Historico; null es "Todos" (o un mes que ya no tiene datos).
+  function historyMonth() {
+    if (state.historyMonth === HISTORY_ALL) return null;
+    const month = data().monthByKey(state.historyMonth);
+    return month?.hasData ? month : null;
+  }
+
+  function renderHistoryTabs(snapshot, month) {
+    const host = document.getElementById('history-month-tabs');
+    if (!host) return;
+    host.innerHTML = monthTabsHtml(snapshot, month?.key, {
+      key: HISTORY_ALL,
+      label: 'Todos',
+      title: 'Todas las descargas de Meta en Drive',
+      available: snapshot.months.some(item => item.hasData),
+      selected: !month,
+    });
+  }
+
   // Resumen de todas las campanas que trae el barrido de Drive, activas y finalizadas: una columna por
-  // descarga mensual de Meta con el gasto de la campana en ese archivo.
-  function renderHistorySummary(snapshot, all) {
+  // descarga mensual de Meta con el gasto de la campana en ese archivo. Con un mes elegido, solo ese archivo.
+  function renderHistorySummary(snapshot, all, month) {
     const head = document.getElementById('history-summary-head');
     const body = document.getElementById('history-summary-body');
     const sub = document.getElementById('history-summary-sub');
     if (!head || !body) return;
-    const months = snapshot.months.filter(month => month.hasData);
+    if (month) {
+      renderMonthSummary(month, all, head, body, sub);
+      return;
+    }
+    const months = snapshot.months.filter(item => item.hasData);
     head.innerHTML = `<tr><th>Campaña</th><th>Objetivo</th><th>Estado</th>${months.map(month => {
       const partial = !month.complete && !month.past;
       return `<th class="num" title="${esc(month.fileName || `${month.name} ${month.year}`)}">${month.shortName}${partial ? ` (al ${month.lastDay})` : ''}</th>`;
@@ -597,6 +632,52 @@
       </tr>`;
   }
 
+  // Un mes: las campanas que corrieron en ese archivo con sus cifras del mes; el acumulado va al final.
+  function renderMonthSummary(month, all, head, body, sub) {
+    head.innerHTML = `<tr><th>Campaña</th><th>Objetivo</th><th>Estado</th><th class="num">Gasto ${month.shortName}</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Anuncios</th><th>Dias activos</th><th class="num" title="Gasto de la campana en todos los meses">Gasto acumulado</th></tr>`;
+    const daysLabel = (from, to) => (from === to ? `${from} ${month.shortName}` : `${from}-${to} ${month.shortName}`);
+    const items = all
+      .filter(item => item.months.includes(month.key))
+      .map(item => {
+        const rows = item.rows.filter(row => row.day.startsWith(month.key));
+        const days = rows.filter(row => row.spend > 0 || row.impressions > 0).map(row => row.d);
+        return { item, stats: data().metrics.campaigns(rows)[0], ads: data().metrics.ads(rows).length, from: Math.min(...days), to: Math.max(...days) };
+      })
+      .sort((a, b) => b.stats.spend - a.stats.spend);
+    const active = items.filter(entry => !entry.item.finished).length;
+    if (sub) {
+      sub.textContent = items.length
+        ? `${items.length} ${items.length === 1 ? 'campana' : 'campanas'} con gasto en ${month.name} ${month.year} segun su archivo en Drive (${month.fileName || 'sin nombre'}): ${!active ? 'ninguna sigue activa' : `${active} ${active === 1 ? 'sigue activa' : 'siguen activas'}`}.`
+        : `El archivo de ${month.name} ${month.year} no tiene campanas con gasto o impresiones.`;
+    }
+    if (!items.length) {
+      body.innerHTML = `<tr><td colspan="9" class="table-empty">Sin campanas en ${esc(month.name)}.</td></tr>`;
+      return;
+    }
+    const total = items.reduce((sum, entry) => sum + entry.stats.spend, 0);
+    body.innerHTML = items.map(({ item, stats, ads, from, to }) => `
+      <tr>
+        <td class="campaign-name">${esc(item.name)}</td>
+        <td><span class="objective-label" style="--campaign-color:${item.color}"><i class="campaign-dot"></i>${esc(item.groupLabel)}</span></td>
+        <td>${item.finished ? '<span class="type-pill slate">Finalizada</span>' : '<span class="type-pill green">Activa</span>'}</td>
+        <td class="num"><b>${fmt('money', stats.spend)}</b></td>
+        <td class="num history-results"><b>${fmt('count', stats.results)}</b><small>${esc(stats.resultLabel)}</small></td>
+        <td class="num">${fmt('unitCost', stats.costPerResult)}</td>
+        <td class="num">${fmt('count', ads)}</td>
+        <td class="date-col">${daysLabel(from, to)}</td>
+        <td class="num">${fmt('money', item.spend)}</td>
+      </tr>`).join('') + `
+      <tr class="total-row">
+        <td class="campaign-name">Total de ${esc(month.name)}</td>
+        <td></td><td></td>
+        <td class="num">${fmt('money', total)}</td>
+        <td class="num"><span class="no-data" title="Cada objetivo mide su propio resultado">No se suman</span></td>
+        <td></td><td></td>
+        <td class="date-col">${daysLabel(month.firstDay, month.lastDay)}</td>
+        <td></td>
+      </tr>`;
+  }
+
   function historyAdChip(ad) {
     const url = data().safeUrl(ad.preview);
     return url
@@ -608,25 +689,38 @@
     const body = document.getElementById('history-body');
     const snapshot = data()?.snapshot();
     if (!body || !snapshot) return;
+    const month = historyMonth();
+    state.historyMonth = month ? month.key : HISTORY_ALL;
+    renderHistoryTabs(snapshot, month);
     const all = campaignHistory(snapshot);
-    renderHistorySummary(snapshot, all);
-    const rows = all.filter(item => item.finished);
+    renderHistorySummary(snapshot, all, month);
+    // Con un mes elegido, las finalizadas son las que terminaron ese mes (siempre con su acumulado completo).
+    const finished = all.filter(item => item.finished);
+    const rows = month ? finished.filter(item => item.last.startsWith(month.key)) : finished;
     const active = all.filter(item => !item.finished);
     const totals = data().metrics.summarize(rows.flatMap(item => item.rows));
     const kpis = document.getElementById('history-kpis');
     const sub = document.getElementById('history-sub');
     if (kpis) {
       kpis.innerHTML = [
-        ['Campanas finalizadas', fmt('count', rows.length), `${active.length} activas al ${shortDate(snapshot.dataEnd)}`],
+        ['Campanas finalizadas', fmt('count', rows.length), month ? `Terminaron en ${month.name} ${month.year}` : `${active.length} activas al ${shortDate(snapshot.dataEnd)}`],
         ['Inversion', fmt('money', totals.spend), 'Gasto acumulado de las finalizadas'],
         ['Impresiones', fmt('count', totals.impressions), 'Total historico'],
         ['Alcance', fmt('count', totals.reach), 'Suma diaria por publico'],
         ['CPM prom.', fmt('money', totals.cpm), 'Costo por mil impresiones'],
       ].map(([label, value, meta]) => `<div class="kpi-pill"><span>${label}</span><strong>${value}</strong><small>${esc(meta)}</small></div>`).join('');
     }
-    if (sub) sub.textContent = rows.length ? `${rows.length} campanas sin gasto al ${shortDate(snapshot.dataEnd)}, ultimo dia con datos.` : 'Sin campanas finalizadas registradas.';
+    if (sub) {
+      if (month) {
+        sub.textContent = rows.length
+          ? `${rows.length} ${rows.length === 1 ? 'campana termino' : 'campanas terminaron'} en ${month.name} ${month.year}, con su acumulado de todos los meses.`
+          : `Ninguna campana termino en ${month.name} ${month.year}.`;
+      } else {
+        sub.textContent = rows.length ? `${rows.length} campanas sin gasto al ${shortDate(snapshot.dataEnd)}, ultimo dia con datos.` : 'Sin campanas finalizadas registradas.';
+      }
+    }
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="12" class="table-empty">Sin campanas finalizadas en los meses cargados.</td></tr>';
+      body.innerHTML = `<tr><td colspan="12" class="table-empty">${month ? `Ninguna campana termino en ${esc(month.name)}.` : 'Sin campanas finalizadas en los meses cargados.'}</td></tr>`;
       return;
     }
     body.innerHTML = rows.map(item => `
@@ -705,6 +799,12 @@
       if (!button || button.dataset.month === state.monthKey) return;
       state.monthKey = button.dataset.month;
       renderAll();
+    });
+    document.getElementById('history-month-tabs')?.addEventListener('click', event => {
+      const button = event.target.closest('.month-tab:not(:disabled)');
+      if (!button || button.dataset.month === state.historyMonth) return;
+      state.historyMonth = button.dataset.month;
+      renderHistory();
     });
     document.getElementById('chart-metrics')?.addEventListener('change', event => {
       const input = event.target.closest('input[name="chart-metric"]');
