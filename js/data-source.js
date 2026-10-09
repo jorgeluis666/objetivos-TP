@@ -335,7 +335,10 @@
       .map(([key, items]) => {
         const totals = summarize(items);
         const resultType = dominantType(items);
-        const days = items.filter(row => row.spend > 0 || row.impressions > 0).map(row => row.d);
+        const activeRows = items.filter(row => row.spend > 0 || row.impressions > 0);
+        const days = activeRows.map(row => row.d);
+        // En la vista anual el dia del mes no basta: las fechas completas dan el rango entre meses.
+        const dates = activeRows.map(row => row.day).sort();
         return {
           key,
           group: items[0].group,
@@ -349,6 +352,8 @@
           preview: items.find(row => row.preview)?.preview || '',
           firstDay: days.length ? Math.min(...days) : null,
           lastDay: days.length ? Math.max(...days) : null,
+          firstDate: dates[0] || null,
+          lastDate: dates[dates.length - 1] || null,
           ...totals,
         };
       });
@@ -399,12 +404,33 @@
     }
     return {
       month,
+      year: month.year,
       from,
       to,
       closed,
       rows: rowsBetween(month, from, to),
       label: rangeLabel(month, month.firstDay && month.firstDay > from ? month.firstDay : from, Math.min(to, month.lastDay || to)),
       compare,
+    };
+  }
+
+  // Vista anual: todos los meses del año con descarga ("1 Junio - 30 Septiembre"). No hay descargas del año
+  // anterior, asi que no lleva comparacion.
+  function yearPeriod() {
+    const data = state.data;
+    const months = (data?.months || []).filter(month => month.hasData && month.year === data.year);
+    if (!months.length) return null;
+    const first = months[0];
+    const last = months[months.length - 1];
+    return {
+      annual: true,
+      month: null,
+      months,
+      year: data.year,
+      closed: last.month === 12 && last.complete,
+      rows: months.flatMap(month => month.rows),
+      label: `${first.firstDay} ${first.name} - ${last.lastDay} ${last.name}`,
+      compare: null,
     };
   }
 
@@ -613,7 +639,7 @@
     nextSweep,
     formatStamp,
     limaParts,
-    metrics: { summarize, objectives, campaigns, ads, rowsBetween, dailyValues, cumulative, period, change, resultLabel, dayLabel, rangeLabel },
+    metrics: { summarize, objectives, campaigns, ads, rowsBetween, dailyValues, cumulative, period, yearPeriod, change, resultLabel, dayLabel, rangeLabel },
     fmt,
     esc,
     safeUrl,

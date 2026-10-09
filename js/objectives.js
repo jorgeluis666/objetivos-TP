@@ -6,6 +6,8 @@
   const CHART_COLLAPSED_KEY = 'tp-chart-collapsed-v2';
   const TABLE_COMPACT_KEY = 'tp-campaigns-compact-v1';
   const PREVIOUS_COLOR = '#94a3b8';
+  // Pestana "Anual" junto a las de mes: acumula todos los meses del año con descarga.
+  const YEAR_KEY = 'anual';
   const BASE_METRICS = [
     { key: 'spend', label: 'Inversion', unit: 'money', color: '#2563eb', field: 'spend' },
     { key: 'impressions', label: 'Impresiones', unit: 'count', color: '#0891b2', field: 'impressions' },
@@ -17,10 +19,11 @@
     { key: 'monthly', label: 'Por mes' },
   ];
   // Indicadores del resumen ejecutivo del reporte. better: hacia donde una variacion es buena (null = neutra).
+  // perMonth: en la vista anual se muestra su promedio mensual (los cocientes llevan su descripcion).
   const KPIS = [
-    { key: 'spend', label: 'Inversion', hint: 'Importe gastado', better: null, format: 'money' },
-    { key: 'impressions', label: 'Impresiones', hint: 'Veces que se mostraron los anuncios', better: 'up', format: 'count' },
-    { key: 'reach', label: 'Alcance', hint: 'Suma diaria por publico, como en el reporte', better: 'up', format: 'count' },
+    { key: 'spend', label: 'Inversion', hint: 'Importe gastado', better: null, format: 'money', perMonth: true },
+    { key: 'impressions', label: 'Impresiones', hint: 'Veces que se mostraron los anuncios', better: 'up', format: 'count', perMonth: true },
+    { key: 'reach', label: 'Alcance', hint: 'Suma diaria por publico, como en el reporte', better: 'up', format: 'count', perMonth: true },
     { key: 'frequency', label: 'Frecuencia', hint: 'Impresiones / alcance', better: null, format: 'decimal' },
     { key: 'cpm', label: 'CPM prom.', hint: 'Costo por mil impresiones', better: 'down', format: 'money' },
   ];
@@ -62,6 +65,14 @@
     return month && month.hasData ? month : data().latestMonth();
   }
 
+  function annualView() {
+    return state.monthKey === YEAR_KEY && Boolean(data()?.metrics.yearPeriod());
+  }
+
+  function currentPeriod() {
+    return annualView() ? data().metrics.yearPeriod() : data().metrics.period(selectedMonth());
+  }
+
   // "▲ 12,3% vs 1-20 Agosto". El color depende de si subir es bueno para ese indicador.
   function deltaHtml(current, previous, better, compareLabel) {
     const change = data().metrics.change(current, previous);
@@ -76,14 +87,16 @@
   function renderTabs(snapshot) {
     const host = document.getElementById('month-tabs');
     if (!host) return;
-    const current = selectedMonth();
+    const annual = annualView();
+    const current = annual ? null : selectedMonth();
+    const yearAvailable = Boolean(data().metrics.yearPeriod());
     host.innerHTML = data().MONTHS.map((name, index) => {
       const key = `${snapshot.year}-${String(index + 1).padStart(2, '0')}`;
       const month = data().monthByKey(key);
       const available = Boolean(month?.hasData);
       const selected = current?.key === key;
       return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${key}" aria-pressed="${selected}" ${available ? '' : 'disabled title="Sin descarga de Meta en la carpeta"'}>${name}${key === snapshot.latestKey ? '<span class="current-dot"></span>' : ''}</button>`;
-    }).join('');
+    }).join('') + `<button type="button" class="month-tab year-tab ${annual ? 'active' : ''}" data-month="${YEAR_KEY}" aria-pressed="${annual}" title="${yearAvailable ? `Acumulado ${snapshot.year} de los meses con descarga de Meta` : 'Sin descargas de Meta en la carpeta'}"${yearAvailable ? '' : ' disabled'}>Anual</button>`;
   }
 
   function renderPeriod(period) {
@@ -93,6 +106,12 @@
     if (!period) {
       title.textContent = 'Sin datos de Meta';
       sub.textContent = 'No hay descargas con gasto en la carpeta de Drive.';
+      return;
+    }
+    if (period.annual) {
+      const count = period.months.length;
+      title.textContent = `Periodo: ${period.label} ${period.year}${period.closed ? '' : ' (año en curso)'}`;
+      sub.textContent = `Acumulado de ${count} ${count === 1 ? 'mes' : 'meses'} con descarga de Meta (${period.months.map(month => month.shortName).join(', ')}). Sin año anterior para comparar.`;
       return;
     }
     const month = period.month;
@@ -111,12 +130,36 @@
     }
     const current = data().metrics.summarize(period.rows);
     const previous = period.compare ? data().metrics.summarize(period.compare.rows) : null;
-    host.innerHTML = KPIS.map(kpi => `
+    const average = period.annual ? monthlyAverage(period) : null;
+    host.innerHTML = KPIS.map(kpi => {
+      let note = `<small>${kpi.hint}</small>`;
+      if (previous) note = deltaHtml(current[kpi.key], previous[kpi.key], kpi.better, period.compare.label);
+      else if (average && kpi.perMonth) note = `<small title="${esc(average.basis)}">Prom. mensual: ${fmt(kpi.format, average[kpi.key])}</small>`;
+      return `
       <div class="kpi-pill">
         <span>${kpi.label}</span>
         <strong>${fmt(kpi.format, current[kpi.key])}</strong>
-        ${previous ? deltaHtml(current[kpi.key], previous[kpi.key], kpi.better, period.compare.label) : `<small>${kpi.hint}</small>`}
-      </div>`).join('');
+        ${note}
+      </div>`;
+    }).join('');
+  }
+
+  // Promedio por mes de la vista anual. Mientras haya meses cerrados el mes en curso queda fuera: un mes a medias
+  // bajaria el promedio.
+  function monthlyAverage(period) {
+    const closed = period.months.filter(month => month.complete || month.past);
+    const months = closed.length ? closed : period.months;
+    const totals = months.map(month => data().metrics.summarize(month.rows));
+    const average = Object.fromEntries(KPIS.map(kpi => [kpi.key, totals.reduce((sum, item) => sum + (item[kpi.key] || 0), 0) / months.length]));
+    average.basis = `Promedio de ${months.map(month => month.name).join(', ')}`;
+    return average;
+  }
+
+  // Meses del año en que corrio un objetivo (vista anual, en lugar de la comparacion con el mes anterior).
+  function objectiveMonths(period, key) {
+    const months = period.months.filter(month => month.rows.some(row => row.group === key && (row.spend > 0 || row.impressions > 0)));
+    if (months.length === period.months.length) return `Activo en los ${months.length} ${months.length === 1 ? 'mes' : 'meses'}`;
+    return `Activo en ${months.map(month => month.shortName).join(', ') || 'ningun mes'}`;
   }
 
   // ── Resultados por objetivo ──────────────────────────────────────────────
@@ -137,7 +180,8 @@
     host.innerHTML = current.map(objective => {
       const before = previous.find(item => item.key === objective.key);
       let comparison;
-      if (!period.compare) comparison = '<p class="delta flat">Sin mes anterior para comparar</p>';
+      if (period.annual) comparison = `<p class="delta flat">${esc(objectiveMonths(period, objective.key))}</p>`;
+      else if (!period.compare) comparison = '<p class="delta flat">Sin mes anterior para comparar</p>';
       else if (!before) comparison = `<p class="delta flat">Nuevo: no corria en ${esc(period.compare.label)}</p>`;
       else {
         const change = data().metrics.change(objective.results, before.results);
@@ -172,8 +216,8 @@
   }
 
   // ── Grafico lineal ───────────────────────────────────────────────────────
-  function chartMetrics(month) {
-    const objectives = month ? data().metrics.objectives(month.rows) : [];
+  function chartMetrics(rows) {
+    const objectives = rows ? data().metrics.objectives(rows) : [];
     return BASE_METRICS.concat(objectives.map(objective => ({
       key: `obj:${objective.key}`,
       label: objective.label,
@@ -196,7 +240,7 @@
     return rows.reduce((sum, row) => sum + row[metric.field], 0);
   }
 
-  function renderChartControls(metrics) {
+  function renderChartControls(metrics, modes, modeKey) {
     const metricsHost = document.getElementById('chart-metrics');
     const modesHost = document.getElementById('chart-modes');
     if (metricsHost) {
@@ -206,9 +250,9 @@
         </label>`).join('');
     }
     if (modesHost) {
-      modesHost.innerHTML = MODES.map(mode => `
-        <label class="series-toggle campaign-chip${mode.key === state.mode ? ' active' : ''}" style="--campaign-color:var(--brand-text)">
-          <input type="radio" name="chart-mode" value="${mode.key}"${mode.key === state.mode ? ' checked' : ''}>${mode.label}
+      modesHost.innerHTML = modes.map(mode => `
+        <label class="series-toggle campaign-chip${mode.key === modeKey ? ' active' : ''}" style="--campaign-color:var(--brand-text)">
+          <input type="radio" name="chart-mode" value="${mode.key}"${mode.key === modeKey ? ' checked' : ''}>${mode.label}
         </label>`).join('');
     }
   }
@@ -223,12 +267,15 @@
       toggle.setAttribute('aria-expanded', String(!state.chartCollapsed));
       toggle.setAttribute('title', state.chartCollapsed ? 'Expandir grafico' : 'Minimizar grafico');
     }
-    const metrics = chartMetrics(month);
+    const annual = annualView();
+    const metrics = chartMetrics(annual ? data().metrics.yearPeriod().rows : month?.rows);
     if (!metrics.some(metric => metric.key === state.metric)) state.metric = 'spend';
     if (!MODES.some(mode => mode.key === state.mode)) state.mode = 'cumulative';
-    renderChartControls(metrics);
+    // La vista anual solo tiene sentido por mes; el modo elegido se conserva para cuando se vuelva a un mes.
+    const modes = annual ? MODES.filter(item => item.key === 'monthly') : MODES;
+    const mode = annual ? modes[0] : MODES.find(item => item.key === state.mode);
+    renderChartControls(metrics, modes, mode.key);
     const metric = metrics.find(item => item.key === state.metric);
-    const mode = MODES.find(item => item.key === state.mode);
     const title = document.getElementById('chart-title');
     const sub = document.getElementById('chart-sub');
     const legend = document.getElementById('chart-legend');
@@ -392,6 +439,8 @@
     const sub = document.getElementById('campaigns-sub');
     const prevHead = document.getElementById('ads-prev-head');
     if (!body) return;
+    // Sin periodo de comparacion (vista anual o primer mes) las columnas de mes anterior y variacion se ocultan.
+    document.querySelector('.campaigns-panel')?.classList.toggle('no-compare', !period?.compare);
     if (!period) {
       body.innerHTML = '<tr><td class="table-empty" colspan="15">Sin datos para el periodo.</td></tr>';
       renderAdsFilter([]);
@@ -408,7 +457,7 @@
     all.forEach(ad => { if (ad.results > 0 && !leaders.has(ad.group)) { leaders.add(ad.group); ad.leader = true; } });
     const rows = state.adsObjective === 'all' ? all : all.filter(ad => ad.group === state.adsObjective);
 
-    if (title) title.textContent = `Anuncios | ${period.label} ${period.month.year}`;
+    if (title) title.textContent = `Anuncios | ${period.label} ${period.year}`;
     if (sub) sub.textContent = `${rows.length} ${rows.length === 1 ? 'anuncio' : 'anuncios'} ordenados por resultados dentro de cada objetivo. La estrella marca al lider de cada objetivo.`;
     if (prevHead) prevHead.textContent = period.compare ? `Resultados ${period.compare.label}` : 'Mes anterior';
 
@@ -416,7 +465,7 @@
       body.innerHTML = '<tr><td class="table-empty" colspan="15">No hay anuncios para este objetivo en el periodo.</td></tr>';
       return;
     }
-    const monthShort = period.month.shortName;
+    const monthShort = period.month?.shortName;
     body.innerHTML = rows.map(ad => {
       const before = previous.get(ad.key);
       const change = before ? data().metrics.change(ad.results, before.results) : null;
@@ -424,7 +473,9 @@
         : !before ? '<span class="delta-pill new">Nuevo</span>'
         : change == null ? '<span class="no-data">-</span>'
         : `<span class="delta-pill ${change >= 0 ? 'good' : 'bad'}">${change >= 0 ? '&#9650;' : '&#9660;'} ${fmt('pct', Math.abs(change), 0)}</span>`;
-      const days = ad.firstDay ? (ad.firstDay === ad.lastDay ? `${ad.firstDay} ${monthShort}` : `${ad.firstDay}-${ad.lastDay} ${monthShort}`) : '-';
+      let days = '-';
+      if (period.annual && ad.firstDate) days = ad.firstDate === ad.lastDate ? shortDate(ad.firstDate, false) : `${shortDate(ad.firstDate, false)} - ${shortDate(ad.lastDate, false)}`;
+      else if (!period.annual && ad.firstDay) days = ad.firstDay === ad.lastDay ? `${ad.firstDay} ${monthShort}` : `${ad.firstDay}-${ad.lastDay} ${monthShort}`;
       const preview = data().safeUrl(ad.preview);
       return `
         <tr>
@@ -484,10 +535,10 @@
       .sort((a, b) => b.last.localeCompare(a.last) || b.spend - a.spend);
   }
 
-  function shortDate(iso) {
+  function shortDate(iso, withYear = true) {
     const [year, month, day] = String(iso || '').split('-').map(Number);
     if (!year || !month || !day) return '-';
-    return `${day} ${data().SHORT_MONTHS[month - 1]} ${year}`;
+    return `${day} ${data().SHORT_MONTHS[month - 1]}${withYear ? ` ${year}` : ''}`;
   }
 
   function renderHistory() {
@@ -572,8 +623,8 @@
     const snapshot = data()?.snapshot();
     if (!snapshot) return;
     const month = selectedMonth();
-    state.monthKey = month?.key || null;
-    const period = data().metrics.period(month);
+    state.monthKey = annualView() ? YEAR_KEY : month?.key || null;
+    const period = currentPeriod();
     renderTabs(snapshot);
     renderPeriod(period);
     renderKpis(period);
@@ -614,7 +665,7 @@
     });
     document.getElementById('ads-objective')?.addEventListener('change', event => {
       state.adsObjective = event.target.value;
-      renderAds(data().metrics.period(selectedMonth()));
+      renderAds(currentPeriod());
     });
     document.getElementById('campaigns-density-btn')?.addEventListener('click', () => {
       state.tableCompact = !state.tableCompact;
