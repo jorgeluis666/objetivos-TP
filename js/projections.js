@@ -101,15 +101,12 @@
         results,
         spend,
         costPerResult: results.projected > 0 ? spend.projected / results.projected : null,
-        currentCost: objective.costPerResult,
         adjusted: results.adjusted || spend.adjusted,
       };
     });
 
     const spendActual = campaigns.reduce((total, campaign) => total + campaign.spend.actual, 0);
     const spendProjected = campaigns.reduce((total, campaign) => total + campaign.spend.projected, 0);
-    // El CPL real que usa la calculadora es el costo por resultado del objetivo de WhatsApp.
-    const whatsapp = campaigns.find(campaign => /whatsapp/.test(campaign.key));
 
     return {
       monthKey: month.key,
@@ -129,8 +126,6 @@
       spendPace: spendActual / Math.max(1, lastDay - firstDay + 1),
       adjusted: campaigns.some(campaign => campaign.adjusted),
       spendAdjusted: campaigns.some(campaign => campaign.spend.adjusted),
-      costPerLead: whatsapp?.currentCost || null,
-      costPerLeadLabel: whatsapp ? `${whatsapp.short}: ${whatsapp.resultLabel.toLowerCase()}` : '',
     };
   }
 
@@ -421,21 +416,6 @@
     }
   }
 
-  // El CPL real del mes (costo por resultado del objetivo de WhatsApp) alimenta la calculadora de inversion.
-  function renderCplLink(projection) {
-    const button = document.getElementById('projection-use-cpl');
-    if (!button) return;
-    const cpl = projection.costPerLead;
-    if (!cpl) {
-      button.hidden = true;
-      return;
-    }
-    button.hidden = false;
-    button.textContent = `Usar CPL real (${money(cpl)})`;
-    button.title = `Costo por resultado real de ${projection.costPerLeadLabel} en ${projection.monthLabel}`;
-    button.dataset.cpl = cpl.toFixed(2);
-  }
-
   // Sin datos se oculta el contenido del panel (sin borrarlo) para que vuelva cuando llegue un barrido bueno.
   function setPanelEmpty(empty) {
     const panel = document.getElementById('projection-panel');
@@ -508,7 +488,6 @@
     renderChart(projection);
     renderScenarioBar(projection, campaign);
     renderTable(projection);
-    renderCplLink(projection);
   }
 
   function selectCampaign(key) {
@@ -629,17 +608,6 @@
       if (!event.target.closest('#projection-reset') || !state.projection) return;
       delete state.scenarios[state.projection.monthKey]?.[state.campaign];
       render();
-    });
-
-    document.getElementById('projection-use-cpl')?.addEventListener('click', event => {
-      const cpl = event.currentTarget.dataset.cpl;
-      if (!cpl) return;
-      window.MessagesCalculator?.init();
-      const input = document.getElementById('messages-cpl');
-      if (!input) return;
-      input.value = cpl;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus();
     });
 
     window.addEventListener('tp:data-updated', () => {

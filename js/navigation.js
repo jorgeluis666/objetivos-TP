@@ -9,9 +9,15 @@
     },
     'view-messages': {
       title: 'Proyecciones',
-      caption: 'Cierre de mes y planificación por CPL',
+      caption: 'Cierre de mes por objetivo',
       source: 'Fuente: Gasto publicitario / Meta Ads',
       footer: 'Proyección lineal según el ritmo del mes',
+    },
+    'view-calculator': {
+      title: 'Calculadora de Inversión',
+      caption: 'Objetivo comercial e inversión por CPL',
+      source: 'Fuente: valores ingresados / CPL real de Meta Ads',
+      footer: 'Los valores se guardan en este navegador',
     },
     'view-history': {
       title: 'Histórico de Campañas',
@@ -76,10 +82,10 @@
     saveView(viewId);
 
     if (viewId === 'view-messages') {
-      window.MessagesCalculator?.init();
       window.TPProjections?.init();
       window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
     }
+    if (viewId === 'view-calculator') window.MessagesCalculator?.init();
     if (viewId === 'view-obj') window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
     if (viewId === 'view-history') window.TPObjectives?.renderHistory?.();
     if (viewId === 'view-reports') window.ReportsArchive?.init();

@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.17.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.18.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -32,7 +32,8 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
     resultados del mes anterior y enlace a la vista previa). La tabla de anuncios tiene cabecera fija,
     columnas Objetivo / Anuncio ancladas, filtro por objetivo, pantalla completa (`Esc` para salir) y
     densidad compacta recordada en `localStorage`.
-- Proyecciones: cierre de mes estimado por objetivo (resultados y gasto) y calculadora de inversion por CPL.
+- Proyecciones: cierre de mes estimado por objetivo (resultados y gasto).
+- Calculadora de Inversión: facturacion objetivo, ventas necesarias e inversion en mensajes por CPL (ver "Calculadora de Inversión").
 - Historico de Campanas: campanas finalizadas con su acumulado de todos los meses.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
@@ -79,7 +80,18 @@ El modulo Proyecciones usa los mismos datos (`window.TPData`) y proyecta el ulti
   en vertical, o se escribe en los campos bajo el grafico, para simular un escenario; tarjetas y tabla se
   recalculan al instante y la proyeccion original queda como referencia gris. Los escenarios viven solo en
   memoria y se pierden al recargar.
-- El boton "Usar CPL real" pasa a la calculadora el costo por resultado del objetivo de WhatsApp.
+
+## Calculadora de Inversión
+
+Modulo aparte (`js/messages-calculator.js`) para planificar la inversion en mensajes de WhatsApp.
+
+- Ventas necesarias = (facturacion objetivo - facturacion ya realizada) / ticket promedio.
+- Inversion = mensajes objetivo x costo por lead de cada conjunto de anuncios; cambiar el CPL promedio lo
+  aplica a todos los conjuntos.
+- El boton "Usar CPL real" toma de `window.TPData` el costo por resultado del objetivo de WhatsApp en el
+  ultimo mes con datos; se oculta si ese mes no tiene resultados de WhatsApp.
+- Los valores se guardan solos en `localStorage` (`tp_messages_calculator_v1`) de ese navegador.
+  "Copiar resumen" y "Exportar a Excel" sacan la propuesta para compartirla.
 
 ## Validacion de reportes
 

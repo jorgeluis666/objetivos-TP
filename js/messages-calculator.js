@@ -122,10 +122,48 @@
     setText('messages-summary-total', money(result.totalInvestment));
   }
 
+  // El CPL real es el costo por resultado del objetivo de WhatsApp en el ultimo mes con datos de Meta.
+  function realCpl() {
+    const tp = global.TPData;
+    const month = tp?.latestMonth();
+    if (!month?.hasData) return null;
+    const whatsapp = tp.metrics.objectives(month.rows).find(objective => /whatsapp/.test(objective.key));
+    if (!whatsapp?.costPerResult) return null;
+    return {
+      value: whatsapp.costPerResult,
+      label: `${whatsapp.label}: ${whatsapp.resultLabel.toLowerCase()}`,
+      monthLabel: `${month.name} ${month.year}`,
+    };
+  }
+
+  function renderCplButton() {
+    const button = document.getElementById('messages-use-cpl');
+    if (!button) return;
+    const cpl = realCpl();
+    if (!cpl) {
+      button.hidden = true;
+      return;
+    }
+    button.hidden = false;
+    button.textContent = `Usar CPL real (${global.TPData.fmt.money(cpl.value)})`;
+    button.title = `Costo por resultado real de ${cpl.label} en ${cpl.monthLabel}`;
+    button.dataset.cpl = cpl.value.toFixed(2);
+  }
+
+  function useRealCpl(event) {
+    const cpl = event.currentTarget.dataset.cpl;
+    if (!cpl) return;
+    updateTopLevel('averageCpl', cpl);
+    const input = document.getElementById('messages-cpl');
+    input.value = state.averageCpl;
+    input.focus();
+  }
+
   function renderAll() {
     renderInputs();
     renderRows();
     renderKpis();
+    renderCplButton();
   }
 
   function feedback(message, error = false) {
@@ -307,9 +345,12 @@
     });
     document.getElementById('messages-add-set').addEventListener('click', addSet);
     document.getElementById('messages-add-row').addEventListener('click', addSet);
+    document.getElementById('messages-use-cpl').addEventListener('click', useRealCpl);
     document.getElementById('messages-reset').addEventListener('click', reset);
     document.getElementById('messages-copy').addEventListener('click', copySummary);
     document.getElementById('messages-export').addEventListener('click', exportExcel);
+    // La calculadora puede abrirse antes de que lleguen los datos de Meta.
+    window.addEventListener('tp:data-updated', renderCplButton);
   }
 
   function escapeXml(value) {
