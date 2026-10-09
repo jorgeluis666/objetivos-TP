@@ -196,7 +196,7 @@ select {
 }
 
 .panel-title {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -2048,7 +2048,7 @@ body.tp-table-fullscreen {
 
 .period-title {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 800;
 }
 
