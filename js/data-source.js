@@ -518,11 +518,70 @@
     if (label) label.textContent = text || statusLabel();
     const pill = label?.closest('.topbar-pill');
     if (pill) pill.classList.toggle('warn', Boolean(state.error) || state.data?.source === 'local');
+    renderStatusCard();
+  }
+
+  // Detalle de la actualizacion: todo lo que antes estaba repartido entre la franja de barrido del
+  // modulo de Reportes y la barra de periodo vive aqui, junto al unico boton Actualizar.
+  function renderStatusCard() {
+    const card = document.getElementById('data-status-card');
+    if (!card) return;
+    const data = state.data;
+    const month = data ? monthByKey(data.latestKey) : null;
+    const set = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value || '-';
+    };
+    set('status-data', month && month.lastDay
+      ? `${month.firstDay || 1}-${month.lastDay} ${month.name} ${month.year}`
+      : (data ? 'Sin descargas con gasto' : 'Cargando...'));
+    set('status-last', data?.sweptAt ? `${SWEEP_ORIGINS[data.origin] || 'barrido'} · ${formatStamp(data.sweptAt)}` : 'sin registro');
+    const next = nextSweep();
+    set('status-next', next ? `${formatStamp(next)} · cada dia a las ${SWEEP_HOUR}:00` : '-');
+    set('status-file', month?.fileName || '-');
+    set('status-source', data?.source === 'live' ? 'Google Drive en vivo' : 'copia guardada en el tablero');
+    const note = document.getElementById('status-note');
+    if (!note) return;
+    // Un solo aviso, por orden de gravedad: sin conexion, copia guardada o descarga del mes en curso.
+    let message = '';
+    let isError = false;
+    if (state.error) {
+      message = `Sin conexion con Google: ${state.error}. Se muestran los ultimos datos leidos.`;
+      isError = true;
+    } else if (data?.source === 'local') {
+      message = 'Copia guardada en el tablero: todavia no llego la lectura en vivo.';
+    } else if (month && month.lastDay && !month.complete) {
+      message = `El dia ${month.lastDay} es el de la descarga y puede estar incompleto.`;
+    }
+    note.textContent = message;
+    note.classList.toggle('error', isError);
+    note.hidden = !message;
+  }
+
+  function wireStatusCard() {
+    const button = document.getElementById('data-status-btn');
+    const card = document.getElementById('data-status-card');
+    if (!button || !card) return;
+    const close = () => {
+      card.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+    };
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const open = card.hidden;
+      card.hidden = !open;
+      button.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', event => {
+      if (!card.hidden && !card.contains(event.target) && event.target !== button) close();
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') close(); });
   }
 
   async function init() {
-    // Todos los botones Actualizar (Gasto publicitario, Proyecciones y Archivo de Reportes) estan en el HTML.
+    // El unico boton Actualizar vive en la barra superior, junto al estado de los datos.
     refreshButtons().forEach(button => button.addEventListener('click', () => refresh({ fresh: true })));
+    wireStatusCard();
     try {
       await loadLocal();
     } catch (error) {

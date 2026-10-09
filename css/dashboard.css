@@ -2303,28 +2303,6 @@ p.delta {
   align-items: center;
 }
 
-.sync-schedule {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  color: #475569;
-  background: #f8fafc;
-  font-size: 10px;
-}
-
-.sync-schedule b {
-  color: #334155;
-}
-
-.sync-schedule .sync-error {
-  flex-basis: 100%;
-  color: #b91c1c;
-}
-
 .sync-table {
   min-width: 980px;
 }
@@ -2738,5 +2716,127 @@ textarea.log-text {
 
   .users-form .log-text:first-child {
     grid-column: 1 / -1;
+  }
+}
+
+/* ===== Estado de la actualizacion (barra superior derecha) ===== */
+
+.data-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* La pildora es el disparador del detalle: hereda el aspecto de .topbar-pill. */
+button.topbar-pill {
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.topbar-pill:hover {
+  border-color: currentColor;
+}
+
+button.topbar-pill:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.status-chevron {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .15s;
+}
+
+button.topbar-pill[aria-expanded="true"] .status-chevron {
+  transform: rotate(180deg);
+}
+
+.data-status-card {
+  position: absolute;
+  z-index: 140;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+}
+
+.data-status-card[hidden] {
+  display: none;
+}
+
+.data-status-head {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.data-status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.data-status-row:first-of-type {
+  border-top: 0;
+}
+
+.data-status-row span {
+  flex: none;
+  color: var(--muted);
+}
+
+.data-status-row strong {
+  color: var(--ink);
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.data-status-note {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.data-status-note[hidden] {
+  display: none;
+}
+
+.data-status-note.error {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+@media(max-width:760px) {
+  .data-status {
+    flex-wrap: wrap;
+  }
+
+  .data-status-card {
+    width: min(320px, calc(100vw - 36px));
   }
 }

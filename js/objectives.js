@@ -97,10 +97,8 @@
     }
     const month = period.month;
     title.textContent = `Periodo: ${period.label} ${month.year}${period.closed ? '' : ' (mes en curso)'}`;
-    const parts = [period.compare ? `Comparacion vs ${period.compare.label}` : 'Sin mes anterior para comparar'];
-    if (!period.closed) parts.push(`el dia ${month.lastDay} es el de la descarga y puede estar incompleto`);
-    if (month.fileName) parts.push(`archivo "${month.fileName}"`);
-    sub.textContent = parts.join(' | ');
+    // El archivo del mes y el aviso de descarga incompleta viven en el estado de la barra superior.
+    sub.textContent = period.compare ? `Comparacion vs ${period.compare.label}` : 'Sin mes anterior para comparar';
   }
 
   // ── Resumen ejecutivo ────────────────────────────────────────────────────

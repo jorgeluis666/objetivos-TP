@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.15.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.16.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -51,8 +51,9 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   tablero, cada hora y al volver a la pestana, y lo reparte a todos los modulos con el evento
   `tp:data-updated`.
 - Barrido automatico: todos los dias entre 10:00 y 11:00 (hora de Lima), aunque nadie abra el
-  tablero. El boton **Actualizar** (en Gasto publicitario, Proyecciones y Archivo de Reportes) hace un
-  barrido en el momento.
+  tablero. Todo lo relacionado con la actualizacion esta en la esquina superior derecha: la pildora de
+  estado abre el detalle (datos cargados, ultimo barrido con su origen, proximo automatico, archivo del
+  mes y fuente) y al lado esta el unico boton **Actualizar**, que hace un barrido en el momento.
 - El repo es publico, asi que ni la URL del Web App ni los datos del cliente se guardan en el:
   `npm run build` toma la URL del secret `TP_DATA_ENDPOINT`, baja el ultimo barrido y lo incrusta en
   `dist/index.html` (que solo se sirve con clave) junto con la URL. La copia queda tambien en

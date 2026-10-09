@@ -39,14 +39,6 @@
     orphan: { label: 'Sin descarga de Meta', tone: 'slate', rank: 4 },
     synced: { label: 'Sincronizado', tone: 'green', rank: 5 },
   };
-  const ORIGINS = {
-    manual: 'boton Actualizar',
-    automatico: 'barrido automatico',
-    instalacion: 'desde Apps Script',
-    prueba: 'desde Apps Script',
-    inicial: 'primera lectura',
-  };
-
   const state = {
     ready: false,
     wired: false,
@@ -269,25 +261,10 @@
     });
   }
 
-  function renderSchedule(snapshot) {
-    if (!els.syncSchedule) return;
-    const tp = window.TPData;
-    const status = tp.status();
-    const next = tp.nextSweep();
-    const parts = [
-      `<span><b>Ultimo barrido:</b> ${snapshot.sweptAt ? `${esc(tp.formatStamp(snapshot.sweptAt))}${ORIGINS[snapshot.origin] ? ` (${ORIGINS[snapshot.origin]})` : ''}` : 'sin registro'}</span>`,
-      `<span><b>Proximo barrido automatico:</b> ${next ? `${esc(tp.formatStamp(next))} (todos los dias entre 10:00 y 11:00)` : '-'}</span>`,
-      `<span><b>Fuente:</b> ${snapshot.source === 'live' ? 'Google Drive en vivo' : 'copia guardada en el tablero'}</span>`,
-    ];
-    if (status.error) parts.push(`<span class="sync-error"><b>Sin conexion con Google:</b> ${esc(status.error)}. Se muestran los ultimos datos leidos.</span>`);
-    els.syncSchedule.innerHTML = parts.join('');
-  }
-
   function renderValidation() {
     const snapshot = window.TPData?.snapshot();
     if (!els.syncBody || !snapshot) return;
     state.validation = validate(snapshot);
-    renderSchedule(snapshot);
     const rows = state.validation;
     const synced = rows.filter(row => row.status === 'synced').length;
     if (els.syncSub) {
@@ -536,7 +513,6 @@
       els.modalDownload = document.getElementById('reports-modal-download');
       els.syncBody = document.getElementById('sync-body');
       els.syncSub = document.getElementById('sync-sub');
-      els.syncSchedule = document.getElementById('sync-schedule');
       els.syncNotes = document.getElementById('sync-notes');
       bindEvents();
       state.wired = true;
