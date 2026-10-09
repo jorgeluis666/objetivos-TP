@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.16.4`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.16.5`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -210,5 +210,6 @@ URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la 
 - Es una sola clave compartida. Como el HTML cifrado es publico, se puede atacar sin limite de intentos: usar
   una clave larga y aleatoria (16+ caracteres). Para cambiarla: editar el secret `TP_PAGE_PASSWORD` y volver a
   ejecutar el workflow (Actions > Publicar en GitHub Pages > Run workflow).
-- Tras entrar, la llave queda en `sessionStorage` de esa pestana para no pedir la clave al recargar; cada deploy
-  genera una sal nueva, asi que despues de publicar se vuelve a pedir.
+- La pantalla de acceso pide solo la clave. Tras entrar, la llave (no la clave) queda en `sessionStorage` de
+  esa pestana para no volver a pedirla al recargar y se pierde al cerrarla: no se guarda nada entre sesiones.
+  La sal es fija por marca (`scripts/build.js`), asi que un deploy nuevo no interrumpe la sesion abierta.
