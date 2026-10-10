@@ -289,6 +289,10 @@
     return OBJECTIVES.find(item => item.key === key)?.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
   }
 
+  // El tablero solo muestra lo que tuvo gasto o impresiones en las filas dadas: objetivos, campanas, conjuntos y
+  // anuncios sin ninguno de los dos quedan fuera.
+  const hasActivity = item => item.spend > 0 || item.impressions > 0;
+
   function objectives(rows) {
     const totalSpend = rows.reduce((sum, row) => sum + row.spend, 0);
     return [...groupRows(rows, row => row.group).entries()]
@@ -306,6 +310,7 @@
           ...totals,
         };
       })
+      .filter(hasActivity)
       .sort((a, b) => b.spend - a.spend);
   }
 
@@ -325,6 +330,7 @@
           ...totals,
         };
       })
+      .filter(hasActivity)
       .sort((a, b) => b.spend - a.spend);
   }
 
@@ -343,13 +349,13 @@
           name: items[0].adSet,
           campaigns: [...new Set(items.map(row => row.campaign).filter(Boolean))],
           adCount: new Set(activeRows.map(row => normalize(row.ad))).size,
-          active: activeRows.length > 0,
           resultType,
           resultLabel: resultLabel(resultType),
           share: totalSpend > 0 ? (totals.spend / totalSpend) * 100 : 0,
           ...totals,
         };
       })
+      .filter(hasActivity)
       .sort((a, b) => b.spend - a.spend);
   }
 
@@ -381,7 +387,8 @@
           lastDate: dates[dates.length - 1] || null,
           ...totals,
         };
-      });
+      })
+      .filter(hasActivity);
   }
 
   function rowsBetween(month, from, to) {

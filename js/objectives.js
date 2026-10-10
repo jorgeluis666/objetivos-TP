@@ -362,7 +362,7 @@
   // Conjuntos de anuncios del objetivo en el periodo, con sus resultados contra el mes anterior.
   function adSetsHtml(period, objective) {
     const ofObjective = rows => rows.filter(row => row.group === objective.key);
-    const sets = data().metrics.adSets(ofObjective(period.rows)).filter(set => set.active);
+    const sets = data().metrics.adSets(ofObjective(period.rows));
     const previous = new Map((period.compare ? data().metrics.adSets(ofObjective(period.compare.rows)) : []).map(set => [set.key, set]));
     const compare = Boolean(period.compare);
     // Con una sola campana su nombre ya esta en el subtitulo del cuadro.

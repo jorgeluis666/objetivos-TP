@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.23.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.23.3`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -74,6 +74,8 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   `npm run build` toma la URL del secret `TP_DATA_ENDPOINT`, baja el ultimo barrido y lo incrusta en
   `dist/index.html` (que solo se sirve con clave) junto con la URL. La copia queda tambien en
   `data/tp-meta-2026.json`, que esta en `.gitignore` y sirve de respaldo en desarrollo o si Google no responde.
+- Solo se muestra lo que tuvo gasto o impresiones en el periodo elegido: objetivos, campanas, conjuntos y
+  anuncios en cero no aparecen en ningun modulo (`hasActivity` en `js/data-source.js`).
 - El objetivo se deduce del nombre de la campana (`Interaccion | Posts | ...`, `Campana pedidos WhatsApp | ...`)
   y su resultado de la columna "Tipo de resultado". El alcance es la suma de las filas de la descarga,
   igual que en los reportes de la agencia.
