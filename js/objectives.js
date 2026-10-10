@@ -21,13 +21,15 @@
     { key: 'daily', label: 'Por dia' },
     { key: 'monthly', label: 'Por mes' },
   ];
-  // Indicadores del grafico de cada campana (Resultados toma el nombre del resultado del objetivo).
+  // Indicadores del grafico de cada campana (Resultados toma el nombre del resultado del objetivo). Se puede elegir
+  // mas de uno; por defecto va el resultado junto a la inversion, que es la relacion que se quiere leer.
   const CAMPAIGN_METRICS = [
     { key: 'results', label: 'Resultados', field: 'results', unit: 'count' },
     { key: 'spend', label: 'Inversion', field: 'spend', unit: 'money' },
     { key: 'impressions', label: 'Impresiones', field: 'impressions', unit: 'count' },
     { key: 'reach', label: 'Alcance', field: 'reach', unit: 'count' },
   ];
+  const DEFAULT_CAMPAIGN_METRICS = ['results', 'spend'];
   // KPIs de la cabecera de cada campana, con su variacion contra el mes anterior.
   const CAMPAIGN_KPIS = [
     { key: 'results', label: null, format: 'count', better: 'up' },
@@ -224,12 +226,13 @@
   }
 
   // Total de cada mes del año, o dia a dia del mes (acumulado o no) frente al mes anterior en el mismo dia.
-  function lineSeries(metric, modeKey, month) {
+  // compare = false deja solo el mes elegido (varios indicadores a la vez).
+  function lineSeries(metric, modeKey, month, compare = true) {
     if (modeKey === 'monthly') {
       const year = data().snapshot().year;
       return {
         labels: data().SHORT_MONTHS,
-        datasets: [{ label: metric.label, data: data().MONTHS.map((_, index) => monthlyValue(data().monthByKey(`${year}-${String(index + 1).padStart(2, '0')}`), metric)), borderColor: metric.color, backgroundColor: `${metric.color}1a`, fill: true, borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: metric.color, tension: 0.25, spanGaps: false, valueLabels: true }],
+        datasets: [{ label: metric.label, unit: metric.unit, data: data().MONTHS.map((_, index) => monthlyValue(data().monthByKey(`${year}-${String(index + 1).padStart(2, '0')}`), metric)), borderColor: metric.color, backgroundColor: `${metric.color}1a`, fill: true, borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: metric.color, tension: 0.25, spanGaps: false, valueLabels: true }],
         legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(metric.label)} por mes</b></span>`],
         note: 'Total de cada mes con descarga de Meta. El mes en curso va hasta el ultimo dia con datos.',
       };
@@ -238,21 +241,39 @@
     const transform = values => (cumulative ? data().metrics.cumulative(values) : values);
     const series = {
       labels: Array.from({ length: month.daysInMonth }, (_, index) => `${index + 1}`),
-      datasets: [{ label: month.name, data: transform(data().metrics.dailyValues(month, metric.field, metricFilter(metric))), borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 }],
+      datasets: [{ label: compare ? month.name : metric.label, unit: metric.unit, data: transform(data().metrics.dailyValues(month, metric.field, metricFilter(metric))), borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 }],
       legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(month.name)} ${month.year}</b></span>`],
       note: cumulative
         ? 'Acumulado dia a dia del mes elegido frente al mes anterior en el mismo dia del mes.'
         : 'Valor de cada dia del mes elegido frente al mes anterior.',
     };
     const previous = data().previousMonth(month);
-    if (previous?.hasData) {
+    if (compare && previous?.hasData) {
       const previousValues = transform(data().metrics.dailyValues(previous, metric.field, metricFilter(metric))).slice(0, month.daysInMonth);
       if (previousValues.some(value => value)) {
-        series.datasets.push({ label: previous.name, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 });
+        series.datasets.push({ label: previous.name, unit: metric.unit, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 });
         series.legend.push(`<span><i class="legend-line dashed" style="color:${PREVIOUS_COLOR}"></i><b>${esc(previous.name)} (mismo dia del mes)</b></span>`);
       }
     }
     return series;
+  }
+
+  // Un indicador: su linea contra el mes anterior. Varios: una linea por indicador, sin comparacion, cada una en su
+  // propio panel (eje y) para ver como se mueve el resultado frente a la inversion sin mezclar escalas.
+  function campaignSeries(metrics, modeKey, month) {
+    if (metrics.length === 1) return lineSeries(metrics[0], modeKey, month);
+    const parts = metrics.map(metric => lineSeries(metric, modeKey, month, false));
+    const color = metrics[0].color;
+    const what = modeKey === 'monthly' ? `${metrics.length} indicadores por mes` : `${esc(month.name)} ${month.year}`;
+    const previous = modeKey === 'monthly' ? null : data().previousMonth(month);
+    return {
+      labels: parts[0].labels,
+      datasets: parts.map((part, index) => ({ ...part.datasets[0], label: metrics[index].label, yAxisID: `y${index}` })),
+      legend: [
+        `<span><i class="legend-line" style="background:${color}"></i><b>${what}</b></span>`,
+        `<span>Cada indicador con su escala.${previous?.hasData ? ` Elige uno solo para compararlo con ${esc(previous.name)}.` : ''}</span>`,
+      ],
+    };
   }
 
   function destroyChart(id) {
@@ -260,17 +281,37 @@
     state.charts.delete(id);
   }
 
-  function drawLineChart(id, canvas, series, metric, modeKey) {
+  const formatValue = (unit, value) => (unit === 'money' ? fmt('money', value) : fmt('count', value));
+  const tickValue = (unit, value) => (unit === 'money'
+    ? (value === 0 ? 'S/. 0' : `S/. ${Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 })}`)
+    : Number(value).toLocaleString('es-PE', { notation: Math.abs(value) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
+
+  // Con un indicador hay un solo eje y; con varios, un eje por indicador apilado en vertical (paneles con su
+  // escala) sobre el mismo eje de dias. Nunca dos escalas superpuestas: los cruces entre lineas no significarian nada.
+  function yScales(metrics) {
+    const base = unit => ({ beginAtZero: true, border: { display: false }, ticks: { color: '#7890b5', font: { size: 10 }, callback: value => tickValue(unit, value) } });
+    if (metrics.length === 1) return { y: { ...base(metrics[0].unit), grid: { color: 'rgba(148,163,184,.20)' } } };
+    // Chart.js apila de abajo hacia arriba en el orden de los ejes: se dan al reves para que el resultado quede arriba.
+    return Object.fromEntries(metrics.map((metric, index) => [`y${index}`, {
+      ...base(metric.unit),
+      stack: 'metrics',
+      stackWeight: 1,
+      grace: '25%',
+      // El tope de cada panel cae sobre el cero del panel de arriba: se omite para que no se encimen.
+      ticks: { ...base(metric.unit).ticks, maxTicksLimit: 5, callback: (value, tickIndex, ticks) => (index > 0 && tickIndex === ticks.length - 1 ? '' : tickValue(metric.unit, value)) },
+      // La linea del cero marca el piso de cada panel.
+      grid: { color: context => (context.tick?.value === 0 ? '#cbd5e1' : 'rgba(148,163,184,.20)') },
+      panelLabel: metric.label,
+    }]).reverse());
+  }
+
+  function drawLineChart(id, canvas, series, metrics, modeKey) {
     destroyChart(id);
     if (!canvas) return;
     if (typeof Chart === 'undefined') {
       canvas.parentElement.innerHTML = '<div class="empty-state"><strong>Grafico no disponible sin conexion.</strong><span>Los indicadores y las tablas siguen visibles.</span></div>';
       return;
     }
-    const format = value => (metric.unit === 'money' ? fmt('money', value) : fmt('count', value));
-    const tick = value => (metric.unit === 'money'
-      ? (value === 0 ? 'S/. 0' : `S/. ${Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 })}`)
-      : Number(value).toLocaleString('es-PE', { notation: Math.abs(value) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
     state.charts.set(id, new Chart(canvas, {
       type: 'line',
       data: { labels: series.labels, datasets: series.datasets },
@@ -286,13 +327,13 @@
             filter: item => item.raw != null,
             callbacks: {
               title: items => (modeKey === 'monthly' ? data().MONTHS[items[0].dataIndex] : `Dia ${items[0].label}`),
-              label: context => ` ${context.dataset.label}: ${format(context.raw)}`,
+              label: context => ` ${context.dataset.label}: ${formatValue(context.dataset.unit, context.raw)}`,
             },
           },
         },
         scales: {
           x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#7890b5', font: { size: 10 }, autoSkip: true, maxTicksLimit: modeKey === 'monthly' ? 12 : 16 } },
-          y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(148,163,184,.20)' }, ticks: { color: '#7890b5', font: { size: 10 }, callback: tick } },
+          ...yScales(metrics),
         },
       },
       plugins: [{
@@ -308,22 +349,63 @@
             chart.getDatasetMeta(index).data.forEach((point, pointIndex) => {
               const value = dataset.data[pointIndex];
               if (value == null) return;
-              const text = metric.unit === 'money' ? tick(Math.round(value)) : Number(value).toLocaleString('es-PE', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 });
+              const text = dataset.unit === 'money' ? tickValue('money', Math.round(value)) : Number(value).toLocaleString('es-PE', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 });
               ctx.fillText(text, point.x, point.y - 12);
             });
           });
+          ctx.restore();
+        },
+      }, {
+        // Nombre de cada panel arriba a la izquierda, en horizontal (solo con varios indicadores).
+        id: 'panelLabels',
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.font = '600 11px Inter, sans-serif';
+          ctx.textBaseline = 'top';
+          Object.values(chart.scales).forEach(scale => {
+            const label = scale.options.panelLabel;
+            if (!label) return;
+            const x = chart.chartArea.left + 8;
+            const y = scale.top + 4;
+            ctx.fillStyle = 'rgba(255,255,255,.85)';
+            ctx.fillRect(x - 4, y - 2, ctx.measureText(label).width + 8, 16);
+            ctx.fillStyle = '#475569';
+            ctx.fillText(label, x, y);
+          });
+          ctx.restore();
+        },
+      }, {
+        // Linea vertical en el dia del tooltip, a lo alto de todos los paneles.
+        id: 'crosshair',
+        afterDatasetsDraw(chart) {
+          const active = chart.tooltip?.getActiveElements() || [];
+          if (!active.length) return;
+          const x = active[0].element.x;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x, chart.chartArea.top);
+          ctx.lineTo(x, chart.chartArea.bottom);
+          ctx.stroke();
           ctx.restore();
         },
       }],
     }));
   }
 
-  // Chips de radio de un grafico (indicador o vista).
-  function chipsHtml(items, selectedKey, name, color) {
-    return items.map(item => `
-      <label class="series-toggle campaign-chip${item.key === selectedKey ? ' active' : ''}" style="--campaign-color:${color || item.color}">
-        <input type="radio" name="${esc(name)}" value="${esc(item.key)}"${item.key === selectedKey ? ' checked' : ''}>${esc(item.label)}
-      </label>`).join('');
+  // Chips de un grafico: radio para la vista, casillas para los indicadores (selected es entonces una lista).
+  function chipsHtml(items, selected, name, color, multiple = false) {
+    return items.map(item => {
+      const on = multiple ? selected.includes(item.key) : item.key === selected;
+      return `
+      <label class="series-toggle campaign-chip${on ? ' active' : ''}" style="--campaign-color:${color || item.color}">
+        <input type="${multiple ? 'checkbox' : 'radio'}" name="${esc(name)}" value="${esc(item.key)}"${on ? ' checked' : ''}>${esc(item.label)}
+      </label>`;
+    }).join('');
   }
 
   // La vista anual solo tiene sentido por mes; el modo elegido se conserva para cuando se vuelva a un mes.
@@ -340,11 +422,12 @@
 
   // ── Cuadro de cada campana ───────────────────────────────────────────────
   // Cada objetivo (la "campana" del reporte) tiene su cuadro: KPIs contra el mes anterior, su grafico y sus
-  // conjuntos de anuncios. Indicador, vista y minimizado se recuerdan por objetivo.
+  // conjuntos de anuncios. Indicadores, vista y minimizado se recuerdan por objetivo.
   function campaignSettings(key) {
     const saved = state.campaignCharts[key] || {};
+    const metrics = CAMPAIGN_METRICS.map(item => item.key).filter(metricKey => Array.isArray(saved.metrics) && saved.metrics.includes(metricKey));
     return {
-      metric: CAMPAIGN_METRICS.some(item => item.key === saved.metric) ? saved.metric : 'results',
+      metrics: metrics.length ? metrics : DEFAULT_CAMPAIGN_METRICS,
       mode: MODES.some(item => item.key === saved.mode) ? saved.mode : 'cumulative',
       collapsed: saved.collapsed === true,
     };
@@ -423,7 +506,7 @@
         </div>
         <dl class="chart-kpis campaign-kpis">${kpis}</dl>
         <div class="campaign-block-body" id="campaign-body-${key}">
-          <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="radiogroup" aria-label="Indicador del grafico de ${esc(objective.label)}"></div>
+          <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="group" aria-label="Indicadores del grafico de ${esc(objective.label)}"></div>
           <div class="chart-wrap h-300"><canvas aria-label="Grafico de la campana ${esc(objective.label)}"></canvas></div>
           <div class="chart-legend projection-legend" data-campaign-legend></div>
           ${adSetsHtml(period, objective)}
@@ -439,18 +522,21 @@
     const settings = campaignSettings(key);
     const { modes, modeKey } = chartModes(settings.mode);
     const metrics = CAMPAIGN_METRICS.map(item => ({ ...item, label: item.key === 'results' ? objective.resultLabel : item.label, color: objective.color, group: key }));
-    const metric = metrics.find(item => item.key === settings.metric);
+    const selected = metrics.filter(item => settings.metrics.includes(item.key));
     block.classList.toggle('is-collapsed', settings.collapsed);
     setToggle(block.querySelector('[data-campaign-toggle]'), settings.collapsed, `la campana ${objective.label}`);
     block.querySelector('[data-campaign-modes]').innerHTML = chipsHtml(modes, modeKey, `campaign-mode-${key}`, 'var(--brand-text)');
-    block.querySelector('[data-campaign-metrics]').innerHTML = chipsHtml(metrics, metric.key, `campaign-metric-${key}`);
+    block.querySelector('[data-campaign-metrics]').innerHTML = chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true);
     if (settings.collapsed) {
       destroyChart(key);
       return;
     }
-    const series = lineSeries(metric, modeKey, month);
+    const series = campaignSeries(selected, modeKey, month);
+    const canvas = block.querySelector('canvas');
+    // Cada panel extra suma alto para que ninguno quede aplastado.
+    canvas.parentElement.style.height = selected.length > 1 ? `${90 + 135 * selected.length}px` : '';
     block.querySelector('[data-campaign-legend]').innerHTML = series.legend.join('');
-    drawLineChart(key, block.querySelector('canvas'), series, metric, modeKey);
+    drawLineChart(key, canvas, series, selected, modeKey);
   }
 
   function renderCampaigns(period) {
@@ -865,13 +951,20 @@
       state.historyStatus = input.value;
       renderHistory();
     });
-    // Indicador, vista y minimizado de cada cuadro de campana.
+    // Indicadores, vista y minimizado de cada cuadro de campana.
     const campaigns = document.getElementById('campaign-blocks');
     campaigns?.addEventListener('change', event => {
-      const input = event.target.closest('input[type="radio"]');
-      const key = input?.closest('.campaign-block')?.dataset.objective;
+      const input = event.target.closest('input');
+      const block = input?.closest('.campaign-block');
+      const key = block?.dataset.objective;
       if (!key) return;
-      saveCampaignSettings(key, { [input.closest('[data-campaign-modes]') ? 'mode' : 'metric']: input.value });
+      if (input.closest('[data-campaign-modes]')) {
+        saveCampaignSettings(key, { mode: input.value });
+      } else {
+        // Siempre queda al menos un indicador: desmarcar el ultimo lo deja como estaba.
+        const checked = [...block.querySelectorAll('[data-campaign-metrics] input:checked')].map(item => item.value);
+        if (checked.length) saveCampaignSettings(key, { metrics: checked });
+      }
       renderCampaignChart(key);
     });
     campaigns?.addEventListener('click', event => {

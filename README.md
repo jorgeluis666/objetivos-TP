@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.23.3`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.24.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -26,11 +26,15 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Las campanas en un solo marco: arriba la distribucion de inversion por campana y debajo un cuadro por
     campana (objetivo: Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): KPIs con su variacion contra
     el mes anterior (resultado, inversion, costo por resultado, alcance, impresiones y CPM), su propio
-    grafico (resultados, inversion, impresiones o alcance; acumulado del mes, por dia contra el mes anterior
-    en el mismo dia, o por mes) y la tabla de sus conjuntos de anuncios
+    grafico (acumulado del mes, por dia o por mes) y la tabla de sus conjuntos de anuncios
     (resultados contra el mes anterior, costo por resultado, inversion, % de la campana, impresiones,
     alcance, CPM, clics y anuncios activos). Cada cuadro se minimiza con el boton de la derecha y
-    recuerda su indicador, su vista y si esta minimizado.
+    recuerda sus indicadores, su vista y si esta minimizado.
+  - Indicadores del grafico de cada campana: resultado, inversion, impresiones y alcance, se puede marcar mas
+    de uno (por defecto resultado + inversion, para leer como responde el objetivo al gasto). Con uno solo va
+    contra el mes anterior en el mismo dia; con varios no hay comparacion y cada uno va en su propio panel,
+    apilados sobre el mismo eje de dias, con una linea vertical y un tooltip con todos los valores del dia.
+    No se superponen dos escalas en un mismo panel: los cruces entre lineas de distinta escala no significan nada.
   - Ranking de anuncios por objetivo (con el lider marcado,
     resultados del mes anterior y enlace a la vista previa). La tabla de anuncios tiene cabecera fija,
     columnas Objetivo / Anuncio ancladas, filtro por objetivo, pantalla completa (`Esc` para salir) y
