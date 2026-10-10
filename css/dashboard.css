@@ -195,7 +195,7 @@ select {
   margin-bottom: 15px;
 }
 
-/* Todos los titulos (panel, periodo y cuadro de campana) van a 22px; la bajada se queda en 10px. */
+/* Titulos (panel, periodo y cuadro de campana) y sus bajadas van a 22px; la jerarquia queda en el peso y el color. */
 .panel-title {
   color: var(--ink);
   font-size: 22px;
@@ -207,12 +207,10 @@ select {
 .panel-sub {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 10px;
-}
-
-.chart-panel {
-  margin-top: 24px;
-  padding: 20px;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  line-height: 1.3;
 }
 
 .chart-panel-head {
@@ -237,19 +235,6 @@ select {
 .chart-toggle:hover {
   border-color: #94a3b8;
   background: #f8fafc;
-}
-
-.chart-panel.is-collapsed {
-  padding-bottom: 16px;
-}
-
-.chart-panel.is-collapsed .chart-wrap,
-.chart-panel.is-collapsed .chart-legend {
-  display: none;
-}
-
-.chart-panel.is-collapsed .panel-head {
-  margin-bottom: 0;
 }
 
 .chart-controls {
@@ -2126,110 +2111,19 @@ body.tp-table-fullscreen {
 .period-sub {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  line-height: 1.3;
 }
 
-.kpi-pill small.delta,
-p.delta {
+.kpi-pill small.delta {
   font-weight: 700;
 }
 
 .delta.good { color: var(--green-text); }
 .delta.bad { color: #b91c1c; }
 .delta.flat { color: #64748b; }
-
-.objectives-panel {
-  margin-top: 14px;
-}
-
-.objective-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 10px;
-}
-
-/* Tarjeta con borde de 1px: el color del objetivo solo va en el punto y en la cifra. Es un boton que lleva al
-   cuadro de su campana. */
-.objective-card {
-  display: block;
-  width: 100%;
-  padding: 14px 15px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: inherit;
-  background: #fff;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color .15s ease, background .15s ease;
-}
-
-.objective-card:hover {
-  border-color: #94a3b8;
-}
-
-.objective-card:focus-visible {
-  outline: 2px solid var(--campaign-color);
-  outline-offset: 2px;
-}
-
-.objective-card header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: #334155;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.objective-card header em {
-  color: #94a3b8;
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.objective-card > strong {
-  display: block;
-  margin-top: 10px;
-  color: var(--campaign-color);
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.objective-card > small {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.objective-card p.delta {
-  margin: 10px 0 0;
-  font-size: 10px;
-}
-
-/* Grafico total de la cuenta dentro del panel de objetivos, separado de las tarjetas por una linea. */
-.objective-chart {
-  margin-top: 16px;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--border);
-}
-
-.objective-chart.is-collapsed {
-  padding-bottom: 0;
-}
-
-/* Minimizado queda solo el titulo con el boton para abrirlo. */
-.chart-panel.is-collapsed .chart-metrics,
-.chart-panel.is-collapsed #chart-modes {
-  display: none;
-}
 
 .chart-toggle svg {
   width: 16px;
@@ -2242,7 +2136,6 @@ p.delta {
   transition: transform .15s ease;
 }
 
-.chart-panel.is-collapsed .chart-toggle svg,
 .campaign-block.is-collapsed .chart-toggle svg {
   transform: rotate(180deg);
 }
@@ -2277,7 +2170,7 @@ p.delta {
 }
 
 /* ===== Cuadro de cada campana ===== */
-/* Van dentro del panel de distribucion, debajo de su tabla, separados por una linea como el grafico total.
+/* Van dentro del panel de distribucion, debajo de su tabla, separados por una linea fina.
    minmax(0, 1fr): sin el, la tabla de conjuntos (min-width) ensancharia la columna y la pagina. */
 .campaign-blocks {
   display: grid;
@@ -2374,37 +2267,10 @@ p.delta {
   width: 44px;
 }
 
-.reoriented {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 9px;
-  color: #475569;
-  font-size: 11px;
-}
-
-.reoriented[hidden] {
-  display: none;
-}
-
-.reoriented-title {
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
-.reoriented-item {
-  margin-top: 3px;
-}
-
 .chart-metrics {
   margin: -4px 0 14px;
 }
 
-.chart-panel .chart-controls,
 .campaign-block .chart-controls {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -2571,12 +2437,6 @@ p.delta {
 
 .sync-notes[hidden] {
   display: none;
-}
-
-@media(max-width:760px) {
-  .objective-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .projection-panel.is-empty > :not(.projection-empty) {

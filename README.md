@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.23.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.23.2`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -23,14 +23,11 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Resumen ejecutivo: el periodo y debajo inversion, impresiones, alcance, frecuencia y CPM en una sola
     tarjeta, con la variacion contra el mismo tramo del mes anterior (por ejemplo 1-28 Sep vs 1-28 Ago;
     un mes cerrado se compara completo).
-  - Resultados por objetivo (Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): resumen con una
-    tarjeta por objetivo (resultado, parte de la inversion y variacion) y el grafico total de la cuenta
-    (inversion, impresiones o alcance; acumulado del mes, por dia contra el mes anterior en el mismo dia,
-    o por mes). Al final, las campanas del mes anterior que ya no tienen gasto (reorientadas).
   - Las campanas en un solo marco: arriba la distribucion de inversion por campana y debajo un cuadro por
-    campana (objetivo), al que lleva su tarjeta del resumen: KPIs con su variacion contra
+    campana (objetivo: Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): KPIs con su variacion contra
     el mes anterior (resultado, inversion, costo por resultado, alcance, impresiones y CPM), su propio
-    grafico (resultados, inversion, impresiones o alcance) y la tabla de sus conjuntos de anuncios
+    grafico (resultados, inversion, impresiones o alcance; acumulado del mes, por dia contra el mes anterior
+    en el mismo dia, o por mes) y la tabla de sus conjuntos de anuncios
     (resultados contra el mes anterior, costo por resultado, inversion, % de la campana, impresiones,
     alcance, CPM, clics y anuncios activos). Cada cuadro se minimiza con el boton de la derecha y
     recuerda su indicador, su vista y si esta minimizado.

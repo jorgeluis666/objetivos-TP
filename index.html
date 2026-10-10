@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/dashboard.css?v=1.23.1">
+<link rel="stylesheet" href="css/dashboard.css?v=1.23.2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.23.1</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.23.2</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -59,33 +59,6 @@
             <div class="period-sub" id="period-sub"></div>
           </div>
           <div class="kpi-strip" id="kpi-strip" aria-label="Resumen ejecutivo"></div>
-        </div>
-
-        <div class="panel objectives-panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Resultados por objetivo</div>
-              <div class="panel-sub" id="objectives-sub">Cada objetivo se mide con su propio resultado: no se suman entre objetivos.</div>
-            </div>
-          </div>
-          <div class="objective-grid" id="objective-cards"></div>
-          <!-- Resumen: grafico total de la cuenta. El de cada campana esta en su cuadro (#campaign-blocks). -->
-          <div class="chart-panel objective-chart" id="chart-panel">
-            <div class="panel-head chart-panel-head">
-              <div>
-                <div class="panel-title" id="chart-title">Evolucion</div>
-                <div class="panel-sub" id="chart-sub"></div>
-              </div>
-              <div class="chart-controls">
-                <div class="chart-series-toggles" id="chart-modes" role="radiogroup" aria-label="Vista del grafico"></div>
-                <button type="button" class="chart-toggle" id="chart-toggle-btn" aria-expanded="true" aria-controls="monthly-chart-body" title="Minimizar grafico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
-              </div>
-            </div>
-            <div class="chart-series-toggles chart-metrics" id="chart-metrics" role="radiogroup" aria-label="Indicador del grafico"></div>
-            <div class="chart-wrap h-360" id="monthly-chart-body"><canvas id="chart-monthly" aria-label="Grafico lineal del indicador elegido"></canvas></div>
-            <div class="chart-legend projection-legend" id="chart-legend"></div>
-          </div>
-          <div class="reoriented" id="reoriented" hidden></div>
         </div>
 
         <!-- Campanas en un solo marco: arriba el resumen (distribucion de la inversion) y debajo un cuadro por
@@ -416,14 +389,14 @@
     <div class="reports-modal-foot">La vista previa usa el visor de Google Drive: necesitas iniciar sesion con una cuenta que tenga acceso a la carpeta compartida.</div>
   </div>
 </div>
-<script src="js/data-source.js?v=1.23.1"></script>
-<script src="js/objectives.js?v=1.23.1"></script>
-<script src="js/messages-calculator.js?v=1.23.1"></script>
-<script src="js/reports-archive.js?v=1.23.1"></script>
-<script src="js/bitacora.js?v=1.23.1"></script>
-<script src="js/usuarios.js?v=1.23.1"></script>
-<script src="js/projections.js?v=1.23.1"></script>
-<script src="js/navigation.js?v=1.23.1"></script>
-<script src="js/sidebar.js?v=1.23.1"></script>
+<script src="js/data-source.js?v=1.23.2"></script>
+<script src="js/objectives.js?v=1.23.2"></script>
+<script src="js/messages-calculator.js?v=1.23.2"></script>
+<script src="js/reports-archive.js?v=1.23.2"></script>
+<script src="js/bitacora.js?v=1.23.2"></script>
+<script src="js/usuarios.js?v=1.23.2"></script>
+<script src="js/projections.js?v=1.23.2"></script>
+<script src="js/navigation.js?v=1.23.2"></script>
+<script src="js/sidebar.js?v=1.23.2"></script>
 </body>
 </html>
