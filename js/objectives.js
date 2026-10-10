@@ -499,7 +499,7 @@
     const kpis = CAMPAIGN_KPIS.map(kpi => `
       <div><dt>${esc(kpi.label || objective.resultLabel)}</dt><dd>${fmt(kpi.format, objective[kpi.key])}${before ? deltaHtml(objective[kpi.key], before[kpi.key], kpi.better) : ''}</dd></div>`).join('');
     return `
-      <section class="panel campaign-block${settings.collapsed ? ' is-collapsed' : ''}" id="campaign-${key}" data-objective="${key}" style="--campaign-color:${objective.color}">
+      <section class="campaign-block${settings.collapsed ? ' is-collapsed' : ''}" id="campaign-${key}" data-objective="${key}" style="--campaign-color:${objective.color}">
         <div class="panel-head chart-panel-head">
           <div>
             <div class="campaign-block-title"><i class="campaign-dot"></i>Campaña ${esc(objective.label)}<em>${fmt('pct', objective.share)} de la inversion</em></div>

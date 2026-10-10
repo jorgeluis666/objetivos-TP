@@ -195,9 +195,13 @@ select {
   margin-bottom: 15px;
 }
 
+/* Todos los titulos (panel, periodo y cuadro de campana) van a 22px; la bajada se queda en 10px. */
 .panel-title {
-  font-size: 10px;
-  font-weight: 700;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.2;
 }
 
 .panel-sub {
@@ -2113,8 +2117,10 @@ body.tp-table-fullscreen {
 
 .period-title {
   color: var(--ink);
-  font-size: 10px;
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.2;
 }
 
 .period-sub {
@@ -2271,12 +2277,11 @@ p.delta {
 }
 
 /* ===== Cuadro de cada campana ===== */
-/* minmax(0, 1fr): sin el, la tabla de conjuntos (min-width) ensancharia la columna y la pagina. */
+/* Van dentro del panel de distribucion, debajo de su tabla, separados por una linea como el grafico total.
+   minmax(0, 1fr): sin el, la tabla de conjuntos (min-width) ensancharia la columna y la pagina. */
 .campaign-blocks {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 14px;
 }
 
 .campaign-blocks:empty {
@@ -2284,6 +2289,9 @@ p.delta {
 }
 
 .campaign-block {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
   scroll-margin-top: 16px;
 }
 
@@ -2293,11 +2301,15 @@ p.delta {
   align-items: center;
   gap: 4px 10px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.2;
 }
 
 .campaign-block-title .campaign-dot {
+  width: 10px;
+  height: 10px;
   margin-right: -4px;
 }
 
@@ -2306,6 +2318,7 @@ p.delta {
   font-size: 10px;
   font-style: normal;
   font-weight: 700;
+  letter-spacing: 0;
 }
 
 /* Minimizado quedan el titulo y los KPIs; se ocultan grafico, conjuntos y la vista del grafico. */
@@ -2399,7 +2412,7 @@ p.delta {
 }
 
 .distribution-panel {
-  margin-top: 20px;
+  margin-top: 14px;
   margin-bottom: 20px;
 }
 
