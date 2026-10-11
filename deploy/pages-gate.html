@@ -71,8 +71,15 @@
   // La llave (no la clave) se guarda solo en sessionStorage, con la sal del build: evita volver a pedirla al
   // recargar la pestana y se pierde al cerrarla. Nada queda guardado entre sesiones en este equipo.
   var storageKey = 'tp-gate-key';
-  var bytes = function (b64) { return Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); };
+  var bytes = function (b64) {
+    var text = atob(b64);
+    var out = new Uint8Array(text.length);
+    for (var i = 0; i < text.length; i++) out[i] = text.charCodeAt(i);
+    return out;
+  };
   var toB64 = function (arr) { return btoa(String.fromCharCode.apply(null, arr)); };
+  // El tablero cifrado se decodifica una sola vez, aunque se pruebe la clave varias veces.
+  var cipherData = null;
 
   function derive(password) {
     return crypto.subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFC')), 'PBKDF2', false, ['deriveBits'])
@@ -98,7 +105,10 @@
 
   function show(rawKey) {
     return crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt'])
-      .then(function (key) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(payload.iv) }, key, bytes(payload.data)); })
+      .then(function (key) {
+        cipherData = cipherData || bytes(payload.data);
+        return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(payload.iv) }, key, cipherData);
+      })
       .then(function (plain) {
         try { sessionStorage.setItem(storageKey, JSON.stringify({ salt: payload.salt, key: toB64(rawKey) })); } catch (e) {}
         // Limpia la llave que pudo dejar la version con "Recordar en este equipo".
@@ -111,8 +121,7 @@
   }
 
   // El fondo se aplica solo cuando termino de cargar; si falla queda el degradado.
-  // Con la llave de esta sesion no se pide: la imagen retrasaria el 'load' que espera la apertura automatica.
-  if (!readSaved()) {
+  function loadBackground() {
     var background = new Image();
     background.onload = function () {
       var bg = document.getElementById('gate-bg');
@@ -120,6 +129,24 @@
     };
     background.src = 'assets/login-bg.jpg';
   }
+
+  // En pantallas angostas .bg esta oculto: la foto se pide solo si el fondo llega a verse (al girar una tableta
+  // o agrandar la ventana). Safari < 14 solo tiene addListener/removeListener en MediaQueryList.
+  function showBackground() {
+    var narrow = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
+    if (!narrow || !narrow.matches) { loadBackground(); return; }
+    var onChange = function () {
+      if (narrow.matches) return;
+      if (narrow.removeEventListener) narrow.removeEventListener('change', onChange); else narrow.removeListener(onChange);
+      // Si el tablero ya reemplazo esta pantalla, la foto no se veria.
+      if (document.getElementById('gate-bg')) loadBackground();
+    };
+    if (narrow.addEventListener) narrow.addEventListener('change', onChange); else narrow.addListener(onChange);
+  }
+
+  // Con la llave de esta sesion no se pide: la imagen retrasaria el 'load' que espera la apertura automatica.
+  var saved = readSaved();
+  if (!saved) showBackground();
 
   var form = document.getElementById('gate');
   var input = document.getElementById('gate-password');
@@ -130,7 +157,7 @@
     if (!window.crypto || !crypto.subtle) { error.textContent = 'Este navegador no puede abrir el tablero.'; return; }
     submit.disabled = true;
     error.textContent = '';
-    derive(input.value).then(function (rawKey) { return show(rawKey); }).catch(function () {
+    derive(input.value).then(show).catch(function () {
       submit.disabled = false;
       error.textContent = 'Contraseña incorrecta';
       input.select();
@@ -143,13 +170,14 @@
 
   // Con la llave de esta sesion se abre solo, pero despues de 'load': si document.open() corre mientras
   // el parser sigue activo no reemplaza la pagina y el tablero se mezcla con este formulario.
-  var saved = readSaved();
+  // Si la llave ya no abre el tablero (la clave cambio), queda el formulario con su fondo de siempre.
   if (saved) {
     document.body.style.visibility = 'hidden';
     window.addEventListener('load', function () {
       show(saved).catch(function () {
         forget();
         document.body.style.visibility = '';
+        showBackground();
       });
     }, { once: true });
   }

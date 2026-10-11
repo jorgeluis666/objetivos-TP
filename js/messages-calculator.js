@@ -1,4 +1,6 @@
 (function (global) {
+  // Escape y descarga compartidos de js/data-source.js, que se carga antes que este archivo.
+  const { esc, download } = global.TPData;
   const STORAGE_KEY = 'tp_messages_calculator_v1';
   const DEFAULTS = {
     target: 10000,
@@ -59,10 +61,10 @@
     }
   }
 
-  function calculate(input = state) {
-    const remaining = Math.max(0, number(input.target) - number(input.actual));
-    const salesNeeded = remaining / Math.max(0.01, number(input.ticket, 0.01));
-    const rows = input.sets.map(set => ({
+  function calculate() {
+    const remaining = Math.max(0, number(state.target) - number(state.actual));
+    const salesNeeded = remaining / Math.max(0.01, number(state.ticket, 0.01));
+    const rows = state.sets.map(set => ({
       ...set,
       investment: number(set.messages) * number(set.cpl),
     }));
@@ -85,10 +87,6 @@
     return number(value).toLocaleString('es-PE', { maximumFractionDigits: 2 });
   }
 
-  function escapeHtml(value) {
-    return global.TPData.esc(value);
-  }
-
   function setText(id, text) {
     const element = document.getElementById(id);
     if (element) element.textContent = text;
@@ -105,11 +103,11 @@
     const result = calculate();
     document.getElementById('messages-sets').innerHTML = result.rows.map((row, index) => `
       <tr data-index="${index}">
-        <td><input class="messages-table-input name" type="text" data-field="name" value="${escapeHtml(row.name)}" aria-label="Nombre del conjunto ${index + 1}"></td>
+        <td><input class="messages-table-input name" type="text" data-field="name" value="${esc(row.name)}" aria-label="Nombre del conjunto ${index + 1}"></td>
         <td class="num"><input class="messages-table-input" type="number" min="0" step="1" data-field="messages" value="${row.messages}" aria-label="Mensajes objetivo del conjunto ${index + 1}"></td>
         <td class="num"><span class="messages-cell-money"><b>S/</b><input class="messages-table-input" type="number" min="0" step="0.10" data-field="cpl" value="${row.cpl}" aria-label="Costo por lead del conjunto ${index + 1}"></span></td>
         <td class="num"><strong>${money(row.investment)}</strong></td>
-        <td class="messages-row-action"><button type="button" class="messages-remove" data-remove-set="${index}" aria-label="Eliminar ${escapeHtml(row.name)}" title="Eliminar conjunto">×</button></td>
+        <td class="messages-row-action"><button type="button" class="messages-remove" data-remove-set="${index}" aria-label="Eliminar ${esc(row.name)}" title="Eliminar conjunto">×</button></td>
       </tr>
     `).join('');
   }
@@ -145,7 +143,7 @@
       return;
     }
     button.hidden = false;
-    button.textContent = `Usar CPL real (${global.TPData.fmt.money(cpl.value)})`;
+    button.textContent = `Usar CPL real (${money(cpl.value)})`;
     button.title = `Costo por resultado real de ${cpl.label} en ${cpl.monthLabel}`;
     button.dataset.cpl = cpl.value.toFixed(2);
   }
@@ -197,6 +195,8 @@
 
     if (input.dataset.field === 'name') {
       set.name = input.value;
+      // El lector de pantalla anuncia el nombre vigente en el boton de eliminar.
+      row.querySelector('[data-remove-set]')?.setAttribute('aria-label', `Eliminar ${input.value}`);
     } else {
       set[input.dataset.field] = Math.max(0, number(input.value));
     }
@@ -228,10 +228,15 @@
       feedback('Debe permanecer al menos un conjunto de anuncios.', true);
       return;
     }
+    // Si se elimino con el teclado, el foco pasa al boton de la fila que ocupa ese lugar.
+    const hadFocus = Boolean(document.activeElement?.matches('[data-remove-set]'));
     state.sets.splice(index, 1);
     persist();
     renderRows();
     renderKpis();
+    if (hadFocus) {
+      document.querySelector(`#messages-sets [data-remove-set="${Math.min(index, state.sets.length - 1)}"]`)?.focus();
+    }
   }
 
   function reset() {
@@ -298,7 +303,7 @@
     const xmlRows = rows.map(row => `<Row>${row.map(value => {
       const numericValue = typeof value === 'number' && Number.isFinite(value);
       const type = numericValue ? 'Number' : 'String';
-      const content = numericValue ? value : escapeXml(value);
+      const content = numericValue ? value : esc(value);
       return `<Cell><Data ss:Type="${type}">${content}</Data></Cell>`;
     }).join('')}</Row>`).join('');
     const workbook = `<?xml version="1.0"?>
@@ -312,15 +317,7 @@
           </Table>
         </Worksheet>
       </Workbook>`;
-    const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'Calculadora_Mensajes_Terminal_Pesquero.xls';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    download('Calculadora_Mensajes_Terminal_Pesquero.xls', workbook, 'application/vnd.ms-excel;charset=utf-8');
     feedback('Archivo Excel generado.');
   }
 
@@ -353,16 +350,6 @@
     window.addEventListener('tp:data-updated', renderCplButton);
   }
 
-  function escapeXml(value) {
-    return String(value).replace(/[<>&'"]/g, character => ({
-      '<': '&lt;',
-      '>': '&gt;',
-      '&': '&amp;',
-      "'": '&apos;',
-      '"': '&quot;',
-    })[character]);
-  }
-
   function init() {
     if (initialized) return;
     initialized = true;
@@ -371,9 +358,5 @@
     renderAll();
   }
 
-  global.MessagesCalculator = {
-    init,
-    calculate: input => calculate(normalize(input)),
-    defaults: () => clone(DEFAULTS),
-  };
+  global.MessagesCalculator = { init };
 })(window);

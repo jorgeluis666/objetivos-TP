@@ -11,6 +11,9 @@ const SWEEP_HOUR = 10;
 const SWEEP_HANDLER = 'sweepScheduled';
 const SNAPSHOT_PROPERTY = 'SNAPSHOT_FILE_ID';
 const SNAPSHOT_NAME = 'Terminal Pesquero - barrido del tablero.json';
+// Subirla al cambiar aggregateRaw_, toDay_, toNumber_, RAW_COLUMNS, OUTPUT_COLUMNS o TIMEZONE: los meses
+// guardados con otra version se vuelven a leer aunque su archivo no haya cambiado.
+const SWEEP_VERSION = 1;
 const MANUAL_THROTTLE_MS = 60 * 1000;
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTH_PATTERNS = [
@@ -22,13 +25,10 @@ const MONTH_PATTERNS = [
 const RAW_COLUMNS = {
   day: ['dia'],
   ad: ['nombre del anuncio'],
-  objective: ['objetivo'],
   spend: ['importe gastado (pen)', 'monto gastado (pen)'],
   impressions: ['impresiones'],
   reach: ['alcance'],
   clicks: ['clics en el enlace'],
-  interactions: ['interacciones con la publicacion'],
-  messages: ['conversaciones con mensajes iniciadas'],
   resultType: ['tipo de resultado'],
   results: ['resultados'],
   campaign: ['nombre de la campana'],
@@ -36,9 +36,9 @@ const RAW_COLUMNS = {
   preview: ['enlace de vista previa'],
 };
 const REQUIRED_RAW = ['day', 'ad', 'spend', 'impressions', 'reach', 'results', 'campaign'];
-const SUM_FIELDS = ['spend', 'impressions', 'reach', 'clicks', 'interactions', 'messages', 'results'];
+const SUM_FIELDS = ['spend', 'impressions', 'reach', 'clicks', 'results'];
 // Filas que devuelve el Web App: una por dia x campana x conjunto x anuncio (se suman edad y sexo).
-const OUTPUT_COLUMNS = ['day', 'campaign', 'adSet', 'ad', 'objective', 'resultType'].concat(SUM_FIELDS, ['preview']);
+const OUTPUT_COLUMNS = ['day', 'campaign', 'adSet', 'ad', 'resultType'].concat(SUM_FIELDS, ['preview']);
 
 function doGet(event) {
   try {
@@ -78,11 +78,16 @@ function logSnapshot_(snapshot) {
       console.log(month.name + ' ' + month.year + ': ERROR ' + month.error);
       return;
     }
+    const duplicates = month.duplicates.length ? ' | duplicados: ' + month.duplicates.join(', ') : '';
+    if (!month.rows.length) {
+      console.log(month.name + ' ' + month.year + ': sin filas con fecha valida' + duplicates);
+      return;
+    }
     const index = name => month.columns.indexOf(name);
     const spend = month.rows.reduce((sum, row) => sum + row[index('spend')], 0);
     const days = month.rows.map(row => row[index('day')]).sort();
     console.log(month.name + ' ' + month.year + ': ' + month.rows.length + ' filas, gasto S/ ' + spend.toFixed(2) +
-      ', del ' + days[0] + ' al ' + days[days.length - 1] + (month.duplicates.length ? ' | duplicados: ' + month.duplicates.join(', ') : ''));
+      ', del ' + days[0] + ' al ' + days[days.length - 1] + duplicates);
   });
   snapshot.ignored.forEach(item => console.log('Ignorado: ' + item.fileName + ' -> ' + item.reason));
   console.log('Reportes en Drive: ' + snapshot.reports.files.length);
@@ -94,7 +99,7 @@ function sweep_(origin) {
   try {
     const previous = readSnapshot_();
     if (origin === 'manual' && previous && Date.now() - Date.parse(previous.sweptAt) < MANUAL_THROTTLE_MS) return previous;
-    const data = readMonths_();
+    const data = readMonths_(previous);
     let reports;
     try {
       reports = readReports_();
@@ -102,7 +107,7 @@ function sweep_(origin) {
       console.error(error);
       reports = Object.assign({}, previous ? previous.reports : { folder: null, files: [] }, { error: 'No se pudo leer la carpeta de reportes.' });
     }
-    const snapshot = { sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports };
+    const snapshot = { version: SWEEP_VERSION, sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports };
     writeSnapshot_(snapshot);
     return snapshot;
   } finally {
@@ -111,7 +116,8 @@ function sweep_(origin) {
 }
 
 // Un archivo por mes: si hay varios del mismo mes se usa el editado mas recientemente y se avisa.
-function readMonths_() {
+// Un mes ya cerrado cuyo archivo no cambio desde el barrido anterior reutiliza sus filas sin abrir la hoja.
+function readMonths_(previous) {
   const files = DriveApp.getFolderById(DATA_FOLDER_ID).getFiles();
   const byMonth = {};
   const ignored = [];
@@ -134,6 +140,11 @@ function readMonths_() {
       current.file = file;
     } else current.duplicates.push(file.getName());
   }
+  // Meses del barrido anterior que se leyeron bien, por archivo.
+  const before = {};
+  ((previous && previous.months) || []).forEach(month => { if (!month.error) before[month.fileId] = month; });
+  const sameVersion = Boolean(previous && previous.version === SWEEP_VERSION);
+  const recentKey = previousMonthKey_();
   const months = Object.keys(byMonth).sort().map(key => {
     const { period, file, duplicates } = byMonth[key];
     const entry = {
@@ -141,15 +152,36 @@ function readMonths_() {
       fileId: file.getId(), fileName: file.getName(), modifiedTime: file.getLastUpdated().toISOString(),
       duplicates, columns: OUTPUT_COLUMNS, rows: [], error: null,
     };
+    const old = before[entry.fileId];
+    const unchanged = Boolean(old && old.modifiedTime === entry.modifiedTime && Array.isArray(old.rows) && Array.isArray(old.columns));
+    // El mes en curso y el anterior se releen siempre: el anterior se completa los primeros dias del mes y
+    // Drive tarda en actualizar la fecha de edicion de un Sheet.
+    if (unchanged && sameVersion && key < recentKey && JSON.stringify(old.columns) === JSON.stringify(OUTPUT_COLUMNS)) {
+      entry.rows = old.rows;
+      return entry;
+    }
     try {
       const spreadsheet = SpreadsheetApp.openById(file.getId());
       entry.rows = aggregateRaw_(rawValues_(spreadsheet), spreadsheet.getSpreadsheetTimeZone());
     } catch (error) {
-      entry.error = String((error && error.message) || error);
+      if (unchanged && old.rows.length) {
+        // El archivo no cambio desde el barrido anterior: un fallo pasajero de Google no borra sus filas.
+        console.error(entry.fileName + ': ' + error);
+        entry.columns = old.columns;
+        entry.rows = old.rows;
+      } else {
+        entry.error = String((error && error.message) || error);
+      }
     }
     return entry;
   });
   return { months, ignored };
+}
+
+// Mes anterior al de hoy en Lima ('yyyy-MM'): ese y los siguientes no se reutilizan del barrido anterior.
+function previousMonthKey_() {
+  const [year, month] = Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-M').split('-').map(Number);
+  return month === 1 ? (year - 1) + '-12' : year + '-' + String(month - 1).padStart(2, '0');
 }
 
 // La pestana con la descarga es la que tiene las cabeceras "Dia" e "Importe gastado (PEN)" (o "Monto gastado").
@@ -169,24 +201,32 @@ function isColumn_(key, cell) {
 
 // Suma edad y sexo. El alcance sumado es aproximado: Meta no permite sumar personas unicas entre filas.
 function aggregateRaw_(values, timeZone) {
-  const headers = values[0];
+  const headers = values[0].map(cell => normalize_(cell));
   const col = {};
-  Object.keys(RAW_COLUMNS).forEach(key => { col[key] = headers.findIndex(cell => isColumn_(key, cell)); });
+  Object.keys(RAW_COLUMNS).forEach(key => { col[key] = headers.findIndex(cell => RAW_COLUMNS[key].indexOf(cell) >= 0); });
   const missing = REQUIRED_RAW.filter(key => col[key] < 0).map(key => RAW_COLUMNS[key].join(' / '));
   if (missing.length) throw new Error('Faltan columnas: ' + missing.join(', '));
 
+  // Cada fecha se repite en miles de filas (edad x sexo x anuncio): se formatea una sola vez.
+  const days = new Map();
+  const dayOf = value => {
+    if (!(value instanceof Date)) return toDay_(value, timeZone);
+    const time = value.getTime();
+    if (!days.has(time)) days.set(time, toDay_(value, timeZone));
+    return days.get(time);
+  };
+
   const groups = {};
   values.slice(1).forEach(row => {
-    const day = toDay_(row[col.day], timeZone);
+    const day = dayOf(row[col.day]);
     if (!day) return;
     const text = key => (col[key] < 0 ? '' : String(row[col[key]] || '').trim());
     const key = [day, text('campaign'), text('adSet'), text('ad')].join('|');
     let group = groups[key];
     if (!group) {
-      group = groups[key] = { day, campaign: text('campaign'), adSet: text('adSet'), ad: text('ad'), objective: '', resultType: '', preview: '' };
+      group = groups[key] = { day, campaign: text('campaign'), adSet: text('adSet'), ad: text('ad'), resultType: '', preview: '' };
       SUM_FIELDS.forEach(field => { group[field] = 0; });
     }
-    if (!group.objective) group.objective = text('objective');
     if (!group.resultType) group.resultType = text('resultType');
     if (!group.preview && /^https:\/\//.test(text('preview'))) group.preview = text('preview');
     SUM_FIELDS.forEach(field => { group[field] += col[field] < 0 ? 0 : toNumber_(row[col[field]]); });
@@ -221,7 +261,7 @@ function readReports_() {
     if (file.isTrashed()) continue;
     list.push({
       id: file.getId(), title: file.getName(), mimeType: file.getMimeType(), sizeBytes: file.getSize(),
-      createdTime: file.getDateCreated().toISOString(), modifiedTime: file.getLastUpdated().toISOString(),
+      modifiedTime: file.getLastUpdated().toISOString(),
     });
   }
   return { folder: { id: folder.getId(), name: folder.getName(), url: folder.getUrl() }, files: list };

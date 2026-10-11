@@ -48,33 +48,53 @@ function encryptPage(html, password) {
     iv: iv.toString('base64'),
     data: data.toString('base64'),
   });
-  const template = readFile('deploy/pages-gate.html');
+  // El payload es JSON de cadenas base64 (sin saltos de linea): solo la plantilla puede traer CRLF.
+  const template = readFile('deploy/pages-gate.html').replace(/\r\n?/g, '\n');
   if (template.split('__PAYLOAD__').length !== 2) throw new Error('deploy/pages-gate.html debe contener __PAYLOAD__ exactamente una vez');
-  return template.replace('__PAYLOAD__', () => payload).replace(/\r\n?/g, '\n');
+  return template.replace('__PAYLOAD__', () => payload);
 }
 
 const DATA_ENDPOINT_RE =/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
 const SNAPSHOT_FILE = path.join(ROOT, 'data', 'tp-meta-2026.json');
+const RETRY_DELAY_MS = 15000;
+
+// Baja el ultimo barrido del Web App y lo guarda en data/. Devuelve null (con aviso) si Google falla.
+async function fetchSnapshot(endpoint) {
+  try {
+    const response = await fetch(`${endpoint}?action=data`, { signal: AbortSignal.timeout(120000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!payload || payload.ok === false || !Array.isArray(payload.months)) throw new Error('respuesta sin meses');
+    const text = JSON.stringify(payload);
+    fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
+    fs.writeFileSync(SNAPSHOT_FILE, text, 'utf8');
+    return text;
+  } catch (error) {
+    console.warn(`[build] no se pudo bajar el barrido del Web App (${error.message})`);
+    return null;
+  }
+}
 
 // El repo es publico: la URL del Web App (secret TP_DATA_ENDPOINT) y los datos del cliente solo viven en
 // dist/, que se sirve con clave. El build baja el ultimo barrido y lo incrusta como copia de respaldo; si
 // Google no responde usa la copia local de data/ (gitignored) de un build anterior.
 async function loadSnapshot(endpoint) {
-  if (endpoint) {
-    try {
-      const response = await fetch(`${endpoint}?action=data`, { signal: AbortSignal.timeout(120000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      if (!payload || payload.ok === false || !Array.isArray(payload.months)) throw new Error('respuesta sin meses');
-      const text = JSON.stringify(payload);
-      fs.mkdirSync(path.dirname(SNAPSHOT_FILE), { recursive: true });
-      fs.writeFileSync(SNAPSHOT_FILE, text, 'utf8');
-      return text;
-    } catch (error) {
-      console.warn(`[build] no se pudo bajar el barrido del Web App (${error.message}); se usa la copia local`);
-    }
+  const text = endpoint ? await fetchSnapshot(endpoint) : null;
+  if (text) return text;
+  if (fs.existsSync(SNAPSHOT_FILE)) {
+    if (endpoint) console.warn('[build] se usa la copia local de data/');
+    return fs.readFileSync(SNAPSHOT_FILE, 'utf8');
   }
-  if (fs.existsSync(SNAPSHOT_FILE)) return fs.readFileSync(SNAPSHOT_FILE, 'utf8');
+  // En GitHub Actions nunca hay copia local: un tablero sin copia reemplazaria al publicado, que si la tiene.
+  // Se reintenta una vez y, si Google sigue sin responder, el build falla y Pages conserva el deploy anterior.
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    if (endpoint) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      const retry = await fetchSnapshot(endpoint);
+      if (retry) return retry;
+    }
+    throw new Error('sin barrido del Web App ni copia local de data/; no se publica un tablero sin datos');
+  }
   console.warn('[build] sin copia de datos: el tablero dependera solo de la lectura en vivo');
   return 'null';
 }
@@ -83,6 +103,9 @@ async function main() {
   const endpoint = (process.env.TP_DATA_ENDPOINT || '').trim();
   if (endpoint && !DATA_ENDPOINT_RE.test(endpoint)) throw new Error('TP_DATA_ENDPOINT no es una URL /exec de script.google.com');
   if (!endpoint) console.warn('[build] falta TP_DATA_ENDPOINT; el tablero no podra leer Google en vivo');
+  const pagePassword = process.env.TP_PAGE_PASSWORD || '';
+  // Un <input type="password"> descarta los saltos de linea: con uno en la clave nadie podria abrir el tablero.
+  if (/[\r\n]/.test(pagePassword)) throw new Error('TP_PAGE_PASSWORD contiene un salto de linea: la pantalla de acceso no lo puede escribir');
 
   let html = readFile('index.html');
   // Al inlinear el CSS la ruta pasa a resolverse desde dist/index.html,
@@ -103,13 +126,11 @@ async function main() {
   const config = `window.TP_DATA_ENDPOINT = ${JSON.stringify(endpoint)};window.TP_META_DATA = ${metaData};window.TP_BITACORA = ${bitacora};window.TP_USUARIOS = ${usuarios};`;
   html = html.replace('</head>', () => `<script>${config}</script></head>`);
 
-  // El navegador convierte CRLF en LF antes de calcular el hash CSP de cada <script>; si el HTML
-  // conserva CRLF (archivos editados en Windows) los hashes no coinciden y el tablero no carga.
+  // Salida en LF tanto en Windows (checkout con CRLF) como en CI: el mismo codigo da el mismo dist/index.html.
   html = html.replace(/\r\n?/g, '\n');
 
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(DIST_DIR, { recursive: true });
-  const pagePassword = process.env.TP_PAGE_PASSWORD || '';
   fs.writeFileSync(DIST_HTML, pagePassword ? encryptPage(html, pagePassword) : html, 'utf8');
   if (pagePassword) console.log('[build] dist/index.html cifrado con TP_PAGE_PASSWORD');
 

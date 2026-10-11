@@ -1,6 +1,6 @@
 (function () {
   // Formatos compartidos de js/data-source.js, que se carga antes que este archivo.
-  const { fmt, esc: escapeHtml, SHORT_MONTHS } = window.TPData;
+  const { fmt, esc: escapeHtml, keepFocus, SHORT_MONTHS } = window.TPData;
   // Cada objetivo trae su color desde js/data-source.js; el gasto siempre va en azul.
   const SPEND_COLOR = '#2563eb';
   const HANDLE_HIT_RADIUS = 16;
@@ -21,13 +21,15 @@
     // Objetivos y acumulados diarios del ultimo barrido (no dependen del escenario).
     base: null,
     drag: null,
+    // Un barrido que llega durante el arrastre se pinta al soltar el punto.
+    pendingRender: false,
   };
 
   const money = fmt.money;
   const count = fmt.count;
   // Un objetivo sin resultados proyectados muestra S/. 0.00 de costo por resultado.
   const unitCost = value => fmt.unitCost(value ?? 0);
-  const format = (value, unit) => (unit === 'money' ? money(value) : count(Math.round(Number(value) || 0)));
+  const format = (value, unit) => (unit === 'money' ? money(value) : count(Number(value) || 0));
 
   function scenarioFor(monthKey, objectiveKey) {
     state.scenarios[monthKey] = state.scenarios[monthKey] || {};
@@ -39,7 +41,8 @@
   // dia con datos, extendido hasta fin de mes. daily es el acumulado real dia a dia (indice 0 = dia 1).
   function buildSeries(daily, firstDay, lastDay, daysInMonth, closed, override) {
     const actual = daily[lastDay - 1] || 0;
-    const adjusted = Number.isFinite(override);
+    // Un mes cerrado no tiene punto arrastrable: muestra el real aunque quede un escenario en memoria.
+    const adjusted = !closed && Number.isFinite(override);
     const elapsed = Math.max(1, lastDay - firstDay + 1);
     const daysLeft = daysInMonth - lastDay;
     const value = adjusted ? override : actual;
@@ -48,13 +51,11 @@
     return {
       daily,
       actual,
-      realDay: lastDay,
       realPace,
-      realProjected: closed ? actual : actual + realPace * daysLeft,
       day: lastDay,
       value,
       pace,
-      projected: closed && !adjusted ? actual : value + pace * daysLeft,
+      projected: closed ? actual : value + pace * daysLeft,
       adjusted,
     };
   }
@@ -113,18 +114,14 @@
       monthName: month.name,
       monthLabel: `${month.name} ${month.year}`,
       shortMonth: SHORT_MONTHS[month.month - 1],
-      year: month.year,
       daysInMonth,
       daysWithData: lastDay,
-      firstDay,
       daysLeft: daysInMonth - lastDay,
       closed,
-      source: tp.statusLabel(),
       campaigns,
       spendActual,
       spendProjected,
       spendPace: spendActual / Math.max(1, lastDay - firstDay + 1),
-      adjusted: campaigns.some(campaign => campaign.adjusted),
       spendAdjusted: campaigns.some(campaign => campaign.spend.adjusted),
     };
   }
@@ -146,20 +143,26 @@
     const campaignCards = projection.campaigns.map(campaign => `
       <button type="button" class="kpi-pill projection-campaign-card${campaign === selected ? ' active' : ''}${campaign.adjusted ? ' is-adjusted' : ''}" data-campaign="${escapeHtml(campaign.key)}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
         <span><i class="campaign-dot"></i>${escapeHtml(campaign.short)} | ${escapeHtml(campaign.resultLabel)}</span>
-        <strong>${count(Math.round(campaign.results.projected))}</strong>
+        <strong>${count(campaign.results.projected)}</strong>
         <small>Gasto proyectado ${money(campaign.spend.projected)}</small>
       </button>`);
-    host.innerHTML = spendCards.concat(campaignCards).join('');
+    // Elegir un objetivo con Enter rehace las tarjetas: el foco vuelve a la del mismo objetivo.
+    keepFocus(host, () => {
+      host.innerHTML = spendCards.concat(campaignCards).join('');
+    });
   }
 
   function renderCampaignChips(projection) {
     const host = document.getElementById('projection-campaigns');
     if (!host) return;
     const selected = selectedCampaign(projection);
-    host.innerHTML = projection.campaigns.map(campaign => `
-      <label class="series-toggle campaign-chip${campaign === selected ? ' active' : ''}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
-        <input type="radio" name="projection-campaign" value="${escapeHtml(campaign.key)}"${campaign === selected ? ' checked' : ''}>${escapeHtml(campaign.short)}
-      </label>`).join('');
+    // Con las flechas del teclado el foco sigue en el radio elegido aunque se rehaga el grupo.
+    keepFocus(host, () => {
+      host.innerHTML = projection.campaigns.map(campaign => `
+        <label class="series-toggle campaign-chip${campaign === selected ? ' active' : ''}" style="--campaign-color:${campaign.color}" title="${escapeHtml(campaign.name)}">
+          <input type="radio" name="projection-campaign" value="${escapeHtml(campaign.key)}"${campaign === selected ? ' checked' : ''}>${escapeHtml(campaign.short)}
+        </label>`).join('');
+    });
   }
 
   function renderTable(projection) {
@@ -175,8 +178,8 @@
           <td class="projection-campaigns-col">${escapeHtml(campaign.type)}<small class="projection-campaign-full">${escapeHtml(campaign.name)}</small></td>
           <td><span class="objective-pill">${escapeHtml(campaign.resultLabel)}</span></td>
           <td class="num">${count(campaign.results.actual)}</td>
-          <td class="num">${count(Math.round(campaign.results.pace))}</td>
-          <td class="num projection-value">${count(Math.round(campaign.results.projected))}</td>
+          <td class="num">${count(campaign.results.pace)}</td>
+          <td class="num projection-value">${count(campaign.results.projected)}</td>
           <td class="num">${money(campaign.spend.actual)}</td>
           <td class="num projection-value">${money(campaign.spend.projected)}</td>
           <td class="num">${unitCost(campaign.costPerResult)}</td>
@@ -230,18 +233,39 @@
     }
     host.hidden = false;
     const day = `${projection.daysWithData}-${projection.shortMonth}`;
-    const field = (key, label, series, step) => `
+    const inputValue = (key, series) => (key === 'results' ? String(Math.round(series.value)) : series.value.toFixed(2));
+    const note = (key, series) => (series.adjusted ? `real ${format(series.actual, SERIES[key].unit)}` : 'valor real');
+    // El HTML solo se rehace si cambia el objetivo, su tipo de resultado o el dia de corte. Al escribir un valor o
+    // arrastrar el punto los campos se actualizan en el lugar para no sacar el foco del campo (Tab, Enter).
+    const signature = `${campaign.key}|${campaign.resultLabel}|${day}`;
+    if (host.dataset.signature === signature && host.querySelector('input[data-series]')) {
+      ['results', 'spend'].forEach(key => {
+        const input = host.querySelector(`input[data-series="${key}"]`);
+        if (!input) return;
+        const value = inputValue(key, campaign[key]);
+        if (input.value !== value) input.value = value;
+        const em = input.closest('.projection-scenario-field')?.querySelector('em');
+        if (em) em.textContent = note(key, campaign[key]);
+      });
+      const reset = document.getElementById('projection-reset');
+      if (reset) reset.disabled = !campaign.adjusted;
+      return;
+    }
+    host.dataset.signature = signature;
+    const field = (key, label, step) => `
       <label class="projection-scenario-field">
         <span>${escapeHtml(label)} al ${day}</span>
-        <input type="number" min="0" step="${step}" value="${step === 1 ? Math.round(series.value) : series.value.toFixed(2)}" data-series="${key}" aria-label="${escapeHtml(label)} al ${day}">
-        <em>${series.adjusted ? `real ${format(series.actual, SERIES[key].unit)}` : 'valor real'}</em>
+        <input type="number" min="0" step="${step}" value="${inputValue(key, campaign[key])}" data-series="${key}" aria-label="${escapeHtml(label)} al ${day}">
+        <em>${note(key, campaign[key])}</em>
       </label>`;
-    host.innerHTML = `
-      <div class="projection-scenario-text">
-        ${field('results', campaign.resultLabel, campaign.results, 1)}
-        ${field('spend', 'Gasto (S/.)', campaign.spend, 0.01)}
-      </div>
-      <button type="button" class="table-tool-btn" id="projection-reset" ${campaign.adjusted ? '' : 'disabled'}>Restablecer punto actual</button>`;
+    keepFocus(host, () => {
+      host.innerHTML = `
+        <div class="projection-scenario-text">
+          ${field('results', campaign.resultLabel, 1)}
+          ${field('spend', 'Gasto (S/.)', 0.01)}
+        </div>
+        <button type="button" class="table-tool-btn" id="projection-reset" ${campaign.adjusted ? '' : 'disabled'}>Restablecer punto actual</button>`;
+    });
   }
 
   // Linea vertical en el dia de corte real y etiqueta de valor sobre cada punto arrastrable.
@@ -310,9 +334,9 @@
   function seriesDatasets(series, meta, projection, draggable) {
     const days = projection.daysInMonth;
     // La linea real es el acumulado dia a dia de la descarga de Meta; la proyeccion parte del punto actual.
-    const real = Array.from({ length: days }, (_, i) => (i + 1 <= series.realDay ? series.daily[i] ?? null : null));
+    const real = Array.from({ length: days }, (_, i) => (i + 1 <= series.day ? series.daily[i] ?? null : null));
     const forecast = Array.from({ length: days }, (_, i) => (i + 1 >= series.day ? series.value + series.pace * (i + 1 - series.day) : null));
-    const original = Array.from({ length: days }, (_, i) => (i + 1 >= series.realDay ? series.actual + series.realPace * (i + 1 - series.realDay) : null));
+    const original = Array.from({ length: days }, (_, i) => (i + 1 >= series.day ? series.actual + series.realPace * (i + 1 - series.day) : null));
     const handle = Array.from({ length: days }, (_, i) => (i + 1 === series.day ? series.value : null));
     const base = { yAxisID: meta.axis, unit: meta.unit, pointRadius: 0, pointHoverRadius: 4, tension: 0, seriesKey: meta.key };
     const datasets = [
@@ -406,7 +430,7 @@
     }
     const note = document.getElementById('projection-note');
     if (note) {
-      note.textContent = `Cada objetivo mide un resultado distinto (interacciones, ThruPlays, clics al boton de WhatsApp), por eso se proyectan por separado. La linea continua es el acumulado real de cada dia; la punteada mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: Meta Ads | ${projection.source}.`;
+      note.textContent = `Cada objetivo mide un resultado distinto (interacciones, ThruPlays, clics al boton de WhatsApp), por eso se proyectan por separado. La linea continua es el acumulado real de cada dia; la punteada mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: Meta Ads | ${window.TPData.statusLabel()}.`;
     }
     const desc = document.getElementById('projection-desc');
     if (desc) {
@@ -437,15 +461,23 @@
       state.chart = null;
     }
     setPanelEmpty(true);
+    // Las tarjetas y la descripcion van fuera del panel: no deben quedar las del barrido anterior.
+    const kpis = document.getElementById('projection-kpis');
+    if (kpis) kpis.innerHTML = '';
+    const desc = document.getElementById('projection-desc');
+    if (desc) desc.textContent = 'Sin datos para proyectar: no hay descargas de Meta con gasto en la carpeta de Drive.';
     const body = document.getElementById('projection-body');
     if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Sin datos para proyectar.</td></tr>';
   }
 
+  // Sin datos de ningun origen se muestra el motivo en vez de seguir esperando.
   function renderWaiting() {
+    const error = window.TPData?.status().error;
+    const message = error ? `No se pudieron cargar los datos (${error}). Pulsa Actualizar para reintentar.` : 'Esperando los datos de Meta...';
     const sub = document.getElementById('projection-sub');
-    if (sub) sub.textContent = 'Esperando los datos de Meta...';
+    if (sub) sub.textContent = message;
     const body = document.getElementById('projection-body');
-    if (body) body.innerHTML = '<tr><td class="table-empty" colspan="10">Esperando los datos de Meta...</td></tr>';
+    if (body) body.innerHTML = `<tr><td class="table-empty" colspan="10">${escapeHtml(message)}</td></tr>`;
   }
 
   function recompute() {
@@ -541,6 +573,16 @@
       chart.options.plugins.tooltip.enabled = false;
     });
 
+    // En tactil el navegador fija el touch-action al empezar el toque, asi que .is-dragging llega tarde:
+    // el desplazamiento de la pagina se bloquea aqui, y solo si el toque cae sobre el punto arrastrable.
+    canvas.addEventListener('touchstart', event => {
+      const chart = state.chart;
+      const touch = event.changedTouches[0];
+      if (!chart || !touch || !state.projection || state.projection.closed) return;
+      const rect = canvas.getBoundingClientRect();
+      if (handleAt(chart, touch.clientX - rect.left, touch.clientY - rect.top)) event.preventDefault();
+    }, { passive: false });
+
     canvas.addEventListener('pointermove', event => {
       const chart = state.chart;
       if (!chart) return;
@@ -567,6 +609,10 @@
       }
       state.drag = null;
       canvas.classList.remove('is-dragging');
+      if (state.pendingRender) {
+        state.pendingRender = false;
+        render();
+      }
     };
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', endDrag);
@@ -611,7 +657,17 @@
     });
 
     window.addEventListener('tp:data-updated', () => {
-      if (state.ready && !state.drag) render();
+      if (!state.ready) return;
+      // Recrear el grafico a mitad del arrastre cortaria el gesto: el barrido se pinta al soltar.
+      if (state.drag) {
+        state.pendingRender = true;
+        return;
+      }
+      render();
+    });
+
+    window.addEventListener('tp:data-error', () => {
+      if (state.ready && !window.TPData?.snapshot()) renderWaiting();
     });
 
     wireDrag();
@@ -625,5 +681,5 @@
     render();
   }
 
-  window.TPProjections = { init, render };
+  window.TPProjections = { init };
 })();

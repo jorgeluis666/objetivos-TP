@@ -3,23 +3,20 @@
   // el boton Actualizar relee ambas carpetas de Drive y este modulo valida que cada mes con gasto tenga su reporte.
   // Los nombres de archivo vienen de Drive: se escapan antes de ir a innerHTML.
   const esc = value => window.TPData.esc(value);
-  const MONTHS = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-  ];
+  // Un patron por mes, en orden de calendario (la posicion es el mes 0-11).
   const MONTH_PATTERNS = [
-    { index: 0, re: /\bene(?:ro)?\b/ },
-    { index: 1, re: /\bfeb(?:rero)?\b/ },
-    { index: 2, re: /\bmar(?:zo)?\b/ },
-    { index: 3, re: /\babr(?:il)?\b/ },
-    { index: 4, re: /\bmay(?:o)?\b/ },
-    { index: 5, re: /\bjun(?:io)?\b/ },
-    { index: 6, re: /\bjul(?:io)?\b/ },
-    { index: 7, re: /\bago(?:sto)?\b/ },
-    { index: 8, re: /\bse(?:pt?|t)(?:iembre)?\b/ },
-    { index: 9, re: /\boct(?:ubre)?\b/ },
-    { index: 10, re: /\bnov(?:iembre)?\b/ },
-    { index: 11, re: /\bdic(?:iembre)?\b/ },
+    /\bene(?:ro)?\b/,
+    /\bfeb(?:rero)?\b/,
+    /\bmar(?:zo)?\b/,
+    /\babr(?:il)?\b/,
+    /\bmay(?:o)?\b/,
+    /\bjun(?:io)?\b/,
+    /\bjul(?:io)?\b/,
+    /\bago(?:sto)?\b/,
+    /\bse(?:pt?|t)(?:iembre)?\b/,
+    /\boct(?:ubre)?\b/,
+    /\bnov(?:iembre)?\b/,
+    /\bdic(?:iembre)?\b/,
   ];
   const TYPES = {
     monthly: { id: 'monthly', label: 'Reporte mensual', tone: 'blue' },
@@ -40,10 +37,10 @@
     synced: { label: 'Sincronizado', tone: 'green', rank: 5 },
   };
   const state = {
-    ready: false,
     wired: false,
-    folder: null,
     syncedAt: '',
+    reportsError: '',
+    lastFocus: null,
     reports: [],
     validation: [],
     filters: { search: '', type: 'all', period: 'all', latestOnly: false },
@@ -84,19 +81,33 @@
       .replace(/([a-z])(\d)/g, '$1 $2');
   }
 
+  // Mes (0-11) de la palabra de mes que aparece primero en el texto, o -1.
+  function firstMonth(text) {
+    let month = -1;
+    let at = Infinity;
+    MONTH_PATTERNS.forEach((re, index) => {
+      const found = text.search(re);
+      if (found >= 0 && found < at) {
+        month = index;
+        at = found;
+      }
+    });
+    return month;
+  }
+
   function detectPeriod(title) {
     const text = titleText(title);
     const yearMatch = text.match(/\b(20\d{2})\b/);
-    const year = yearMatch ? Number(yearMatch[1]) : null;
-    // Si el nombre trae varias palabras de mes, gana la que aparece primero.
-    const monthHit = MONTH_PATTERNS
-      .map(pattern => ({ ...pattern, at: text.search(pattern.re) }))
-      .filter(pattern => pattern.at >= 0)
-      .sort((a, b) => a.at - b.at)[0];
-    if (!monthHit || !year) return null;
+    if (!yearMatch) return null;
+    const year = Number(yearMatch[1]);
+    // Gana la palabra de mes que aparece primero; "mar", "may" y "set" tambien son palabras comunes
+    // ("Frutos_del_Mar", "Set_de_anuncios") y solo cuentan pegadas al ano ("Mar2026", "1-13Mar2026").
+    const loose = text.replace(new RegExp(`\\b(?:mar|may|set)\\b(?!\\s*${year}\\b)`, 'g'), ' ');
+    let month = firstMonth(loose);
+    if (month < 0) month = firstMonth(text);
+    if (month < 0) return null;
 
-    const label = `${MONTHS[monthHit.index].charAt(0).toUpperCase()}${MONTHS[monthHit.index].slice(1)} ${year}`;
-    return { key: `${year}-${String(monthHit.index + 1).padStart(2, '0')}`, label, year, month: monthHit.index + 1 };
+    return { key: `${year}-${String(month + 1).padStart(2, '0')}`, label: `${window.TPData.MONTHS[month]} ${year}`, year, month: month + 1 };
   }
 
   function detectRange(title) {
@@ -107,14 +118,21 @@
     return { from, to, label: `Del ${from} al ${to}` };
   }
 
+  const MATERIAL_MIME_RE = /^image\/|spreadsheet|ms-excel|csv|zip|compressed/;
+  const MATERIAL_EXTENSION_RE = /\.(png|jpe?g|gif|xlsx?|csv|zip)$/i;
+
   function detectType(title, mimeType, range) {
     const text = normalize(title);
-    if (String(mimeType).startsWith('video/')) return TYPES.audiovisual;
+    const mime = String(mimeType);
+    if (mime.startsWith('video/')) return TYPES.audiovisual;
     if (text.includes('propuesta')) return TYPES.proposal;
     if (text.includes('recomendacion')) return TYPES.recommendations;
     if (text.includes('dashboard')) return TYPES.dashboard;
+    const named = text.includes('reporte');
+    // Imagenes, hojas de calculo y comprimidos son materiales: el mes o el tramo del nombre no los vuelve reporte.
+    if (!named && (MATERIAL_MIME_RE.test(mime) || MATERIAL_EXTENSION_RE.test(String(title)))) return TYPES.other;
     if (range) return TYPES.partial;
-    if (text.includes('reporte') || detectPeriod(title)) return TYPES.monthly;
+    if (named || detectPeriod(title)) return TYPES.monthly;
     return TYPES.other;
   }
 
@@ -126,15 +144,12 @@
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  function toDate(iso) {
-    const value = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? `${iso}T00:00:00` : iso;
-    return new Date(value);
-  }
-
+  // Fecha corta en hora de Lima ("7 sep 2026"), la misma que usa la cobertura (limaDay).
   function formatDate(iso) {
-    const date = toDate(iso);
+    const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return '--';
-    return `${date.getDate()} ${MONTHS[date.getMonth()].slice(0, 3)} ${date.getFullYear()}`;
+    const { year, month, day } = window.TPData.limaParts(date);
+    return `${day} ${window.TPData.SHORT_MONTHS[month].toLowerCase()} ${year}`;
   }
 
   // Fecha calendario en Lima de un instante ISO (Drive guarda las fechas en UTC).
@@ -164,7 +179,6 @@
         isVideo,
         sizeBytes: Number(file.sizeBytes) || 0,
         modifiedTime: file.modifiedTime,
-        createdTime: file.createdTime,
         viewUrl: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
         previewUrl: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
         downloadUrl: `https://drive.google.com/uc?export=download&id=${encodeURIComponent(file.id)}`,
@@ -181,10 +195,7 @@
     });
     groups.forEach(group => {
       group.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime));
-      group.forEach((report, index) => {
-        report.latest = index === 0;
-        report.versions = group.length;
-      });
+      group.forEach((report, index) => { report.latest = index === 0; });
     });
 
     return reports.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime));
@@ -223,11 +234,12 @@
       let coverage = 0;
 
       if (!month) {
+        // reports viene ordenado del mas reciente al mas antiguo.
+        best = reports[0];
         issues.push({ status: 'orphan', detail: 'Hay reportes de este mes, pero su descarga de Meta no esta en la carpeta de datos.' });
       } else if (month.error) {
         issues.push({ status: 'error', detail: month.error });
       } else {
-        const closed = month.complete || month.past;
         reports.forEach(report => {
           const value = reportCoverage(report, month);
           if (!best || value > coverage || (value === coverage && new Date(report.modifiedTime) > new Date(best.modifiedTime))) {
@@ -235,20 +247,25 @@
             coverage = value;
           }
         });
-        // En el mes en curso el ultimo dia de la descarga es el dia en que se bajo: aun no esta completo, asi
-        // que un reporte que llega al dia anterior ya esta al dia.
-        const required = closed ? month.daysInMonth : Math.max(month.firstDay || 1, (month.lastDay || 1) - 1);
-        if (month.past && !month.complete) {
-          issues.push({ status: 'incomplete', detail: `La descarga llega al ${month.lastDay} de ${month.daysInMonth} dias: vuelve a bajarla de Meta con el mes completo.` });
+        if (!month.hasData) {
+          // El Sheet del mes existe pero no tiene gasto ni impresiones: no hay dias contra los cuales validar el reporte.
+          issues.push({ status: 'orphan', detail: 'Hay reportes de este mes, pero su descarga de Meta no tiene gasto ni impresiones.' });
+        } else {
+          // En el mes en curso el ultimo dia de la descarga es el dia en que se bajo: aun no esta completo, asi
+          // que un reporte que llega al dia anterior ya esta al dia.
+          const closed = month.complete || month.past;
+          const required = closed ? month.daysInMonth : Math.max(month.firstDay || 1, (month.lastDay || 1) - 1);
+          if (month.past && !month.complete) {
+            issues.push({ status: 'incomplete', detail: `La descarga llega al ${month.lastDay} de ${month.daysInMonth} dias: vuelve a bajarla de Meta con el mes completo.` });
+          }
+          if (!best) issues.push({ status: 'missing', detail: `Hay gasto del ${month.firstDay} al ${month.lastDay}, pero ningun reporte de ${month.name.toLowerCase()} en la carpeta de reportes.` });
+          else if (coverage < required) issues.push({ status: 'stale', detail: `El reporte llega al ${coverage}; los datos de Meta, al ${month.lastDay}.` });
         }
-        if (!best) issues.push({ status: 'missing', detail: `Hay gasto del ${month.firstDay} al ${month.lastDay}, pero ningun reporte de ${month.name.toLowerCase()} en la carpeta de reportes.` });
-        else if (coverage < required) issues.push({ status: 'stale', detail: `El reporte llega al ${coverage}; los datos de Meta, al ${month.lastDay}.` });
       }
       if (!issues.length) issues.push({ status: 'synced', detail: month && !(month.complete || month.past) ? `Datos al ${month.lastDay}; reporte al ${coverage}.` : 'Datos y reporte con el mes completo.' });
       issues.sort((a, b) => STATUS[a.status].rank - STATUS[b.status].rank);
 
       return {
-        key,
         label,
         month,
         spend: month ? tp.metrics.summarize(month.rows).spend : null,
@@ -296,9 +313,10 @@
       }).join('');
     }
 
-    // Avisos de la carpeta de datos: archivos que el barrido no pudo usar.
+    // Avisos de las carpetas: la de reportes no se pudo releer, o archivos de datos que el barrido no pudo usar.
     if (els.syncNotes) {
       const notes = [];
+      if (state.reportsError) notes.push(`<b>Carpeta de reportes</b>: ${esc(state.reportsError)}${state.reports.length ? ' Se muestra la lista del barrido anterior.' : ''}`);
       snapshot.ignored.forEach(item => notes.push(`<b>${esc(item.fileName)}</b>: ${esc(item.reason)}`));
       snapshot.months.forEach(month => {
         if (month.duplicates.length) notes.push(`<b>${esc(month.name)} ${month.year}</b>: hay otro archivo del mismo mes (${esc(month.duplicates.join(', '))}); se usa "${esc(month.fileName)}", el editado mas reciente.`);
@@ -388,12 +406,16 @@
     if (!els.body) return;
     const rows = visibleReports();
 
+    const stamp = state.reportsError
+      ? ' | no se pudo releer la carpeta'
+      : state.syncedAt ? ` | lista leida ${window.TPData.formatStamp(state.syncedAt)}` : '';
     els.count.textContent = rows.length === state.reports.length
-      ? `${state.reports.length} documentos${state.syncedAt ? ` | lista leida ${window.TPData.formatStamp(state.syncedAt)}` : ''}`
+      ? `${state.reports.length} documentos${stamp}`
       : `${rows.length} de ${state.reports.length} documentos`;
 
     if (!rows.length) {
-      els.body.innerHTML = `<tr><td class="table-empty" colspan="7">${state.reports.length ? 'No hay documentos que coincidan con el filtro.' : 'La carpeta de reportes esta vacia.'}</td></tr>`;
+      const empty = state.reportsError ? esc(state.reportsError) : 'La carpeta de reportes esta vacia.';
+      els.body.innerHTML = `<tr><td class="table-empty" colspan="7">${state.reports.length ? 'No hay documentos que coincidan con el filtro.' : empty}</td></tr>`;
       return;
     }
 
@@ -436,6 +458,10 @@
     els.modalFrame.src = report.previewUrl;
     els.modal.classList.add('visible');
     document.body.classList.add('modal-open');
+    // El foco entra al dialogo y el fondo sale del orden de tab y del arbol accesible (sin cambio visual).
+    state.lastFocus = document.activeElement;
+    if (els.shell) els.shell.inert = true;
+    els.modal.querySelector('[data-close-preview]')?.focus({ preventScroll: true });
   }
 
   function closePreview() {
@@ -443,6 +469,24 @@
     els.modal.classList.remove('visible');
     els.modalFrame.src = '';
     document.body.classList.remove('modal-open');
+    if (els.shell) els.shell.inert = false;
+    // El foco vuelve al boton que abrio el modal, si la tabla no se rearmo mientras estaba abierto.
+    const back = state.lastFocus;
+    state.lastFocus = null;
+    if (back?.isConnected && typeof back.focus === 'function') back.focus({ preventScroll: true });
+  }
+
+  // Tab y Shift+Tab dan la vuelta dentro del modal en lugar de salir a la pagina de fondo.
+  function trapFocus(event) {
+    const focusable = [...els.modal.querySelectorAll('a[href], button, iframe')];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const edge = event.shiftKey ? first : last;
+    if (!els.modal.contains(document.activeElement) || document.activeElement === edge) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
   }
 
   function bindEvents() {
@@ -474,24 +518,37 @@
       if (event.target === els.modal || event.target.closest('[data-close-preview]')) closePreview();
     });
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && els.modal?.classList.contains('visible')) closePreview();
+      if (!els.modal?.classList.contains('visible')) return;
+      if (event.key === 'Escape') closePreview();
+      else if (event.key === 'Tab') trapFocus(event);
     });
     window.addEventListener('tp:data-updated', load);
-    window.addEventListener('tp:data-error', () => renderValidation());
+    // Con datos ya pintados un error de lectura no cambia nada; sin datos, load() muestra el motivo.
+    window.addEventListener('tp:data-error', () => { if (!window.TPData?.snapshot()) load(); });
   }
 
   function load() {
     const snapshot = window.TPData?.snapshot();
     if (!snapshot) {
-      if (els.body) els.body.innerHTML = '<tr><td class="table-empty" colspan="7">Esperando la lista de la carpeta de Drive...</td></tr>';
+      const error = window.TPData?.status().error;
+      if (!error) {
+        if (els.body) els.body.innerHTML = '<tr><td class="table-empty" colspan="7">Esperando la lista de la carpeta de Drive...</td></tr>';
+        return;
+      }
+      // Sin datos de ningun origen: se reemplazan los "Cargando..." por el motivo, igual que en Gasto publicitario.
+      const message = `No se pudieron cargar los datos (${error}). Pulsa Actualizar para reintentar.`;
+      if (els.body) els.body.innerHTML = `<tr><td class="table-empty" colspan="7">${esc(message)}</td></tr>`;
+      if (els.syncBody) els.syncBody.innerHTML = `<tr><td class="table-empty" colspan="6">${esc(message)}</td></tr>`;
+      if (els.count) els.count.textContent = 'Sin datos';
+      if (els.syncSub) els.syncSub.textContent = 'Sin datos para validar.';
       return;
     }
-    state.folder = snapshot.reports.folder;
+    const folder = snapshot.reports.folder;
     state.syncedAt = snapshot.sweptAt;
+    state.reportsError = snapshot.reports.error || '';
     state.reports = buildReports(snapshot.reports.files);
-    if (els.folderLink && /^https:\/\/drive\.google\.com\//i.test(String(state.folder?.url || ''))) els.folderLink.href = state.folder.url;
+    if (els.folderLink && /^https:\/\/drive\.google\.com\//i.test(String(folder?.url || ''))) els.folderLink.href = folder.url;
     render();
-    state.ready = true;
   }
 
   function init() {
@@ -514,6 +571,7 @@
       els.syncBody = document.getElementById('sync-body');
       els.syncSub = document.getElementById('sync-sub');
       els.syncNotes = document.getElementById('sync-notes');
+      els.shell = document.querySelector('.shell');
       bindEvents();
       state.wired = true;
     }

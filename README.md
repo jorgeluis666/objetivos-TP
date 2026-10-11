@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.24.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.25.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -18,6 +18,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 
 - Gasto publicitario: los indicadores del reporte de Ads por mes, calculados con la descarga de Meta.
   - Pestanas de Enero a Diciembre y una pestana Anual, que acumula todos los meses del año con descarga.
+    Si hay descargas de mas de un año, encima de los meses aparece un selector de año (tambien en el Historico).
     En la vista anual no hay comparacion (no hay descargas del año anterior): los indicadores muestran su
     promedio mensual (meses cerrados), cada objetivo los meses en que corrio y el grafico va por mes.
   - Resumen ejecutivo: el periodo y debajo inversion, impresiones, alcance, frecuencia y CPM en una sola
@@ -53,9 +54,6 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 - Usuarios y Claves: directorio de las cuentas con acceso al tablero, sin contraseñas (ver "Usuarios y Claves").
-
-Los modulos Comparativo YoY, Distribucion, Productos Web y Usuarios y Claves se muestran
-deshabilitados hasta su futura implementacion.
 
 ## Datos
 

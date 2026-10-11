@@ -51,10 +51,14 @@
 
   const state = {
     monthKey: null,
+    // Año de las pestanas en la vista anual (con un mes elegido manda el año de ese mes).
+    year: null,
     tableCompact: readSetting(TABLE_COMPACT_KEY, 'false') === 'true',
     tableFullscreen: false,
     adsObjective: 'all',
     historyMonth: HISTORY_ALL,
+    // Año de las pestanas del Historico en "Todos" (con un mes elegido manda el año de ese mes).
+    historyYear: null,
     historyStatus: 'todas',
     campaignCharts: readJson(CAMPAIGN_CHARTS_KEY),
     // Graficos de Chart.js vivos, uno por cuadro de campana (clave del objetivo).
@@ -66,6 +70,7 @@
   const data = () => window.TPData;
   const fmt = (kind, ...args) => data().fmt[kind](...args);
   const esc = value => data().esc(value);
+  const hasActivity = item => data().metrics.hasActivity(item);
 
   function readSetting(key, fallback) {
     try {
@@ -89,6 +94,25 @@
     }
   }
 
+  // Reemplaza el HTML de host sin sacar el foco del control que se estaba usando (pestana, chip o filtro).
+  function replaceHtml(host, html) {
+    data().keepFocus(host, () => { host.innerHTML = html; });
+  }
+
+  // Años con meses con datos, del mas antiguo al mas reciente. Con mas de uno las pestanas llevan encima los años.
+  function dataYears(snapshot) {
+    return [...new Set(snapshot.months.filter(month => month.hasData).map(month => month.year))];
+  }
+
+  // El año pedido si tiene meses con datos; si no, el del ultimo mes con datos.
+  function validYear(snapshot, year) {
+    return dataYears(snapshot).includes(year) ? year : snapshot.year;
+  }
+
+  function latestMonthOf(snapshot, year) {
+    return snapshot.months.filter(month => month.hasData && month.year === year).pop() || null;
+  }
+
   function selectedMonth() {
     const snapshot = data()?.snapshot();
     if (!snapshot) return null;
@@ -96,12 +120,19 @@
     return month && month.hasData ? month : data().latestMonth();
   }
 
+  // Año de las pestanas de Gasto publicitario: el del mes elegido o, en la vista anual, el año elegido.
+  function viewYear() {
+    const snapshot = data().snapshot();
+    if (state.monthKey === YEAR_KEY) return validYear(snapshot, state.year);
+    return selectedMonth()?.year ?? snapshot.year;
+  }
+
   function annualView() {
-    return state.monthKey === YEAR_KEY && Boolean(data()?.metrics.yearPeriod());
+    return state.monthKey === YEAR_KEY && Boolean(data()?.metrics.yearPeriod(viewYear()));
   }
 
   function currentPeriod() {
-    return annualView() ? data().metrics.yearPeriod() : data().metrics.period(selectedMonth());
+    return annualView() ? data().metrics.yearPeriod(viewYear()) : data().metrics.period(selectedMonth());
   }
 
   // "▲ 12,3% vs 1-20 Agosto". El color depende de si subir es bueno para ese indicador. Sin compareLabel queda
@@ -124,28 +155,34 @@
   }
 
   // ── Pestanas de mes y periodo ────────────────────────────────────────────
-  // Enero a Diciembre y una ultima pestana que junta todos los meses (Anual aqui, Todos en el Historico).
-  function monthTabsHtml(snapshot, selectedKey, last) {
-    return data().MONTHS.map((name, index) => {
-      const key = `${snapshot.year}-${String(index + 1).padStart(2, '0')}`;
+  // Enero a Diciembre del año dado y una ultima pestana que junta todos los meses (Anual aqui, Todos en el
+  // Historico). Con descargas de mas de un año, encima van los años a todo el ancho de la grilla de pestanas.
+  function monthTabsHtml(snapshot, year, selectedKey, last) {
+    const years = dataYears(snapshot);
+    const yearTabs = years.length > 1
+      ? `<div class="year-tabs" role="group" aria-label="Año">${years.map(item => `<button type="button" class="month-tab ${item === year ? 'active' : ''}" data-year="${item}" aria-pressed="${item === year}">${item}</button>`).join('')}</div>`
+      : '';
+    return yearTabs + data().MONTHS.map((name, index) => {
+      const key = `${year}-${String(index + 1).padStart(2, '0')}`;
       const month = data().monthByKey(key);
       const available = Boolean(month?.hasData);
       const selected = selectedKey === key;
       return `<button type="button" class="month-tab ${selected ? 'active' : ''}" data-month="${key}" aria-pressed="${selected}" ${available ? '' : 'disabled title="Sin descarga de Meta en la carpeta"'}>${name}${key === snapshot.latestKey ? '<span class="current-dot"></span>' : ''}</button>`;
-    }).join('') + `<button type="button" class="month-tab year-tab ${last.selected ? 'active' : ''}" data-month="${last.key}" aria-pressed="${last.selected}" title="${esc(last.available ? last.title : 'Sin descargas de Meta en la carpeta')}"${last.available ? '' : ' disabled'}>${last.label}</button>`;
+    }).join('') + `<button type="button" class="month-tab ${last.selected ? 'active' : ''}" data-month="${last.key}" aria-pressed="${last.selected}" title="${esc(last.available ? last.title : 'Sin descargas de Meta en la carpeta')}"${last.available ? '' : ' disabled'}>${last.label}</button>`;
   }
 
   function renderTabs(snapshot) {
     const host = document.getElementById('month-tabs');
     if (!host) return;
     const annual = annualView();
-    host.innerHTML = monthTabsHtml(snapshot, annual ? null : selectedMonth()?.key, {
+    const year = viewYear();
+    replaceHtml(host, monthTabsHtml(snapshot, year, annual ? null : selectedMonth()?.key, {
       key: YEAR_KEY,
       label: 'Anual',
-      title: `Acumulado ${snapshot.year} de los meses con descarga de Meta`,
-      available: Boolean(data().metrics.yearPeriod()),
+      title: `Acumulado ${year} de los meses con descarga de Meta`,
+      available: Boolean(data().metrics.yearPeriod(year)),
       selected: annual,
-    });
+    }));
   }
 
   function renderPeriod(period) {
@@ -159,7 +196,9 @@
     }
     if (period.annual) {
       const count = period.months.length;
-      title.textContent = `Periodo: ${period.label} ${period.year}${period.closed ? '' : ' (año en curso)'}`;
+      // Un año anterior al del ultimo mes con datos ya termino aunque falte la descarga completa de diciembre.
+      const closed = period.closed || period.year < data().snapshot().year;
+      title.textContent = `Periodo: ${period.label} ${period.year}${closed ? '' : ' (año en curso)'}`;
       sub.textContent = `Acumulado de ${count} ${count === 1 ? 'mes' : 'meses'} con descarga de Meta (${period.months.map(month => month.shortName).join(', ')}). Sin año anterior para comparar.`;
       return;
     }
@@ -206,22 +245,23 @@
 
   // Meses del año en que corrio un objetivo (vista anual, en lugar de la comparacion con el mes anterior).
   function objectiveMonths(period, key) {
-    const months = period.months.filter(month => month.rows.some(row => row.group === key && (row.spend > 0 || row.impressions > 0)));
+    const months = period.months.filter(month => month.rows.some(row => row.group === key && hasActivity(row)));
     if (months.length === period.months.length) return `Activo en los ${months.length} ${months.length === 1 ? 'mes' : 'meses'}`;
     return `Activo en ${months.map(month => month.shortName).join(', ') || 'ningun mes'}`;
   }
 
   // ── Graficos lineales ────────────────────────────────────────────────────
-  // Los de cada cuadro de campana. metric: { key, label, field, unit, color, group? }; group limita las filas a
-  // un objetivo.
+  // Los de cada cuadro de campana. metric: { key, label, field, unit, color, group }; group es el objetivo del
+  // cuadro y limita las filas a las suyas.
   function metricFilter(metric) {
-    return metric.group ? row => row.group === metric.group : null;
+    return row => row.group === metric.group;
   }
 
+  // Un mes sin gasto ni impresiones del objetivo queda como hueco, igual que un mes sin descarga.
   function monthlyValue(month, metric) {
     if (!month?.hasData) return null;
-    const rows = metric.group ? month.rows.filter(row => row.group === metric.group) : month.rows;
-    if (!rows.length) return null;
+    const rows = month.rows.filter(metricFilter(metric));
+    if (!rows.some(hasActivity)) return null;
     return rows.reduce((sum, row) => sum + row[metric.field], 0);
   }
 
@@ -229,12 +269,11 @@
   // compare = false deja solo el mes elegido (varios indicadores a la vez).
   function lineSeries(metric, modeKey, month, compare = true) {
     if (modeKey === 'monthly') {
-      const year = data().snapshot().year;
+      const year = viewYear();
       return {
         labels: data().SHORT_MONTHS,
         datasets: [{ label: metric.label, unit: metric.unit, data: data().MONTHS.map((_, index) => monthlyValue(data().monthByKey(`${year}-${String(index + 1).padStart(2, '0')}`), metric)), borderColor: metric.color, backgroundColor: `${metric.color}1a`, fill: true, borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: metric.color, tension: 0.25, spanGaps: false, valueLabels: true }],
         legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(metric.label)} por mes</b></span>`],
-        note: 'Total de cada mes con descarga de Meta. El mes en curso va hasta el ultimo dia con datos.',
       };
     }
     const cumulative = modeKey === 'cumulative';
@@ -243,9 +282,6 @@
       labels: Array.from({ length: month.daysInMonth }, (_, index) => `${index + 1}`),
       datasets: [{ label: compare ? month.name : metric.label, unit: metric.unit, data: transform(data().metrics.dailyValues(month, metric.field, metricFilter(metric))), borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 }],
       legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(month.name)} ${month.year}</b></span>`],
-      note: cumulative
-        ? 'Acumulado dia a dia del mes elegido frente al mes anterior en el mismo dia del mes.'
-        : 'Valor de cada dia del mes elegido frente al mes anterior.',
     };
     const previous = data().previousMonth(month);
     if (compare && previous?.hasData) {
@@ -409,8 +445,8 @@
   }
 
   // La vista anual solo tiene sentido por mes; el modo elegido se conserva para cuando se vuelva a un mes.
-  function chartModes(savedMode) {
-    if (annualView()) return { modes: MODES.filter(item => item.key === 'monthly'), modeKey: 'monthly' };
+  function chartModes(savedMode, annual) {
+    if (annual) return { modes: MODES.filter(item => item.key === 'monthly'), modeKey: 'monthly' };
     return { modes: MODES, modeKey: MODES.some(item => item.key === savedMode) ? savedMode : 'cumulative' };
   }
 
@@ -501,45 +537,46 @@
           </div>
           <div class="chart-controls">
             <div class="chart-series-toggles" data-campaign-modes role="radiogroup" aria-label="Vista del grafico de ${esc(objective.label)}"></div>
-            <button type="button" class="chart-toggle" data-campaign-toggle aria-controls="campaign-body-${key}">${CHEVRON}</button>
+            <button type="button" class="chart-toggle" data-campaign-toggle="${key}" aria-controls="campaign-body-${key}">${CHEVRON}</button>
           </div>
         </div>
-        <dl class="chart-kpis campaign-kpis">${kpis}</dl>
+        <dl class="chart-kpis">${kpis}</dl>
         <div class="campaign-block-body" id="campaign-body-${key}">
           <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="group" aria-label="Indicadores del grafico de ${esc(objective.label)}"></div>
-          <div class="chart-wrap h-300"><canvas aria-label="Grafico de la campana ${esc(objective.label)}"></canvas></div>
+          <div class="chart-wrap h-300"><canvas role="img" aria-label="Grafico de la campana ${esc(objective.label)}"></canvas></div>
           <div class="chart-legend projection-legend" data-campaign-legend></div>
           ${adSetsHtml(period, objective)}
         </div>
       </section>`;
   }
 
-  function renderCampaignChart(key, period = currentPeriod()) {
+  // Los controles del cuadro lo redibujan solo con la clave; renderCampaigns le pasa el periodo y sus objetivos.
+  function renderCampaignChart(key, period = currentPeriod(), objectives = period ? data().metrics.objectives(period.rows) : []) {
     const block = campaignBlock(key);
-    const objective = period && data().metrics.objectives(period.rows).find(item => item.key === key);
+    const objective = objectives.find(item => item.key === key);
     const month = selectedMonth();
     if (!block || !objective || !month) return;
     const settings = campaignSettings(key);
-    const { modes, modeKey } = chartModes(settings.mode);
+    const { modes, modeKey } = chartModes(settings.mode, period.annual);
     const metrics = CAMPAIGN_METRICS.map(item => ({ ...item, label: item.key === 'results' ? objective.resultLabel : item.label, color: objective.color, group: key }));
     const selected = metrics.filter(item => settings.metrics.includes(item.key));
     block.classList.toggle('is-collapsed', settings.collapsed);
     setToggle(block.querySelector('[data-campaign-toggle]'), settings.collapsed, `la campana ${objective.label}`);
-    block.querySelector('[data-campaign-modes]').innerHTML = chipsHtml(modes, modeKey, `campaign-mode-${key}`, 'var(--brand-text)');
-    block.querySelector('[data-campaign-metrics]').innerHTML = chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true);
+    replaceHtml(block.querySelector('[data-campaign-modes]'), chipsHtml(modes, modeKey, `campaign-mode-${key}`, 'var(--brand-text)'));
+    replaceHtml(block.querySelector('[data-campaign-metrics]'), chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true));
     if (settings.collapsed) {
       destroyChart(key);
       return;
     }
     const series = campaignSeries(selected, modeKey, month);
     const canvas = block.querySelector('canvas');
-    // Cada panel extra suma alto para que ninguno quede aplastado.
-    canvas.parentElement.style.height = selected.length > 1 ? `${90 + 135 * selected.length}px` : '';
+    // Cada panel extra suma alto para que ninguno quede aplastado. Sin Chart.js el canvas ya es el aviso.
+    if (canvas) canvas.parentElement.style.height = selected.length > 1 ? `${90 + 135 * selected.length}px` : '';
     block.querySelector('[data-campaign-legend]').innerHTML = series.legend.join('');
     drawLineChart(key, canvas, series, selected, modeKey);
   }
 
-  function renderCampaigns(period) {
+  function renderCampaigns(period, objectives) {
     const host = document.getElementById('campaign-blocks');
     if (!host) return;
     [...state.charts.keys()].forEach(destroyChart);
@@ -547,23 +584,26 @@
       host.innerHTML = '';
       return;
     }
-    const objectives = data().metrics.objectives(period.rows);
     const previous = period.compare ? data().metrics.objectives(period.compare.rows) : [];
-    host.innerHTML = objectives.map(objective => campaignHtml(period, objective, previous.find(item => item.key === objective.key))).join('');
-    objectives.forEach(objective => renderCampaignChart(objective.key, period));
+    // Datos nuevos rehacen los cuadros sin sacar el foco del chip o del boton que se estaba usando.
+    data().keepFocus(host, () => {
+      host.innerHTML = objectives.map(objective => campaignHtml(period, objective, previous.find(item => item.key === objective.key))).join('');
+      objectives.forEach(objective => renderCampaignChart(objective.key, period, objectives));
+    });
   }
 
   // ── Distribucion por campana ─────────────────────────────────────────────
-  function renderDistribution(period) {
+  function renderDistribution(period, objectives) {
     const body = document.getElementById('distribution-body');
     const sub = document.getElementById('distribution-sub');
     if (!body) return;
     if (!period) {
       body.innerHTML = '<tr><td class="table-empty" colspan="13">Sin datos para el periodo.</td></tr>';
+      if (sub) sub.textContent = '';
       return;
     }
     const rows = data().metrics.campaigns(period.rows);
-    const colors = new Map(data().metrics.objectives(period.rows).map(objective => [objective.key, objective.color]));
+    const colors = new Map(objectives.map(objective => [objective.key, objective.color]));
     const total = data().metrics.summarize(period.rows);
     if (sub) sub.textContent = `${period.label} | ${rows.length} ${rows.length === 1 ? 'campana' : 'campanas'} con gasto o impresiones.`;
     body.innerHTML = rows.map(row => `
@@ -608,7 +648,7 @@
       .join('');
   }
 
-  function renderAds(period) {
+  function renderAds(period, objectives = period ? data().metrics.objectives(period.rows) : []) {
     const body = document.getElementById('campaigns-body');
     const title = document.getElementById('campaigns-title');
     const sub = document.getElementById('campaigns-sub');
@@ -618,10 +658,13 @@
     document.querySelector('.campaigns-panel')?.classList.toggle('no-compare', !period?.compare);
     if (!period) {
       body.innerHTML = '<tr><td class="table-empty" colspan="15">Sin datos para el periodo.</td></tr>';
+      // Vuelven los textos iniciales: los del periodo anterior ya no aplican.
+      if (title) title.textContent = 'Anuncios del periodo';
+      if (sub) sub.textContent = '';
+      if (prevHead) prevHead.textContent = 'Mes anterior';
       renderAdsFilter([]);
       return;
     }
-    const objectives = data().metrics.objectives(period.rows);
     renderAdsFilter(objectives);
     const order = new Map(objectives.map((objective, index) => [objective.key, index]));
     const colors = new Map(objectives.map(objective => [objective.key, objective.color]));
@@ -677,7 +720,7 @@
         if (!byName.has(row.campaign)) byName.set(row.campaign, { rows: [], months: new Set(), first: null, last: null });
         const entry = byName.get(row.campaign);
         entry.rows.push(row);
-        if (row.spend > 0 || row.impressions > 0) {
+        if (hasActivity(row)) {
           const date = `${month.key}-${String(row.d).padStart(2, '0')}`;
           entry.months.add(month.key);
           if (!entry.first || date < entry.first) entry.first = date;
@@ -724,16 +767,16 @@
     return month?.hasData ? month : null;
   }
 
-  function renderHistoryTabs(snapshot, month) {
+  function renderHistoryTabs(snapshot, year, month) {
     const host = document.getElementById('history-month-tabs');
     if (!host) return;
-    host.innerHTML = monthTabsHtml(snapshot, month?.key, {
+    replaceHtml(host, monthTabsHtml(snapshot, year, month?.key, {
       key: HISTORY_ALL,
       label: 'Todos',
       title: 'Todas las descargas de Meta en Drive',
       available: snapshot.months.some(item => item.hasData),
       selected: !month,
-    });
+    }));
   }
 
   const matchesStatus = (item, key) => key === 'todas' || (key === 'activas' ? !item.finished : item.finished);
@@ -746,7 +789,7 @@
       .filter(item => item.months.includes(month.key))
       .map(item => {
         const rows = item.rows.filter(row => row.day.startsWith(month.key));
-        const days = rows.filter(row => row.spend > 0 || row.impressions > 0).map(row => row.d);
+        const days = rows.filter(hasActivity).map(row => row.d);
         return {
           item,
           stats: data().metrics.campaigns(rows)[0],
@@ -763,11 +806,11 @@
   function renderHistoryStatus(entries) {
     const host = document.getElementById('history-status-filter');
     if (!host) return;
-    host.innerHTML = HISTORY_STATUS.map(status => {
+    replaceHtml(host, HISTORY_STATUS.map(status => {
       const selected = status.key === state.historyStatus;
       const count = entries.filter(entry => matchesStatus(entry.item, status.key)).length;
       return `<label class="series-toggle campaign-chip${selected ? ' active' : ''}"><input type="radio" name="history-status" value="${status.key}"${selected ? ' checked' : ''}>${status.label} (${count})</label>`;
-    }).join('');
+    }).join(''));
   }
 
   function renderHistoryKpis(snapshot, entries, month) {
@@ -798,9 +841,9 @@
   }
 
   // La lista de anuncios va plegada: abierta estiraba la fila una linea por anuncio y ensanchaba la tabla.
-  function historyAdsCell(ads) {
+  function historyAdsCell(ads, campaign) {
     if (!ads.length) return '<span class="no-data">-</span>';
-    return `<details class="history-ads"><summary>${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'}</summary><div class="history-ads-list">${ads.map(historyAdChip).join('')}</div></details>`;
+    return `<details class="history-ads" data-campaign="${esc(campaign)}"><summary>${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'}</summary><div class="history-ads-list">${ads.map(historyAdChip).join('')}</div></details>`;
   }
 
   // Una sola tabla con todas las campanas de las descargas de Meta en Drive. "Todos" lleva una columna de gasto
@@ -812,16 +855,19 @@
     if (!head || !body || !snapshot) return;
     const month = historyMonth();
     state.historyMonth = month ? month.key : HISTORY_ALL;
-    renderHistoryTabs(snapshot, month);
+    state.historyYear = month ? month.year : validYear(snapshot, state.historyYear);
+    renderHistoryTabs(snapshot, state.historyYear, month);
     const scoped = historyEntries(campaignHistory(snapshot), month);
     renderHistoryStatus(scoped);
     const entries = scoped.filter(entry => matchesStatus(entry.item, state.historyStatus));
     renderHistoryKpis(snapshot, entries, month);
 
+    // Con descargas de mas de un año cada columna de mes lleva el suyo (Dic 26, Ene 27).
+    const multiYear = dataYears(snapshot).length > 1;
     const months = month ? [] : snapshot.months.filter(item => item.hasData);
     head.innerHTML = `<tr><th>Campaña</th><th>Objetivo</th><th>Estado</th>${months.map(item => {
       const partial = !item.complete && !item.past;
-      return `<th class="num" title="${esc(item.fileName || `${item.name} ${item.year}`)}">${item.shortName}${partial ? ` (al ${item.lastDay})` : ''}</th>`;
+      return `<th class="num" title="${esc(item.fileName || `${item.name} ${item.year}`)}">${item.shortName}${multiYear ? ` ${String(item.year).slice(2)}` : ''}${partial ? ` (al ${item.lastDay})` : ''}</th>`;
     }).join('')}<th class="num">${month ? `Gasto ${month.shortName}` : 'Gasto total'}</th><th class="num">Resultados</th><th class="num th-wrap">Costo por resultado</th><th class="num">Impresiones</th><th class="num">Alcance</th><th>Anuncios</th>${month
       ? '<th>Dias activos</th><th class="num" title="Gasto de la campana en todos los meses">Gasto acumulado</th>'
       : '<th>Periodo</th>'}</tr>`;
@@ -830,13 +876,18 @@
     const noun = entries.length === 1 ? status.one : status.many;
     const sub = document.getElementById('history-sub');
     if (sub) {
-      const range = months.length > 1 ? `${months[0].name} a ${months[months.length - 1].name}` : months[0]?.name;
       if (!entries.length) {
         sub.textContent = `Ninguna ${status.one} ${month ? `con gasto en ${month.name} ${month.year}` : 'en las descargas de Meta en Drive'}.`;
       } else if (month) {
         sub.textContent = `${entries.length} ${noun} con gasto en ${month.name} ${month.year} segun su archivo en Drive (${month.fileName || 'sin nombre'}).`;
       } else {
-        sub.textContent = `${entries.length} ${noun} en ${months.length} ${months.length === 1 ? 'descarga' : 'descargas'} de Meta en Drive (${range} ${snapshot.year}). Cada mes es el gasto de su archivo; el nombre aparece al pasar el mouse.`;
+        const first = months[0];
+        const last = months[months.length - 1];
+        // Con mas de un año cada extremo del rango lleva el suyo.
+        const range = multiYear
+          ? `${first.name} ${first.year} a ${last.name} ${last.year}`
+          : `${months.length > 1 ? `${first.name} a ${last.name}` : first.name} ${snapshot.year}`;
+        sub.textContent = `${entries.length} ${noun} en ${months.length} ${months.length === 1 ? 'descarga' : 'descargas'} de Meta en Drive (${range}). Cada mes es el gasto de su archivo; el nombre aparece al pasar el mouse.`;
       }
     }
     if (!entries.length) {
@@ -863,7 +914,7 @@
         <td class="num">${fmt('unitCost', stats.costPerResult)}</td>
         <td class="num">${fmt('count', stats.impressions)}</td>
         <td class="num">${fmt('count', stats.reach)}</td>
-        <td>${historyAdsCell(ads)}</td>
+        <td>${historyAdsCell(ads, item.name)}</td>
         ${month
           ? `<td class="date-col">${daysLabel(from, to)}</td><td class="num">${fmt('money', item.spend)}</td>`
           : `<td class="date-col">${periodLabel(item.first, item.last)}</td>`}
@@ -915,18 +966,27 @@
   }
 
   // ── Render y eventos ─────────────────────────────────────────────────────
-  function renderAll() {
+  // Gasto publicitario: pestanas, periodo y todo lo que depende del mes elegido.
+  function renderPeriodView() {
     const snapshot = data()?.snapshot();
     if (!snapshot) return;
     const month = selectedMonth();
+    state.year = viewYear();
     state.monthKey = annualView() ? YEAR_KEY : month?.key || null;
     const period = currentPeriod();
+    // Los objetivos del periodo se calculan una vez para los cuadros, la distribucion y los anuncios.
+    const objectives = period ? data().metrics.objectives(period.rows) : [];
     renderTabs(snapshot);
     renderPeriod(period);
     renderKpis(period);
-    renderCampaigns(period);
-    renderDistribution(period);
-    renderAds(period);
+    renderCampaigns(period, objectives);
+    renderDistribution(period, objectives);
+    renderAds(period, objectives);
+  }
+
+  // Con datos nuevos se repintan las dos vistas; cada una cambia de mes con sus propias pestanas.
+  function renderAll() {
+    renderPeriodView();
     renderHistory();
   }
 
@@ -935,14 +995,32 @@
     if (tabs) state.tabsHome = { parent: tabs.parentNode, next: tabs.nextSibling };
     tabs?.addEventListener('click', event => {
       const button = event.target.closest('.month-tab:not(:disabled)');
-      if (!button || button.dataset.month === state.monthKey) return;
-      state.monthKey = button.dataset.month;
-      renderAll();
+      if (!button) return;
+      const year = Number(button.dataset.year);
+      if (year) {
+        if (year === viewYear()) return;
+        // Otro año: un mes pasa al ultimo mes con datos de ese año y la vista anual sigue en anual.
+        state.year = year;
+        if (state.monthKey !== YEAR_KEY) state.monthKey = latestMonthOf(data().snapshot(), year)?.key || null;
+      } else {
+        if (button.dataset.month === state.monthKey) return;
+        state.monthKey = button.dataset.month;
+      }
+      renderPeriodView();
     });
     document.getElementById('history-month-tabs')?.addEventListener('click', event => {
       const button = event.target.closest('.month-tab:not(:disabled)');
-      if (!button || button.dataset.month === state.historyMonth) return;
-      state.historyMonth = button.dataset.month;
+      if (!button) return;
+      const year = Number(button.dataset.year);
+      if (year) {
+        if (year === state.historyYear) return;
+        // Otro año: "Todos" se mantiene y un mes pasa al ultimo mes con datos de ese año.
+        state.historyYear = year;
+        if (state.historyMonth !== HISTORY_ALL) state.historyMonth = latestMonthOf(data().snapshot(), year)?.key || HISTORY_ALL;
+      } else {
+        if (button.dataset.month === state.historyMonth) return;
+        state.historyMonth = button.dataset.month;
+      }
       renderHistory();
     });
     document.getElementById('history-status-filter')?.addEventListener('change', event => {
@@ -991,7 +1069,13 @@
       button.addEventListener('click', () => { if (state.tableFullscreen) toggleTableFullscreen(false); });
     });
     applyTableCompact();
-    window.addEventListener('tp:data-updated', renderAll);
+    // Datos nuevos no cierran la lista de anuncios que el usuario tiene abierta en el Historico.
+    window.addEventListener('tp:data-updated', () => {
+      const body = document.getElementById('history-body');
+      const open = new Set([...(body?.querySelectorAll('details.history-ads[open]') || [])].map(node => node.dataset.campaign));
+      renderAll();
+      if (open.size) body.querySelectorAll('details.history-ads').forEach(node => { if (open.has(node.dataset.campaign)) node.open = true; });
+    });
     // Sin datos de ningun origen: se reemplazan los "Cargando..." por el motivo.
     window.addEventListener('tp:data-error', () => {
       if (data().snapshot()) return;
@@ -1014,6 +1098,5 @@
     renderAll();
   }
 
-  window.TPObjectives = { renderHistory, renderAll };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

@@ -41,7 +41,7 @@
       title: 'Usuarios y Claves',
       caption: 'Cuentas con acceso al tablero',
       source: 'Fuente: Directorio de accesos de Agencia Lima Retail',
-      footer: 'Las claves las valida el servidor; aqui no se guarda ninguna',
+      footer: 'La clave única descifra el tablero en el navegador; aquí no se guarda ninguna',
     },
   };
 
@@ -75,19 +75,13 @@
 
     document.getElementById('topbar-title').textContent = meta.title;
     document.getElementById('topbar-caption').textContent = meta.caption;
-    // El estado de los datos es el mismo en todos los modulos: lo arma js/data-source.js.
-    document.getElementById('topbar-status').textContent = window.TPData?.statusLabel() || 'Cargando datos...';
+    // El estado de los datos (#topbar-status) es el mismo en todos los modulos: lo mantiene js/data-source.js.
     document.getElementById('footer-source').textContent = meta.source;
     document.getElementById('footer-status').textContent = meta.footer;
     saveView(viewId);
 
-    if (viewId === 'view-messages') {
-      window.TPProjections?.init();
-      window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
-    }
+    if (viewId === 'view-messages') window.TPProjections?.init();
     if (viewId === 'view-calculator') window.MessagesCalculator?.init();
-    if (viewId === 'view-obj') window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
-    if (viewId === 'view-history') window.TPObjectives?.renderHistory?.();
     if (viewId === 'view-reports') window.ReportsArchive?.init();
     if (viewId === 'view-log') window.Bitacora?.init();
     if (viewId === 'view-users') window.Usuarios?.init();
