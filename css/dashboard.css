@@ -99,7 +99,7 @@ select {
 
 .section-title {
   margin: 6px 0 8px;
-  font-size: 25px;
+  font-size: 18px;
   letter-spacing: -.03em;
 }
 
@@ -107,7 +107,7 @@ select {
   max-width: 760px;
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
@@ -127,12 +127,12 @@ select {
   margin-bottom: 15px;
 }
 
-/* Titulos (panel, periodo y cuadro de campana) y sus bajadas van a 22px; la jerarquia queda en el peso y el color. */
+/* Titulos (panel, periodo y cuadro de campana) van a 18px y sus bajadas a 16px, igual en todos los tableros. */
 .panel-title,
 .period-title,
 .campaign-block-title {
   color: var(--ink);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: -.02em;
   line-height: 1.2;
@@ -142,7 +142,7 @@ select {
 .period-sub {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: -.01em;
   line-height: 1.3;
