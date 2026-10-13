@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.25.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.25.1`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -76,6 +76,10 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   `npm run build` toma la URL del secret `TP_DATA_ENDPOINT`, baja el ultimo barrido y lo incrusta en
   `dist/index.html` (que solo se sirve con clave) junto con la URL. La copia queda tambien en
   `data/tp-meta-2026.json`, que esta en `.gitignore` y sirve de respaldo en desarrollo o si Google no responde.
+- El Web App tarda unos 30 s en responder al abrir el tablero; mientras tanto se ve una copia (la pildora dice
+  "copia guardada"). Es la ultima lectura en vivo de esa pestana (`sessionStorage`, `tp-last-sweep`; se pierde al
+  cerrarla) o, si no hay, la incrustada en el deploy. El deploy corre solo todos los dias a las 11:30 (Lima), despues
+  del barrido automatico, asi que la copia incrustada nunca tiene mas de un dia.
 - Solo se muestra lo que tuvo gasto o impresiones en el periodo elegido: objetivos, campanas, conjuntos y
   anuncios en cero no aparecen en ningun modulo (`hasActivity` en `js/data-source.js`).
 - El objetivo se deduce del nombre de la campana (`Interaccion | Posts | ...`, `Campana pedidos WhatsApp | ...`)
@@ -224,8 +228,9 @@ Con `TP_PAGE_PASSWORD=<clave> npm run build` el `index.html` sale cifrado, como 
 
 ## Publicacion en terminalpesquero.limaretail.com (GitHub Pages)
 
-URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la actualiza sola
-(`.github/workflows/deploy-pages.yml`); no hay que volver a tocar el DNS ni la configuracion de Pages.
+URL publica: **https://terminalpesquero.limaretail.com**. Cada push a `main` la actualiza sola, y ademas se
+vuelve a publicar todos los dias a las 11:30 de Lima con el barrido del dia (`.github/workflows/deploy-pages.yml`);
+no hay que volver a tocar el DNS ni la configuracion de Pages.
 
 - Pages publica con Actions (sube `dist/`), asi que el dominio propio se configura en **Settings > Pages >
   Custom domain** y queda guardado en el repo. Ademas `CNAME` (raiz) lleva el dominio y `build.js` lo copia a

@@ -10,6 +10,7 @@
   // Copia del ultimo barrido (gitignored): el build la incrusta como window.TP_META_DATA y en desarrollo se pide
   // por fetch. El tablero la muestra mientras llega (o si falla) la lectura en vivo.
   const LOCAL_URL = 'data/tp-meta-2026.json';
+  const SESSION_COPY_KEY = 'tp-last-sweep';
   // Un barrido en el momento relee las cuatro descargas (~10 s); se deja margen para meses con mas filas.
   const FETCH_TIMEOUT_MS = 90 * 1000;
   const POLL_MS = 60 * 60 * 1000;
@@ -549,8 +550,34 @@
     window.dispatchEvent(new CustomEvent('tp:data-updated'));
   }
 
+  // Ultima lectura en vivo de esta pestana. El Web App tarda ~30 s en responder al abrir el tablero: al recargar se
+  // muestra esta copia y no la incrustada en el deploy, que puede ser de dias atras. Vive en sessionStorage, como la
+  // llave de la pantalla de acceso: se pierde al cerrar la pestana.
+  function readSessionCopy() {
+    try {
+      const payload = JSON.parse(window.sessionStorage.getItem(SESSION_COPY_KEY) || 'null');
+      return payload && Array.isArray(payload.months) ? payload : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveSessionCopy(payload) {
+    try {
+      window.sessionStorage.setItem(SESSION_COPY_KEY, JSON.stringify(payload));
+    } catch {
+      // Sin sessionStorage (o sin espacio) al recargar se vuelve a ver la copia del deploy.
+    }
+  }
+
   async function loadLocal() {
-    const payload = window.TP_META_DATA || await fetchJson(LOCAL_URL);
+    const session = readSessionCopy();
+    const built = window.TP_META_DATA || await fetchJson(LOCAL_URL).catch(error => {
+      if (!session) throw error;
+      return null;
+    });
+    // Gana el barrido mas reciente; los sweptAt son ISO en UTC y se comparan como texto.
+    const payload = session && (!built || String(session.sweptAt || '') > String(built.sweptAt || '')) ? session : built;
     publish(normalizePayload(payload, 'local'));
   }
 
@@ -571,7 +598,9 @@
       updateStatusLabel();
       return;
     }
-    publish(normalizePayload(payload, 'live'));
+    const data = normalizePayload(payload, 'live');
+    saveSessionCopy(payload);
+    publish(data);
   }
 
   function refreshButtons() {

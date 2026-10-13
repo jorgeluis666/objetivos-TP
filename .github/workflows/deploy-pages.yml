@@ -6,6 +6,10 @@ name: Publicar en GitHub Pages
 on:
   push:
     branches: [main]
+  # Todos los dias despues del barrido de las 10:00 (Lima = UTC-5): la copia incrustada del tablero, que se ve
+  # mientras responde el Web App, queda con los datos del dia.
+  schedule:
+    - cron: '30 16 * * *'
   workflow_dispatch:
 
 permissions:
