@@ -2230,7 +2230,7 @@ body.tp-table-fullscreen {
 }
 
 .campaigns-table {
-  min-width: 1500px;
+  min-width: 1420px;
 }
 
 /* Sin periodo de comparacion (vista anual o primer mes): fuera "Mes anterior" y "Variacion". */
@@ -2239,7 +2239,7 @@ body.tp-table-fullscreen {
 }
 
 .campaigns-panel.no-compare .campaigns-table {
-  min-width: 1340px;
+  min-width: 1260px;
 }
 
 .campaign-set-col {
@@ -2271,16 +2271,141 @@ body.tp-table-fullscreen {
 .delta-pill.bad { color: #b91c1c; background: #fef2f2; }
 .delta-pill.new { color: var(--brand-text); background: var(--brand-soft); }
 
-.preview-link {
-  color: #2563eb;
-  font-size: 10px;
-  font-weight: 700;
+/* Nombre del anuncio con enlace a su vista previa en Meta. */
+.ad-link {
+  color: inherit;
   text-decoration: none;
+}
+
+.ad-link:hover {
+  color: var(--brand-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ad-link:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.ad-link-ic {
+  margin-left: 4px;
+  color: var(--brand-dark);
+  font-size: 11px;
+}
+
+/* Anuncios dentro de cada cuadro de campana (Gasto publicitario). */
+.campaign-ads-table {
+  min-width: 1080px;
+}
+
+.adset-table .campaign-ad-name {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.preview-link:hover {
-  text-decoration: underline;
+/* ===== Modulo Anuncios ===== */
+#view-ads .campaigns-panel {
+  margin-top: 14px;
+}
+
+/* Top 3 de anuncios por contactos de WhatsApp. */
+.ad-top:empty {
+  display: none;
+}
+
+.ad-top-head {
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ad-top-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ad-top-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ad-top-card {
+  display: flex;
+  min-width: 0;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ad-top-rank {
+  display: inline-grid;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand-text);
+  background: var(--brand-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ad-top-body {
+  min-width: 0;
+}
+
+.ad-top-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-top-group {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #475569;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-top-value {
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ad-top-value small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ad-top-meta {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media(max-width:900px) {
+  .ad-top-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .table-tool-select select {

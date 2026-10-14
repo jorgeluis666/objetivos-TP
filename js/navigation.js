@@ -7,6 +7,12 @@
       source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
       footer: 'Barrido automatico todos los dias a las 10:00',
     },
+    'view-ads': {
+      title: 'Anuncios',
+      caption: 'Meta Ads por anuncio',
+      source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
+      footer: 'Mismo mes que Gasto publicitario',
+    },
     'view-messages': {
       title: 'Proyecciones',
       caption: 'Cierre de mes por objetivo',
@@ -80,6 +86,8 @@
     document.getElementById('footer-status').textContent = meta.footer;
     saveView(viewId);
 
+    // Gasto publicitario y Anuncios comparten el mes: la que se abre se repinta si el mes cambio en la otra.
+    if (viewId === 'view-obj' || viewId === 'view-ads') window.TPObjectives?.show(viewId);
     if (viewId === 'view-messages') window.TPProjections?.init();
     if (viewId === 'view-calculator') window.MessagesCalculator?.init();
     if (viewId === 'view-reports') window.ReportsArchive?.init();

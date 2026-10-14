@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.25.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.26.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -27,19 +27,32 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Las campanas en un solo marco: arriba la distribucion de inversion por campana y debajo un cuadro por
     campana (objetivo: Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): KPIs con su variacion contra
     el mes anterior (resultado, inversion, costo por resultado, alcance, impresiones y CPM), su propio
-    grafico (acumulado del mes, por dia o por mes) y la tabla de sus conjuntos de anuncios
+    grafico (acumulado del mes, por dia o por mes), la tabla de sus conjuntos de anuncios
     (resultados contra el mes anterior, costo por resultado, inversion, % de la campana, impresiones,
-    alcance, CPM, clics y anuncios activos). Cada cuadro se minimiza con el boton de la derecha y
-    recuerda sus indicadores, su vista y si esta minimizado.
+    alcance, CPM, clics y anuncios activos) y al final la tabla de sus anuncios, de mas a menos resultados,
+    con la estrella en el lider, el nombre con enlace a la vista previa, resultados contra el mes anterior,
+    costo por resultado, inversion y % de la campana, impresiones, alcance, CPM, clics y dias activos (la
+    columna Conjunto aparece si la campana tiene mas de uno). Cada cuadro se minimiza con el boton de la
+    derecha y recuerda sus indicadores, su vista y si esta minimizado.
   - Indicadores del grafico de cada campana: resultado, inversion, impresiones y alcance, se puede marcar mas
     de uno (por defecto resultado + inversion, para leer como responde el objetivo al gasto). Con uno solo va
     contra el mes anterior en el mismo dia; con varios no hay comparacion y cada uno va en su propio panel,
     apilados sobre el mismo eje de dias, con una linea vertical y un tooltip con todos los valores del dia.
     No se superponen dos escalas en un mismo panel: los cruces entre lineas de distinta escala no significan nada.
-  - Ranking de anuncios por objetivo (con el lider marcado,
-    resultados del mes anterior y enlace a la vista previa). La tabla de anuncios tiene cabecera fija,
-    columnas Objetivo / Anuncio ancladas, filtro por objetivo, pantalla completa (`Esc` para salir) y
-    densidad compacta recordada en `localStorage`.
+- Anuncios: Meta Ads por anuncio, en el menu justo despues de Gasto publicitario. Usa los mismos datos,
+  periodos y comparaciones, y comparte el mes elegido: cambiar de mes en una vista hace que la otra se repinte
+  al abrirse.
+  - Pestanas de mes y Anual como en Gasto publicitario; el periodo dice contra que tramo se compara.
+  - Top 3 de anuncios por contactos de WhatsApp: los anuncios de Pedidos WhatsApp (clics al boton) y Mensajes
+    WhatsApp (conversaciones) con mas resultados en el periodo y, a igual cantidad, menor costo por resultado.
+    Cada tarjeta muestra el nombre con enlace, objetivo y campana, los resultados, el costo por resultado y la
+    inversion. El barrido de Meta no trae compras ni valor de compras, por eso no hay columnas de ventas ni ROAS.
+  - Tabla de anuncios: Objetivo, Anuncio (nombre con enlace `↗` a la vista previa y estrella en el lider de
+    cada objetivo), Campana / conjunto, Resultado, Resultados, resultados del mes anterior, Variacion, Costo por
+    resultado, Inversion, Impresiones, Alcance, CPM, Clics y Dias activos. Cabecera fija, columnas Objetivo /
+    Anuncio ancladas, filtro por objetivo, pantalla completa (las pestanas de mes entran al panel; `Esc` sale)
+    y densidad compacta recordada en `localStorage`. Sin periodo de comparacion (Anual o primer mes) se ocultan
+    mes anterior y variacion.
 - Proyecciones: cierre de mes estimado por objetivo (resultados y gasto).
 - Calculadora de Inversión: facturacion objetivo, ventas necesarias e inversion en mensajes por CPL (ver "Calculadora de Inversión").
 - Historico de Campanas: una sola tabla con todas las campanas de las descargas de Meta (activas y finalizadas).

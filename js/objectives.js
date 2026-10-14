@@ -1,7 +1,12 @@
 (function () {
-  // Modulo Gasto publicitario (y el Historico de Campanas): indicadores del reporte de Ads calculados con las
-  // descargas de Meta que entrega window.TPData (js/data-source.js).
+  // Modulos Gasto publicitario, Anuncios y el Historico de Campanas: indicadores del reporte de Ads calculados con
+  // las descargas de Meta que entrega window.TPData (js/data-source.js).
   const TABLE_COMPACT_KEY = 'tp-campaigns-compact-v1';
+  // Vistas que comparten el mes elegido (Gasto publicitario y Anuncios).
+  const PERIOD_VIEWS = ['view-obj', 'view-ads'];
+  // El barrido no trae compras: el Top 3 de Anuncios es por contactos de WhatsApp (clics al boton en Pedidos
+  // WhatsApp y conversaciones en Mensajes WhatsApp).
+  const TOP_GROUPS = ['pedidos-whatsapp', 'mensajes-whatsapp'];
   // Indicador, vista y minimizado del grafico de cada campana, por clave de objetivo.
   const CAMPAIGN_CHARTS_KEY = 'tp-campaign-charts-v1';
   const PREVIOUS_COLOR = '#94a3b8';
@@ -51,6 +56,9 @@
 
   const state = {
     monthKey: null,
+    // Sube con cada cambio de mes; cada vista guarda la version que pinto y se repinta al abrirse si quedo atras.
+    monthVersion: 0,
+    rendered: Object.fromEntries(PERIOD_VIEWS.map(view => [view, -1])),
     // Año de las pestanas en la vista anual (con un mes elegido manda el año de ese mes).
     year: null,
     tableCompact: readSetting(TABLE_COMPACT_KEY, 'false') === 'true',
@@ -154,6 +162,26 @@
     return `<span class="delta-pill ${change >= 0 ? 'good' : 'bad'}">${change >= 0 ? '&#9650;' : '&#9660;'} ${fmt('pct', Math.abs(change), 0)}</span>`;
   }
 
+  // Nombre del anuncio con enlace a su vista previa en Meta (sin enlace queda el nombre solo).
+  function adNameLink(ad) {
+    const name = esc(ad.ad || '(sin nombre)');
+    const url = data().safeUrl(ad.preview);
+    return url
+      ? `<a class="ad-link" href="${url}" target="_blank" rel="noopener noreferrer" title="Ver el anuncio en Meta">${name}<span class="ad-link-ic" aria-hidden="true">&#8599;</span></a>`
+      : name;
+  }
+
+  // Dias activos del anuncio: "3-18 Sep" en un mes, rango de fechas en la vista anual.
+  function adDays(ad, period) {
+    if (period.annual) {
+      if (!ad.firstDate) return '-';
+      return ad.firstDate === ad.lastDate ? shortDate(ad.firstDate, false) : `${shortDate(ad.firstDate, false)} - ${shortDate(ad.lastDate, false)}`;
+    }
+    if (!ad.firstDay) return '-';
+    const monthShort = period.month?.shortName;
+    return ad.firstDay === ad.lastDay ? `${ad.firstDay} ${monthShort}` : `${ad.firstDay}-${ad.lastDay} ${monthShort}`;
+  }
+
   // ── Pestanas de mes y periodo ────────────────────────────────────────────
   // Enero a Diciembre del año dado y una ultima pestana que junta todos los meses (Anual aqui, Todos en el
   // Historico). Con descargas de mas de un año, encima van los años a todo el ancho de la grilla de pestanas.
@@ -171,8 +199,9 @@
     }).join('') + `<button type="button" class="month-tab ${last.selected ? 'active' : ''}" data-month="${last.key}" aria-pressed="${last.selected}" title="${esc(last.available ? last.title : 'Sin descargas de Meta en la carpeta')}"${last.available ? '' : ' disabled'}>${last.label}</button>`;
   }
 
-  function renderTabs(snapshot) {
-    const host = document.getElementById('month-tabs');
+  // Las pestanas de Gasto publicitario (month-tabs) y las de Anuncios (ads-month-tabs) muestran el mismo mes.
+  function renderTabs(snapshot, hostId = 'month-tabs') {
+    const host = document.getElementById(hostId);
     if (!host) return;
     const annual = annualView();
     const year = viewYear();
@@ -185,9 +214,10 @@
     }));
   }
 
-  function renderPeriod(period) {
-    const title = document.getElementById('period-title');
-    const sub = document.getElementById('period-sub');
+  // prefix '' es Gasto publicitario y 'ads-' es Anuncios (mismos textos salvo el subtitulo de la vista anual).
+  function renderPeriod(period, prefix = '') {
+    const title = document.getElementById(`${prefix}period-title`);
+    const sub = document.getElementById(`${prefix}period-sub`);
     if (!title || !sub) return;
     if (!period) {
       title.textContent = 'Sin datos de Meta';
@@ -199,7 +229,9 @@
       // Un año anterior al del ultimo mes con datos ya termino aunque falte la descarga completa de diciembre.
       const closed = period.closed || period.year < data().snapshot().year;
       title.textContent = `Periodo: ${period.label} ${period.year}${closed ? '' : ' (año en curso)'}`;
-      sub.textContent = `Acumulado de ${count} ${count === 1 ? 'mes' : 'meses'} con descarga de Meta (${period.months.map(month => month.shortName).join(', ')}). Sin año anterior para comparar.`;
+      sub.textContent = prefix
+        ? 'Acumulado del año: sin periodo anterior para comparar'
+        : `Acumulado de ${count} ${count === 1 ? 'mes' : 'meses'} con descarga de Meta (${period.months.map(month => month.shortName).join(', ')}). Sin año anterior para comparar.`;
       return;
     }
     const month = period.month;
@@ -520,6 +552,50 @@
       </div>`;
   }
 
+  // Anuncios del objetivo en el periodo, de mas a menos resultados, con la estrella en el lider.
+  function campaignAdsHtml(period, objective) {
+    const ofObjective = rows => rows.filter(row => row.group === objective.key);
+    const ads = data().metrics.ads(ofObjective(period.rows)).sort((a, b) => (b.results - a.results) || (b.spend - a.spend));
+    const previous = new Map((period.compare ? data().metrics.ads(ofObjective(period.compare.rows)) : []).map(ad => [ad.key, ad]));
+    const compare = Boolean(period.compare);
+    // Con un solo conjunto su nombre no aporta: la columna aparece cuando hay mas de uno.
+    const manySets = new Set(ads.flatMap(ad => ad.adSets)).size > 1;
+    // [titulo, numerica]
+    const head = [['Anuncio']].concat(manySets ? [['Conjunto']] : [], [['Resultados', true]])
+      .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variacion', true]] : [])
+      .concat([['Costo por resultado', true], ['Inversion', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true], ['Dias activos']]);
+    const body = ads.map((ad, index) => {
+      const before = previous.get(ad.key);
+      const share = objective.spend > 0 ? (ad.spend / objective.spend) * 100 : 0;
+      return `
+        <tr>
+          <td class="campaign-name campaign-ad-name" title="${esc(ad.ad)}">${index === 0 && ad.results > 0 ? '<b class="leader-star" title="Lider de la campaña">&#9733;</b> ' : ''}${adNameLink(ad)}</td>
+          ${manySets ? `<td class="campaign-set-col">${esc(ad.adSets.join(' / ') || '-')}</td>` : ''}
+          <td class="num"><b>${fmt('count', ad.results)}</b></td>
+          ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">-</span>'}</td><td class="num">${variationCell(ad.results, before?.results)}</td>` : ''}
+          <td class="num">${fmt('unitCost', ad.costPerResult)}</td>
+          <td class="num">${fmt('money', ad.spend)}</td>
+          <td class="share-col"><div class="share-bar"><span style="width:${Math.min(100, share).toFixed(1)}%"></span></div><b class="share-value">${fmt('pct', share)}</b></td>
+          <td class="num">${fmt('count', ad.impressions)}</td>
+          <td class="num">${fmt('count', ad.reach)}</td>
+          <td class="num">${fmt('money', ad.cpm)}</td>
+          <td class="num">${fmt('count', ad.clicks)}</td>
+          <td class="date-col">${adDays(ad, period)}</td>
+        </tr>`;
+    }).join('') || `<tr><td class="table-empty" colspan="${head.length}">Sin anuncios con gasto en el periodo.</td></tr>`;
+    return `
+      <div class="adset-head">
+        <div class="panel-title">Anuncios</div>
+        <div class="panel-sub">${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'} con gasto o impresiones en ${esc(period.label)}${compare ? `. Resultados contra ${esc(period.compare.label)}` : ''}. La estrella marca al lider.</div>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table adset-table campaign-ads-table">
+          <thead><tr>${head.map(([label, numeric]) => `<th${numeric ? ' class="num"' : ''}>${esc(label)}</th>`).join('')}</tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>`;
+  }
+
   function campaignHtml(period, objective, before) {
     const key = esc(objective.key);
     const settings = campaignSettings(objective.key);
@@ -546,6 +622,7 @@
           <div class="chart-wrap h-300"><canvas role="img" aria-label="Grafico de la campaña ${esc(objective.label)}"></canvas></div>
           <div class="chart-legend projection-legend" data-campaign-legend></div>
           ${adSetsHtml(period, objective)}
+          ${campaignAdsHtml(period, objective)}
         </div>
       </section>`;
   }
@@ -638,7 +715,38 @@
       </tr>`;
   }
 
-  // ── Anuncios del periodo ─────────────────────────────────────────────────
+  // ── Modulo Anuncios (vista view-ads) ─────────────────────────────────────
+  // Top 3 de anuncios por contactos de WhatsApp: los de mas resultados en las campanas de WhatsApp y, a igual
+  // cantidad, el de menor costo por resultado. Cada tarjeta dice que resultado cuenta (clics o conversaciones).
+  function renderTopAds(period, objectives) {
+    const host = document.getElementById('ads-top');
+    if (!host) return;
+    if (!period) {
+      host.innerHTML = '';
+      return;
+    }
+    const colors = new Map(objectives.map(objective => [objective.key, objective.color]));
+    const top = data().metrics.ads(period.rows.filter(row => TOP_GROUPS.includes(row.group)))
+      .filter(ad => ad.results > 0)
+      .sort((a, b) => (b.results - a.results) || ((a.costPerResult ?? Infinity) - (b.costPerResult ?? Infinity)))
+      .slice(0, 3);
+    const head = '<div class="ad-top-head">Top 3 de anuncios por contactos de WhatsApp</div>';
+    if (!top.length) {
+      host.innerHTML = `${head}<p class="ad-top-note">Ningun anuncio de las campañas de WhatsApp registro contactos en el periodo.</p>`;
+      return;
+    }
+    host.innerHTML = `${head}<div class="ad-top-list">${top.map((ad, index) => `
+      <div class="ad-top-card" style="--campaign-color:${colors.get(ad.group) || PREVIOUS_COLOR}">
+        <span class="ad-top-rank">${index + 1}</span>
+        <div class="ad-top-body">
+          <div class="ad-top-name" title="${esc(ad.ad)}">${adNameLink(ad)}</div>
+          <div class="ad-top-group"><i class="campaign-dot"></i>${esc(ad.groupLabel)} · ${esc(ad.campaigns.join(' / '))}</div>
+          <div class="ad-top-value">${fmt('count', ad.results)}<small>${esc(ad.resultLabel)}</small></div>
+          <div class="ad-top-meta">${fmt('unitCost', ad.costPerResult)} por resultado · ${fmt('money', ad.spend)} de inversion</div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
   function renderAdsFilter(objectives) {
     const select = document.getElementById('ads-objective');
     if (!select) return;
@@ -657,7 +765,7 @@
     // Sin periodo de comparacion (vista anual o primer mes) las columnas de mes anterior y variacion se ocultan.
     document.querySelector('.campaigns-panel')?.classList.toggle('no-compare', !period?.compare);
     if (!period) {
-      body.innerHTML = '<tr><td class="table-empty" colspan="15">Sin datos para el periodo.</td></tr>';
+      body.innerHTML = '<tr><td class="table-empty" colspan="14">Sin datos para el periodo.</td></tr>';
       // Vuelven los textos iniciales: los del periodo anterior ya no aplican.
       if (title) title.textContent = 'Anuncios del periodo';
       if (sub) sub.textContent = '';
@@ -680,21 +788,16 @@
     if (prevHead) prevHead.textContent = period.compare ? `Resultados ${period.compare.label}` : 'Mes anterior';
 
     if (!rows.length) {
-      body.innerHTML = '<tr><td class="table-empty" colspan="15">No hay anuncios para este objetivo en el periodo.</td></tr>';
+      body.innerHTML = '<tr><td class="table-empty" colspan="14">No hay anuncios para este objetivo en el periodo.</td></tr>';
       return;
     }
-    const monthShort = period.month?.shortName;
     body.innerHTML = rows.map(ad => {
       const before = previous.get(ad.key);
       const changeCell = period.compare ? variationCell(ad.results, before?.results) : '<span class="no-data">-</span>';
-      let days = '-';
-      if (period.annual && ad.firstDate) days = ad.firstDate === ad.lastDate ? shortDate(ad.firstDate, false) : `${shortDate(ad.firstDate, false)} - ${shortDate(ad.lastDate, false)}`;
-      else if (!period.annual && ad.firstDay) days = ad.firstDay === ad.lastDay ? `${ad.firstDay} ${monthShort}` : `${ad.firstDay}-${ad.lastDay} ${monthShort}`;
-      const preview = data().safeUrl(ad.preview);
       return `
         <tr>
           <td class="type-col"><span class="objective-label" style="--campaign-color:${colors.get(ad.group) || PREVIOUS_COLOR}"><i class="campaign-dot"></i>${esc(ad.groupLabel)}</span></td>
-          <td class="ad-name-col" title="${esc(ad.ad)}"><span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Lider del objetivo">&#9733;</b> ' : ''}${esc(ad.ad || '(sin nombre)')}</span></td>
+          <td class="ad-name-col" title="${esc(ad.ad)}"><span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Lider del objetivo">&#9733;</b> ' : ''}${adNameLink(ad)}</span></td>
           <td class="campaign-set-col">${esc(ad.campaigns.join(' / '))}<small>${esc(ad.adSets.join(' / ') || '-')}</small></td>
           <td><span class="objective-pill">${esc(ad.resultLabel)}</span></td>
           <td class="num"><b>${fmt('count', ad.results)}</b></td>
@@ -706,8 +809,7 @@
           <td class="num">${fmt('count', ad.reach)}</td>
           <td class="num">${fmt('money', ad.cpm)}</td>
           <td class="num">${fmt('count', ad.clicks)}</td>
-          <td class="date-col">${days}</td>
-          <td>${preview ? `<a class="preview-link" href="${preview}" target="_blank" rel="noopener noreferrer">Ver anuncio &raquo;</a>` : '<span class="no-data">Sin enlace</span>'}</td>
+          <td class="date-col">${adDays(ad, period)}</td>
         </tr>`;
     }).join('');
   }
@@ -949,7 +1051,7 @@
     state.tableFullscreen = force == null ? !state.tableFullscreen : Boolean(force);
     const panel = document.querySelector('.campaigns-panel');
     const button = document.getElementById('campaigns-expand-btn');
-    const tabs = document.getElementById('month-tabs');
+    const tabs = document.getElementById('ads-month-tabs');
     const scroll = panel?.querySelector('.table-scroll');
     if (!panel || !button) return;
     panel.classList.toggle('is-fullscreen', state.tableFullscreen);
@@ -966,8 +1068,8 @@
   }
 
   // ── Render y eventos ─────────────────────────────────────────────────────
-  // Gasto publicitario: pestanas, periodo y todo lo que depende del mes elegido.
-  function renderPeriodView() {
+  // Gasto publicitario (view-obj) o Anuncios (view-ads): pestanas, periodo y todo lo que depende del mes elegido.
+  function renderPeriodView(viewId) {
     const snapshot = data()?.snapshot();
     if (!snapshot) return;
     const month = selectedMonth();
@@ -976,37 +1078,53 @@
     const period = currentPeriod();
     // Los objetivos del periodo se calculan una vez para los cuadros, la distribucion y los anuncios.
     const objectives = period ? data().metrics.objectives(period.rows) : [];
-    renderTabs(snapshot);
-    renderPeriod(period);
-    renderKpis(period);
-    renderCampaigns(period, objectives);
-    renderDistribution(period, objectives);
-    renderAds(period, objectives);
+    if (viewId === 'view-ads') {
+      renderTabs(snapshot, 'ads-month-tabs');
+      renderPeriod(period, 'ads-');
+      renderTopAds(period, objectives);
+      renderAds(period, objectives);
+    } else {
+      renderTabs(snapshot);
+      renderPeriod(period);
+      renderKpis(period);
+      renderCampaigns(period, objectives);
+      renderDistribution(period, objectives);
+    }
+    state.rendered[viewId] = state.monthVersion;
   }
 
-  // Con datos nuevos se repintan las dos vistas; cada una cambia de mes con sus propias pestanas.
+  // Al abrir Gasto publicitario o Anuncios: se repinta solo si el mes cambio en la otra vista.
+  function show(viewId) {
+    if (state.wired && PERIOD_VIEWS.includes(viewId) && state.rendered[viewId] !== state.monthVersion) renderPeriodView(viewId);
+  }
+
+  // Con datos nuevos se repintan todas las vistas; el Historico cambia de mes con sus propias pestanas.
   function renderAll() {
-    renderPeriodView();
+    PERIOD_VIEWS.forEach(renderPeriodView);
     renderHistory();
   }
 
   function wireEvents() {
-    const tabs = document.getElementById('month-tabs');
-    if (tabs) state.tabsHome = { parent: tabs.parentNode, next: tabs.nextSibling };
-    tabs?.addEventListener('click', event => {
-      const button = event.target.closest('.month-tab:not(:disabled)');
-      if (!button) return;
-      const year = Number(button.dataset.year);
-      if (year) {
-        if (year === viewYear()) return;
-        // Otro año: un mes pasa al ultimo mes con datos de ese año y la vista anual sigue en anual.
-        state.year = year;
-        if (state.monthKey !== YEAR_KEY) state.monthKey = latestMonthOf(data().snapshot(), year)?.key || null;
-      } else {
-        if (button.dataset.month === state.monthKey) return;
-        state.monthKey = button.dataset.month;
-      }
-      renderPeriodView();
+    const adsTabs = document.getElementById('ads-month-tabs');
+    if (adsTabs) state.tabsHome = { parent: adsTabs.parentNode, next: adsTabs.nextSibling };
+    // Las pestanas de las dos vistas cambian el mismo mes: se pinta la vista de la pestana y la otra queda atrasada.
+    [['month-tabs', 'view-obj'], ['ads-month-tabs', 'view-ads']].forEach(([id, viewId]) => {
+      document.getElementById(id)?.addEventListener('click', event => {
+        const button = event.target.closest('.month-tab:not(:disabled)');
+        if (!button) return;
+        const year = Number(button.dataset.year);
+        if (year) {
+          if (year === viewYear()) return;
+          // Otro año: un mes pasa al ultimo mes con datos de ese año y la vista anual sigue en anual.
+          state.year = year;
+          if (state.monthKey !== YEAR_KEY) state.monthKey = latestMonthOf(data().snapshot(), year)?.key || null;
+        } else {
+          if (button.dataset.month === state.monthKey) return;
+          state.monthKey = button.dataset.month;
+        }
+        state.monthVersion += 1;
+        renderPeriodView(viewId);
+      });
     });
     document.getElementById('history-month-tabs')?.addEventListener('click', event => {
       const button = event.target.closest('.month-tab:not(:disabled)');
@@ -1080,11 +1198,13 @@
     window.addEventListener('tp:data-error', () => {
       if (data().snapshot()) return;
       const message = `No se pudieron cargar los datos (${data().status().error}). Pulsa Actualizar para reintentar.`;
-      const title = document.getElementById('period-title');
-      if (title) title.textContent = 'Sin datos de Meta';
-      const sub = document.getElementById('period-sub');
-      if (sub) sub.textContent = message;
-      [['distribution-body', 13], ['campaigns-body', 15], ['history-body', 10]].forEach(([id, span]) => {
+      ['', 'ads-'].forEach(prefix => {
+        const title = document.getElementById(`${prefix}period-title`);
+        if (title) title.textContent = 'Sin datos de Meta';
+        const sub = document.getElementById(`${prefix}period-sub`);
+        if (sub) sub.textContent = message;
+      });
+      [['distribution-body', 13], ['campaigns-body', 14], ['history-body', 10]].forEach(([id, span]) => {
         const body = document.getElementById(id);
         if (body) body.innerHTML = `<tr><td class="table-empty" colspan="${span}">${esc(message)}</td></tr>`;
       });
@@ -1097,6 +1217,8 @@
     wireEvents();
     renderAll();
   }
+
+  window.TPObjectives = { show };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

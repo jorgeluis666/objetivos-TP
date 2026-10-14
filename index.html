@@ -14,11 +14,15 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.25.2</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.26.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
       <div class="s-text"><div class="s-title-nav">Gasto publicitario</div><div class="s-desc-nav">Meta Ads por objetivo</div></div>
+    </button>
+    <button class="s-item" type="button" data-view-target="view-ads">
+      <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></div>
+      <div class="s-text"><div class="s-title-nav">Anuncios</div><div class="s-desc-nav">Meta Ads por anuncio</div></div>
     </button>
     <button class="s-item" type="button" data-view-target="view-messages">
       <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg></div>
@@ -78,6 +82,20 @@
           </div>
           <div class="campaign-blocks" id="campaign-blocks"></div>
         </div>
+      </section>
+
+      <!-- Anuncios: mismo mes que Gasto publicitario (cambiarlo en una vista cambia la otra). -->
+      <section class="view" id="view-ads">
+        <h1 class="section-title">Anuncios de Meta Ads</h1>
+        <p class="section-desc">Cada anuncio con sus resultados, inversion y comparacion con el mismo tramo del mes anterior. El mes elegido es el mismo de Gasto publicitario.</p>
+        <div class="month-tabs" id="ads-month-tabs" role="group" aria-label="Mes de los anuncios"></div>
+        <div class="panel period-panel">
+          <div class="period-head">
+            <div class="period-title" id="ads-period-title">Cargando datos de Meta...</div>
+            <div class="period-sub" id="ads-period-sub"></div>
+          </div>
+          <div class="ad-top" id="ads-top"></div>
+        </div>
 
         <div class="panel campaigns-panel">
           <div class="panel-head campaigns-panel-head">
@@ -93,8 +111,8 @@
           </div>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de anuncios">
             <table class="data-table campaigns-table">
-              <thead><tr><th>Objetivo</th><th>Anuncio</th><th>Campaña / conjunto</th><th>Resultado</th><th class="num">Resultados</th><th class="num" id="ads-prev-head">Mes anterior</th><th class="num">Variacion</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">CPM</th><th class="num">Clics</th><th>Dias activos</th><th>Vista previa</th></tr></thead>
-              <tbody id="campaigns-body"><tr><td class="table-empty" colspan="15">Cargando datos de Meta...</td></tr></tbody>
+              <thead><tr><th>Objetivo</th><th>Anuncio</th><th>Campaña / conjunto</th><th>Resultado</th><th class="num">Resultados</th><th class="num" id="ads-prev-head">Mes anterior</th><th class="num">Variacion</th><th class="num">Costo por resultado</th><th class="num">Inversion</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">CPM</th><th class="num">Clics</th><th>Dias activos</th></tr></thead>
+              <tbody id="campaigns-body"><tr><td class="table-empty" colspan="14">Cargando datos de Meta...</td></tr></tbody>
             </table>
           </div>
         </div>
