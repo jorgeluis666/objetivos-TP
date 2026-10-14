@@ -7,7 +7,7 @@
   const EXPORT_NAME = 'tp-bitacora-2026.json';
   const INLINE_GLOBAL = 'TP_BITACORA';
   const TYPES = { cambio: 'Cambio', comentario: 'Comentario', decision: 'Decisión' };
-  const PLATFORMS = { general: 'General', meta: 'Meta Ads', tiktok: 'TikTok Ads' };
+  const PLATFORMS = { general: 'General', meta: 'Meta Ads' };
 
   const { today, validDate, newId, options } = window.TPDraft;
   const esc = value => window.TPData.esc(value);

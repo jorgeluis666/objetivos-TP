@@ -96,7 +96,7 @@
         key: objective.key,
         name: objective.campaigns.join(' / '),
         short: objective.label,
-        type: `${objective.campaigns.length} ${objective.campaigns.length === 1 ? 'campana' : 'campanas'}`,
+        type: `${objective.campaigns.length} ${objective.campaigns.length === 1 ? 'campaña' : 'campañas'}`,
         resultLabel: objective.resultLabel,
         color: objective.color,
         results,
@@ -199,7 +199,7 @@
         <td></td>
       </tr>`;
 
-    body.innerHTML = rows ? rows + totalRow : '<tr><td class="table-empty" colspan="10">No hay campanas con gasto en el mes.</td></tr>';
+    body.innerHTML = rows ? rows + totalRow : '<tr><td class="table-empty" colspan="10">No hay campañas con gasto en el mes.</td></tr>';
 
     const head = document.getElementById('projection-actual-head');
     if (head) head.textContent = `Resultados al ${projection.daysWithData}-${projection.shortMonth}`;

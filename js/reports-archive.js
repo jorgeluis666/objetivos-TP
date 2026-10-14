@@ -356,13 +356,11 @@
     const monthly = state.reports.filter(report => report.type.id === TYPES.monthly.id || report.type.id === TYPES.partial.id).length;
     const latest = state.reports.filter(report => report.latest).length;
     const newest = state.reports[0];
-    const synced = state.validation.filter(row => row.status === 'synced').length;
 
     const cards = [
       { label: 'Archivos en la carpeta', value: String(total), hint: `${latest} vigentes + ${total - latest} versiones anteriores` },
-      { label: 'Reportes de campana', value: String(monthly), hint: 'Mensuales y parciales' },
+      { label: 'Reportes de campaña', value: String(monthly), hint: 'Mensuales y parciales' },
       { label: 'Ultimo documento', value: newest ? formatDate(newest.modifiedTime) : '--', hint: newest ? newest.name : 'Sin registros' },
-      { label: 'Meses sincronizados', value: `${synced}/${state.validation.length}`, hint: 'Descargas de Meta con su reporte al dia' },
     ];
 
     els.kpis.innerHTML = cards.map(card => `

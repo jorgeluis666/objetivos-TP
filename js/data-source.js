@@ -299,7 +299,15 @@
     const latest = withData[withData.length - 1] || null;
     // Un mes anterior al ultimo con datos ya termino aunque su descarga no llegue al ultimo dia.
     months.forEach(month => { month.past = Boolean(latest && month.key < latest.key); });
+    // Meta deja vacia la vista previa de algunos anuncios (por ejemplo un anuncio ya apagado en otro objetivo): se
+    // usa el enlace de la misma pieza, por nombre, de cualquier mes u objetivo; gana el mes mas reciente.
+    const previews = new Map();
+    [...months].reverse().forEach(month => month.rows.forEach(row => {
+      const name = normalize(row.ad);
+      if (row.preview && !previews.has(name)) previews.set(name, row.preview);
+    }));
     return {
+      previews,
       source,
       sweptAt: String(payload.sweptAt || ''),
       origin: String(payload.origin || ''),
@@ -433,7 +441,7 @@
           ad: items[0].ad,
           resultType,
           resultLabel: resultLabel(resultType),
-          preview: items.find(row => row.preview)?.preview || '',
+          preview: items.find(row => row.preview)?.preview || state.data?.previews.get(normalize(items[0].ad)) || '',
           firstDay: days.length ? Math.min(...days) : null,
           lastDay: days.length ? Math.max(...days) : null,
           firstDate: dates[0] || null,

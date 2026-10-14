@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.25.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.25.2`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -82,6 +82,8 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   del barrido automatico, asi que la copia incrustada nunca tiene mas de un dia.
 - Solo se muestra lo que tuvo gasto o impresiones en el periodo elegido: objetivos, campanas, conjuntos y
   anuncios en cero no aparecen en ningun modulo (`hasActivity` en `js/data-source.js`).
+- Vista previa: si Meta deja vacio el enlace de un anuncio, se usa el de la misma pieza (por nombre) de otro mes u
+  objetivo. Las publicaciones promocionadas (Interaccion, Trafico IG) nunca traen enlace en la descarga.
 - El objetivo se deduce del nombre de la campana (`Interaccion | Posts | ...`, `Campana pedidos WhatsApp | ...`)
   y su resultado de la columna "Tipo de resultado". El alcance es la suma de las filas de la descarga,
   igual que en los reportes de la agencia.
@@ -148,8 +150,8 @@ porque `dist/` no lleva `data/`). En desarrollo se lee con `fetch`.
 
 - `date` (`YYYY-MM-DD`) define el mes en que se agrupa el item.
 - `type`: `cambio`, `comentario` o `decision` (otro valor se lee como `comentario`).
-- `platform`: `general`, `meta` o `tiktok` (otro valor se lee como `general`). La lista vive en
-  `js/bitacora.js` (`PLATFORMS`) y en el select del formulario de `index.html`.
+- `platform`: `general` o `meta`, la unica plataforma que se maneja en esta cuenta (otro valor se lee como
+  `general`). La lista vive en `js/bitacora.js` (`PLATFORMS`), que tambien llena el select del formulario.
 - `done`: casilla marcada (hecho, aplicado o revisado). Los items nuevos usan `id` = `b` + timestamp en base 36.
 
 Flujo editar → exportar → publicar:
@@ -189,7 +191,13 @@ fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el
 - Se edita igual que la Bitácora: borrador en `localStorage` (`tp-usuarios-draft`), **Exportar** descarga
   `tp-usuarios-2026.json`, se reemplaza el archivo en `data/`, commit y push a `main`.
 - La clave es una sola para todos (secret `TP_PAGE_PASSWORD`): dar acceso es entregarla, y quitarselo a
-  alguien obliga a cambiarla y repartir la nueva. La vista muestra los pasos.
+  alguien obliga a cambiarla y repartir la nueva. Los pasos van aqui y no en el tablero, porque el tablero lo ve
+  el cliente:
+  1. Dar acceso: agregar a la persona en la vista, exportar y publicar el archivo; despues compartirle la clave
+     por un canal privado, nunca en el mismo mensaje que el enlace.
+  2. Cambiar la clave: GitHub > Settings > Secrets and variables > Actions > editar `TP_PAGE_PASSWORD` (larga y
+     aleatoria, 16 caracteres o mas) y luego Actions > "Publicar en GitHub Pages" > Run workflow.
+  3. Quitar acceso: marcar a la persona como Suspendida y cambiar la clave; luego pasar la nueva al resto.
 
 Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de este directorio tambien lo son.
 

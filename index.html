@@ -14,7 +14,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.25.1</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.25.2</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -66,13 +66,13 @@
         <div class="panel distribution-panel">
           <div class="panel-head">
             <div>
-              <div class="panel-title">Distribucion de inversion por campana</div>
+              <div class="panel-title">Distribucion de inversion por campaña</div>
               <div class="panel-sub" id="distribution-sub"></div>
             </div>
           </div>
           <div class="table-scroll">
             <table class="data-table distribution-table">
-              <thead><tr><th>Campana</th><th>Objetivo</th><th>Resultado</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th>% de la inversion</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">Frecuencia</th><th class="num">CPM</th><th class="num">Clics</th><th class="num">CTR</th></tr></thead>
+              <thead><tr><th>Campaña</th><th>Objetivo</th><th>Resultado</th><th class="num">Resultados</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th>% de la inversion</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">Frecuencia</th><th class="num">CPM</th><th class="num">Clics</th><th class="num">CTR</th></tr></thead>
               <tbody id="distribution-body"><tr><td class="table-empty" colspan="13">Cargando datos de Meta...</td></tr></tbody>
             </table>
           </div>
@@ -93,7 +93,7 @@
           </div>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de anuncios">
             <table class="data-table campaigns-table">
-              <thead><tr><th>Objetivo</th><th>Anuncio</th><th>Campana / conjunto</th><th>Resultado</th><th class="num">Resultados</th><th class="num" id="ads-prev-head">Mes anterior</th><th class="num">Variacion</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">CPM</th><th class="num">Clics</th><th>Dias activos</th><th>Vista previa</th></tr></thead>
+              <thead><tr><th>Objetivo</th><th>Anuncio</th><th>Campaña / conjunto</th><th>Resultado</th><th class="num">Resultados</th><th class="num" id="ads-prev-head">Mes anterior</th><th class="num">Variacion</th><th class="num">Costo por resultado</th><th class="num">Gasto</th><th class="num">Impresiones</th><th class="num">Alcance</th><th class="num">CPM</th><th class="num">Clics</th><th>Dias activos</th><th>Vista previa</th></tr></thead>
               <tbody id="campaigns-body"><tr><td class="table-empty" colspan="15">Cargando datos de Meta...</td></tr></tbody>
             </table>
           </div>
@@ -111,14 +111,14 @@
               <div class="panel-sub" id="projection-sub">Cargando datos del mes en curso...</div>
             </div>
             <div class="projection-controls">
-              <div class="chart-series-toggles" id="projection-campaigns" role="radiogroup" aria-label="Campana proyectada"></div>
+              <div class="chart-series-toggles" id="projection-campaigns" role="radiogroup" aria-label="Campaña proyectada"></div>
               <div class="chart-series-toggles" id="projection-series" role="group" aria-label="Series del grafico">
                 <label class="series-toggle active" data-series="reservations"><input type="checkbox" value="results" checked>Resultados</label>
                 <label class="series-toggle active" data-series="investment"><input type="checkbox" value="spend" checked>Gasto</label>
               </div>
             </div>
           </div>
-          <div class="chart-wrap h-360"><canvas id="chart-projection" role="img" aria-label="Linea de tiempo de resultados y gasto por campana"></canvas></div>
+          <div class="chart-wrap h-360"><canvas id="chart-projection" role="img" aria-label="Linea de tiempo de resultados y gasto por campaña"></canvas></div>
           <div class="projection-scenario" id="projection-scenario" hidden></div>
           <div class="chart-legend projection-legend" id="projection-legend"></div>
           <p class="projection-note" id="projection-note"></p>
@@ -133,7 +133,7 @@
           </div>
           <div class="table-scroll">
             <table class="data-table projection-table">
-              <thead><tr><th>Objetivo</th><th>Campanas</th><th>Resultado</th><th class="num" id="projection-actual-head">Resultados actuales</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Gasto actual</th><th class="num">Gasto proyectado</th><th class="num">Costo por resultado</th><th>Escenario</th></tr></thead>
+              <thead><tr><th>Objetivo</th><th>Campañas</th><th>Resultado</th><th class="num" id="projection-actual-head">Resultados actuales</th><th class="num">Ritmo diario</th><th class="num" id="projection-close-head">Proyeccion al cierre</th><th class="num">Gasto actual</th><th class="num">Gasto proyectado</th><th class="num">Costo por resultado</th><th>Escenario</th></tr></thead>
               <tbody id="projection-body"><tr><td class="table-empty" colspan="10">Cargando proyeccion...</td></tr></tbody>
             </table>
           </div>
@@ -356,15 +356,6 @@
           </div>
           <div class="log-status" id="users-status"></div>
           <div id="users-list"></div>
-        </div>
-        <div class="panel users-guide">
-          <div class="panel-title">Cómo dar acceso o cambiar la clave</div>
-          <ol>
-            <li><b>Dar acceso:</b> agrega a la persona en esta lista, exporta el archivo y publícalo. Después compártele la clave por un canal privado, nunca en el mismo mensaje que el enlace.</li>
-            <li>La clave es <b>una sola para todos</b> y vive en el secret <b>TP_PAGE_PASSWORD</b> de GitHub: no está en esta lista ni en el HTML publicado.</li>
-            <li><b>Cambiarla:</b> GitHub &gt; Settings &gt; Secrets and variables &gt; Actions &gt; editar <b>TP_PAGE_PASSWORD</b> (larga y aleatoria, 16 caracteres o más) y luego Actions &gt; "Publicar en GitHub Pages" &gt; Run workflow.</li>
-            <li><b>Quitar acceso:</b> marca a la persona como Suspendida y cambia la clave, porque es compartida; luego pásale la nueva al resto.</li>
-          </ol>
         </div>
       </section>
 

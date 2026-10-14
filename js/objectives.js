@@ -12,9 +12,9 @@
   const HISTORY_ALL = 'todos';
   // Filtro por estado del Historico. Activa = con gasto o impresiones el ultimo dia con datos.
   const HISTORY_STATUS = [
-    { key: 'todas', label: 'Todas', one: 'campana', many: 'campanas' },
-    { key: 'activas', label: 'Activas', one: 'campana activa', many: 'campanas activas' },
-    { key: 'finalizadas', label: 'Finalizadas', one: 'campana finalizada', many: 'campanas finalizadas' },
+    { key: 'todas', label: 'Todas', one: 'campaña', many: 'campañas' },
+    { key: 'activas', label: 'Activas', one: 'campaña activa', many: 'campañas activas' },
+    { key: 'finalizadas', label: 'Finalizadas', one: 'campaña finalizada', many: 'campañas finalizadas' },
   ];
   const MODES = [
     { key: 'cumulative', label: 'Acumulado del mes' },
@@ -487,9 +487,9 @@
     // Con una sola campana su nombre ya esta en el subtitulo del cuadro.
     const manyCampaigns = objective.campaigns.length > 1;
     // [titulo, numerica]
-    const head = [['Conjunto']].concat(manyCampaigns ? [['Campana']] : [], [['Resultados', true]])
+    const head = [['Conjunto']].concat(manyCampaigns ? [['Campaña']] : [], [['Resultados', true]])
       .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variacion', true]] : [])
-      .concat([['Costo por resultado', true], ['Inversion', true], ['% de la campana'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true]]);
+      .concat([['Costo por resultado', true], ['Inversion', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true]]);
     const body = sets.map(set => {
       const before = previous.get(set.key);
       return `
@@ -543,7 +543,7 @@
         <dl class="chart-kpis">${kpis}</dl>
         <div class="campaign-block-body" id="campaign-body-${key}">
           <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="group" aria-label="Indicadores del grafico de ${esc(objective.label)}"></div>
-          <div class="chart-wrap h-300"><canvas role="img" aria-label="Grafico de la campana ${esc(objective.label)}"></canvas></div>
+          <div class="chart-wrap h-300"><canvas role="img" aria-label="Grafico de la campaña ${esc(objective.label)}"></canvas></div>
           <div class="chart-legend projection-legend" data-campaign-legend></div>
           ${adSetsHtml(period, objective)}
         </div>
@@ -561,7 +561,7 @@
     const metrics = CAMPAIGN_METRICS.map(item => ({ ...item, label: item.key === 'results' ? objective.resultLabel : item.label, color: objective.color, group: key }));
     const selected = metrics.filter(item => settings.metrics.includes(item.key));
     block.classList.toggle('is-collapsed', settings.collapsed);
-    setToggle(block.querySelector('[data-campaign-toggle]'), settings.collapsed, `la campana ${objective.label}`);
+    setToggle(block.querySelector('[data-campaign-toggle]'), settings.collapsed, `la campaña ${objective.label}`);
     replaceHtml(block.querySelector('[data-campaign-modes]'), chipsHtml(modes, modeKey, `campaign-mode-${key}`, 'var(--brand-text)'));
     replaceHtml(block.querySelector('[data-campaign-metrics]'), chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true));
     if (settings.collapsed) {
@@ -605,7 +605,7 @@
     const rows = data().metrics.campaigns(period.rows);
     const colors = new Map(objectives.map(objective => [objective.key, objective.color]));
     const total = data().metrics.summarize(period.rows);
-    if (sub) sub.textContent = `${period.label} | ${rows.length} ${rows.length === 1 ? 'campana' : 'campanas'} con gasto o impresiones.`;
+    if (sub) sub.textContent = `${period.label} | ${rows.length} ${rows.length === 1 ? 'campaña' : 'campañas'} con gasto o impresiones.`;
     body.innerHTML = rows.map(row => `
       <tr>
         <td class="campaign-name">${esc(row.name)}</td>
@@ -825,7 +825,7 @@
       finalizadas: `Sin gasto al ${shortDate(snapshot.dataEnd)}`,
     }[state.historyStatus];
     host.innerHTML = [
-      ['Campanas', fmt('count', entries.length), statusNote],
+      ['Campañas', fmt('count', entries.length), statusNote],
       ['Inversion', fmt('money', totals.spend), month ? `Gasto en ${month.name}` : 'Gasto acumulado'],
       ['Impresiones', fmt('count', totals.impressions), month ? `En ${month.name}` : 'Total historico'],
       ['Alcance', fmt('count', totals.reach), 'Suma diaria por publico'],
@@ -869,7 +869,7 @@
       const partial = !item.complete && !item.past;
       return `<th class="num" title="${esc(item.fileName || `${item.name} ${item.year}`)}">${item.shortName}${multiYear ? ` ${String(item.year).slice(2)}` : ''}${partial ? ` (al ${item.lastDay})` : ''}</th>`;
     }).join('')}<th class="num">${month ? `Gasto ${month.shortName}` : 'Gasto total'}</th><th class="num">Resultados</th><th class="num th-wrap">Costo por resultado</th><th class="num">Impresiones</th><th class="num">Alcance</th><th>Anuncios</th>${month
-      ? '<th>Dias activos</th><th class="num" title="Gasto de la campana en todos los meses">Gasto acumulado</th>'
+      ? '<th>Dias activos</th><th class="num" title="Gasto de la campaña en todos los meses">Gasto acumulado</th>'
       : '<th>Periodo</th>'}</tr>`;
 
     const status = HISTORY_STATUS.find(item => item.key === state.historyStatus);

@@ -2514,7 +2514,6 @@ textarea.log-text {
 .log-item .log-tag.decision { color: var(--green-text); }
 .log-item .log-tag.platform.general { color: #475569; }
 .log-item .log-tag.platform.meta { color: #1d4ed8; }
-.log-item .log-tag.platform.tiktok { color: #be185d; }
 
 .log-delete {
   width: 28px;
@@ -2622,18 +2621,6 @@ textarea.log-text {
 .users-item .users-role.cliente { color: #475569; }
 .users-item .users-state.activo { color: var(--green-text); }
 .users-item .users-state.suspendido { color: var(--red); }
-
-.users-guide {
-  margin-top: 16px;
-}
-
-.users-guide ol {
-  margin: 10px 0 0;
-  padding-left: 18px;
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.7;
-}
 
 /* El ancho que manda es el de la lista, no el de la ventana: cambia tambien al minimizar el panel. */
 #users-list {
