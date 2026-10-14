@@ -297,6 +297,15 @@
       .sort((a, b) => a.key.localeCompare(b.key));
     const withData = months.filter(month => month.hasData);
     const latest = withData[withData.length - 1] || null;
+    // Meta no exporta los dias sin entrega: si la pauta estuvo apagada al inicio del mes (1 Oct) la descarga empieza
+    // despues. Con datos en el mes anterior la cuenta ya corria, asi que el mes empieza el 1 y esos dias van en 0.
+    // Solo el primer mes con datos conserva su primer dia real (la pauta arranco el 15 Jun).
+    const byKey = new Map(months.map(month => [month.key, month]));
+    months.forEach(month => {
+      const before = new Date(month.year, month.month - 2, 1);
+      const previous = byKey.get(`${before.getFullYear()}-${String(before.getMonth() + 1).padStart(2, '0')}`);
+      if (month.hasData && month.firstDay > 1 && previous?.hasData) month.firstDay = 1;
+    });
     // Un mes anterior al ultimo con datos ya termino aunque su descarga no llegue al ultimo dia.
     months.forEach(month => { month.past = Boolean(latest && month.key < latest.key); });
     // Meta deja vacia la vista previa de algunos anuncios (por ejemplo un anuncio ya apagado en otro objetivo): se

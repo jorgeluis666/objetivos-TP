@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.26.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.26.1`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -95,6 +95,11 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   del barrido automatico, asi que la copia incrustada nunca tiene mas de un dia.
 - Solo se muestra lo que tuvo gasto o impresiones en el periodo elegido: objetivos, campanas, conjuntos y
   anuncios en cero no aparecen en ningun modulo (`hasActivity` en `js/data-source.js`).
+- Dias con la pauta apagada: Meta no exporta los dias sin entrega, asi que una descarga puede empezar despues del
+  dia 1 (el 1 de octubre de 2026 la pauta estuvo apagada y el archivo arranca el 2). Si el mes anterior tiene datos,
+  el mes empieza igual el dia 1 y esos dias cuentan en 0: el periodo dice "1-13 Octubre", se compara con
+  "1-13 Septiembre" y el ritmo de Proyecciones divide entre los 13 dias. Solo el primer mes con datos (Junio,
+  desde el 15) empieza en su primer dia real.
 - Vista previa: si Meta deja vacio el enlace de un anuncio, se usa el de la misma pieza (por nombre) de otro mes u
   objetivo. Las publicaciones promocionadas (Interaccion, Trafico IG) nunca traen enlace en la descarga.
 - El objetivo se deduce del nombre de la campana (`Interaccion | Posts | ...`, `Campana pedidos WhatsApp | ...`)
