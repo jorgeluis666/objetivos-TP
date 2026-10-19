@@ -2946,8 +2946,7 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-top: 16px;
-  border-top: 3px solid var(--brand);
+  margin-top: 16px;
 }
 
 .week-cover-brand {
