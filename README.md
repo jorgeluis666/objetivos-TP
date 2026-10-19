@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.27.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.28.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -67,7 +67,10 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
 - Generacion de Reporte: el reporte semanal de lunes a domingo, con el orden del ultimo reporte de la carpeta de Drive y descarga en PDF (ver "Generacion de Reporte").
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
-- Usuarios y Claves: directorio de las cuentas con acceso al tablero, sin contraseñas (ver "Usuarios y Claves").
+
+El pie del panel lateral lleva el nombre de la cuenta, el WhatsApp de Agencia Lima Retail
+(+51 937 409 733) y www.limaretail.com. El modulo "Usuarios y Claves" salio del tablero; el
+directorio guardado sigue en el repositorio por si hace falta recuperarlo.
 
 ## Datos
 
@@ -209,39 +212,6 @@ y Exportar sigue funcionando.
 
 Ojo: mientras el repo sea publico, lo que se publique en la bitácora tambien lo es.
 
-## Usuarios y Claves
-
-Directorio de quien tiene acceso al tablero. El tablero publicado se abre con la clave unica de
-`TP_PAGE_PASSWORD` (ver "Publicacion en terminalpesquero.limaretail.com"); aqui **nunca** se guarda
-ninguna clave, ni en el repo ni en el HTML: esta vista solo lleva nombre, usuario de acceso, rol,
-fecha de alta y estado. La version publicada es `data/tp-usuarios-2026.json` (el build la incrusta como
-`window.TP_USUARIOS`).
-
-```json
-{
-  "updatedAt": "2026-09-29",
-  "users": [
-    { "id": "u01", "name": "Nombre Apellido", "user": "cliente-tp", "role": "cliente",
-      "status": "activo", "since": "2026-09-29" }
-  ]
-}
-```
-
-- `role`: `cliente`, `equipo` o `admin` (otro valor se lee como `cliente`).
-- `status`: `activo` o `suspendido`. `user` es el usuario o correo con que se identifica a la persona
-  (no es una cuenta del servidor) y se guarda en minusculas y sin espacios ni `:`.
-- Se edita igual que la Bitácora: borrador en `localStorage` (`tp-usuarios-draft`), **Exportar** descarga
-  `tp-usuarios-2026.json`, se reemplaza el archivo en `data/`, commit y push a `main`.
-- La clave es una sola para todos (secret `TP_PAGE_PASSWORD`): dar acceso es entregarla, y quitarselo a
-  alguien obliga a cambiarla y repartir la nueva. Los pasos van aqui y no en el tablero, porque el tablero lo ve
-  el cliente:
-  1. Dar acceso: agregar a la persona en la vista, exportar y publicar el archivo; despues compartirle la clave
-     por un canal privado, nunca en el mismo mensaje que el enlace.
-  2. Cambiar la clave: GitHub > Settings > Secrets and variables > Actions > editar `TP_PAGE_PASSWORD` (larga y
-     aleatoria, 16 caracteres o mas) y luego Actions > "Publicar en GitHub Pages" > Run workflow.
-  3. Quitar acceso: marcar a la persona como Suspendida y cambiar la clave; luego pasar la nueva al resto.
-
-Ojo: mientras el repo sea publico (y GitHub Pages siga activo), los nombres de este directorio tambien lo son.
 
 ## Configuracion del Web App (Google Apps Script)
 

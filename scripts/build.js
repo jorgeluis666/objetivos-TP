@@ -119,11 +119,10 @@ async function main() {
   // Se incrustan, en el orden de index.html, todos los js/ que carga: no hay otra lista que mantener.
   html = html.replace(/<script src="js\/([\w-]+\.js)(?:\?v=[^"]+)?"><\/script>/g, (_, file) => `<script>${readFile(`js/${file}`)}</script>`);
   if (/<script src="js\//.test(html)) throw new Error('index.html carga un js/ que el build no incrusta');
-  // La bitacora y el directorio de usuarios viajan incrustados: dist/ no lleva la carpeta data/.
+  // La bitacora viaja incrustada: dist/ no lleva la carpeta data/.
   const inlineJson = file => JSON.stringify(JSON.parse(readFile(file))).replace(/</g, '\\u003c');
   const bitacora = inlineJson('data/tp-bitacora-2026.json');
-  const usuarios = inlineJson('data/tp-usuarios-2026.json');
-  const config = `window.TP_DATA_ENDPOINT = ${JSON.stringify(endpoint)};window.TP_META_DATA = ${metaData};window.TP_BITACORA = ${bitacora};window.TP_USUARIOS = ${usuarios};`;
+  const config = `window.TP_DATA_ENDPOINT = ${JSON.stringify(endpoint)};window.TP_META_DATA = ${metaData};window.TP_BITACORA = ${bitacora};`;
   html = html.replace('</head>', () => `<script>${config}</script></head>`);
 
   // Salida en LF tanto en Windows (checkout con CRLF) como en CI: el mismo codigo da el mismo dist/index.html.
