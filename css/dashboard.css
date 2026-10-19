@@ -2894,3 +2894,264 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
     width: min(320px, calc(100vw - 36px));
   }
 }
+
+/* ===== Generacion de Reporte (semana de lunes a domingo) ===== */
+/* El reporte se ve en pantalla como el PDF de la carpeta Reportes y se imprime con @media print:
+   solo #week-doc, sin panel lateral, barra superior ni el resto de los modulos. */
+
+.week-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 6px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+
+.week-toolbar .reports-field select {
+  min-width: 290px;
+}
+
+.week-toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.week-model {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.week-model a {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+
+.week-best {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 4px 8px;
+  border-radius: 99px;
+  color: #15803d;
+  background: #f0fdf4;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.week-cover {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 16px;
+  border-top: 3px solid var(--brand);
+}
+
+.week-cover-brand {
+  color: var(--brand-text);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.week-cover-title {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+
+.week-cover-period {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.week-cover-meta {
+  text-align: right;
+}
+
+.week-cover-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.week-cover-meta b {
+  display: block;
+  margin: 6px 0;
+  font-size: 15px;
+}
+
+/* La descarga del mes todavia no llega hasta el domingo: el total puede subir. */
+.week-warning {
+  margin-top: 14px;
+  padding: 12px 15px;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.week-h2 {
+  margin: 26px 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.week-kpis {
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+}
+
+.week-chart-panel {
+  margin-top: 4px;
+}
+
+.h-260 {
+  height: 260px;
+}
+
+.chart-legend .legend-dot.brand {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--brand);
+}
+
+.week-campaigns,
+.week-types,
+.week-notes-panel {
+  margin-top: 14px;
+}
+
+.week-notes {
+  display: grid;
+  gap: 12px;
+}
+
+.week-note {
+  display: block;
+}
+
+.week-note-head {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.week-note-head b {
+  color: var(--brand-text);
+}
+
+.week-note textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.week-note textarea:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.week-foot {
+  margin: 18px 0 4px;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+@media(max-width:1100px) {
+  .week-kpis {
+    grid-template-columns: repeat(3, minmax(130px, 1fr));
+  }
+}
+
+@media(max-width:760px) {
+  .week-cover {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .week-cover-meta {
+    text-align: left;
+  }
+
+  .week-kpis {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  .sidebar,
+  .topbar,
+  .site-footer,
+  .week-toolbar,
+  .reports-modal,
+  .view:not(#view-week) {
+    display: none !important;
+  }
+
+  .content {
+    max-width: none;
+    padding: 0;
+  }
+
+  #view-week > .section-title,
+  #view-week > .section-desc {
+    display: none;
+  }
+
+  .panel {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .week-h2 {
+    break-after: avoid;
+  }
+
+  /* El textarea no imprime su texto completo si desborda: en papel va como texto corrido. */
+  .week-note textarea {
+    height: auto;
+    min-height: 0;
+    border: 0;
+    padding: 0;
+    overflow: visible;
+    resize: none;
+  }
+
+  .report-btn {
+    display: none;
+  }
+}

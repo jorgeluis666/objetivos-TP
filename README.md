@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.26.1`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.27.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -65,6 +65,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Filtro Todas / Activas / Finalizadas, con la cantidad de cada una en el mes elegido. Los indicadores de
     arriba siguen los dos filtros.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
+- Generacion de Reporte: el reporte semanal de lunes a domingo, con el orden del ultimo reporte de la carpeta de Drive y descarga en PDF (ver "Generacion de Reporte").
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 - Usuarios y Claves: directorio de las cuentas con acceso al tablero, sin contraseñas (ver "Usuarios y Claves").
 
@@ -119,6 +120,29 @@ El modulo Proyecciones usa los mismos datos (`window.TPData`) y proyecta el ulti
   en vertical, o se escribe en los campos bajo el grafico, para simular un escenario; tarjetas y tabla se
   recalculan al instante y la proyeccion original queda como referencia gris. Los escenarios viven solo en
   memoria y se pierden al recargar.
+
+## Generacion de Reporte
+
+Pestana que arma el reporte de la semana que acaba de pasar, de lunes a domingo, con el mismo orden del
+ultimo reporte publicado en la carpeta Reportes de Drive: resumen del periodo, resultados por dia,
+mejores anuncios, conjuntos y campanas, y conclusiones.
+
+- **De donde salen los numeros:** de las mismas filas del barrido de Meta que usa Gasto publicitario (una
+  fila por dia, campana, conjunto y anuncio). No hay una fuente nueva ni una lectura extra.
+- **Que semana muestra:** la ultima de lunes a domingo ya cerrada (en hora de Lima). El selector deja ver
+  las 12 anteriores. La semana en curso no se lista: el reporte es de semana completa.
+- **Cada lunes se puebla solo:** el tablero relee el barrido al abrirse y con Actualizar, y el workflow de Pages vuelve a publicar todos los dias despues del barrido.
+- **Si la descarga del mes no llega al domingo**, el reporte lo avisa arriba y nombra los dias que faltan:
+  los totales pueden subir cuando se suba la descarga nueva.
+- **Resultados:** cada objetivo mide el suyo (ThruPlay, interacciones, contactos...), asi que no se suman
+  entre si. Esta cuenta no tiene columna de conversaciones: encabeza el tipo de resultado con mas inversion y los demas van en el desglose "Resultados por tipo".
+- **Conclusiones:** las dos primeras vienen propuestas con lo que dice la semana y se editan en la pestana;
+  quedan guardadas por semana en el navegador (`tp-week-notes-v1`), no se publican con el tablero.
+- **Descargar PDF** abre el dialogo de impresion con el reporte solo (sin panel lateral ni barra superior)
+  y el nombre del archivo ya armado.
+
+El modulo es `js/report-week.js` y es el mismo archivo en todos los tableros de marca: lo unico que cambia
+es el bloque `CONFIG` de arriba. Sus estilos y los de impresion estan al final de `css/dashboard.css`.
 
 ## Calculadora de Inversión
 
