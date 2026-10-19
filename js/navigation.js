@@ -38,8 +38,9 @@
       footer: 'Validado contra las descargas de Meta del modulo Gasto publicitario',
     },
     'view-week': {
-      title: 'Generación de Reporte',
-      caption: 'Semana de lunes a domingo',
+      parent: 'view-reports',   // va dentro de Archivo de Reportes, con su pestaña
+      title: 'Archivo de Reportes',
+      caption: 'Generación de Reporte · semana de lunes a domingo',
       source: 'Fuente: descargas de Meta Ads / carpeta Reportes de Drive',
       footer: 'La semana que acaba de pasar, lista cada lunes',
     },
@@ -73,8 +74,10 @@
     document.querySelectorAll('.view').forEach(view => {
       view.classList.toggle('visible', view.id === viewId);
     });
+    // El menú marca el módulo; las pestañas de adentro, la sección abierta.
     document.querySelectorAll('[data-view-target]').forEach(button => {
-      const active = button.dataset.viewTarget === viewId;
+      const target = button.dataset.viewTarget;
+      const active = target === viewId || (button.classList.contains('s-item') && target === meta.parent);
       button.classList.toggle('active', active);
       button.setAttribute('aria-current', active ? 'page' : 'false');
     });

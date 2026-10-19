@@ -65,7 +65,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Filtro Todas / Activas / Finalizadas, con la cantidad de cada una en el mes elegido. Los indicadores de
     arriba siguen los dos filtros.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
-- Generacion de Reporte: el reporte semanal de lunes a domingo, con el orden del ultimo reporte de la carpeta de Drive y descarga en PDF (ver "Generacion de Reporte").
+  - Pestana Generacion de Reporte, dentro de Archivo de Reportes: el reporte semanal de lunes a domingo, con el orden del ultimo reporte de la carpeta de Drive y descarga en PDF (ver "Generacion de Reporte").
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 
 El pie del panel lateral lleva el nombre de la cuenta, el WhatsApp de Agencia Lima Retail

@@ -14,7 +14,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.28.2</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.29.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button title="Gasto publicitario" class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -38,11 +38,7 @@
     </button>
     <button title="Archivo de Reportes" class="s-item" type="button" data-view-target="view-reports">
       <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
-      <div class="s-text"><div class="s-title-nav">Archivo de Reportes</div><div class="s-desc-nav">Documentos en Drive</div></div>
-    </button>
-    <button title="Generación de Reporte" class="s-item" type="button" data-view-target="view-week">
-      <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="14" x2="13" y2="14"/></svg></div>
-      <div class="s-text"><div class="s-title-nav">Generación de Reporte</div><div class="s-desc-nav">Semana de lunes a domingo</div></div>
+      <div class="s-text"><div class="s-title-nav">Archivo de Reportes</div><div class="s-desc-nav">Documentos y reporte semanal</div></div>
     </button>
     <button title="Bitácora" class="s-item" type="button" data-view-target="view-log">
       <div class="s-icon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="15" height="18" rx="2"/><line x1="3" y1="8" x2="7" y2="8"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="3" y1="16" x2="7" y2="16"/><line x1="10" y1="8" x2="16" y2="8"/><line x1="10" y1="12" x2="16" y2="12"/></svg></div>
@@ -264,6 +260,10 @@
       </section>
 
       <section class="view" id="view-reports">
+        <div class="month-tabs report-tabs" role="group" aria-label="Secciones de Archivo de Reportes">
+          <button type="button" class="month-tab" data-view-target="view-reports">Documentos en Drive</button>
+          <button type="button" class="month-tab" data-view-target="view-week">Generación de Reporte</button>
+        </div>
         <h1 class="section-title">Archivo de Reportes</h1>
         <p class="section-desc">Repositorio de los reportes, propuestas y materiales de Terminal Pesquero almacenados en la carpeta compartida de Google Drive. Cada documento se puede previsualizar sin salir del tablero, abrir en Drive o descargar.</p>
         <div class="kpi-strip reports-kpis" id="reports-kpis" role="group" aria-label="KPIs del archivo de reportes"></div>
@@ -327,6 +327,10 @@
       </section>
 
       <section class="view" id="view-week">
+        <div class="month-tabs report-tabs" role="group" aria-label="Secciones de Archivo de Reportes">
+          <button type="button" class="month-tab" data-view-target="view-reports">Documentos en Drive</button>
+          <button type="button" class="month-tab" data-view-target="view-week">Generación de Reporte</button>
+        </div>
         <h1 class="section-title">Generación de Reporte</h1>
         <p class="section-desc">El reporte de la semana que acaba de pasar, de lunes a domingo, con el mismo orden del último reporte publicado en la carpeta Reportes de Drive. Se arma con las descargas de Meta Ads, así que cada lunes la semana cerrada ya está aquí: solo hay que revisar las conclusiones y descargarlo en PDF.</p>
         <div class="panel week-toolbar">
