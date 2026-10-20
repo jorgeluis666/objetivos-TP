@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.28.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.30.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -65,7 +65,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Filtro Todas / Activas / Finalizadas, con la cantidad de cada una en el mes elegido. Los indicadores de
     arriba siguen los dos filtros.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
-  - Pestana Generacion de Reporte, dentro de Archivo de Reportes: el reporte semanal de lunes a domingo, con el orden del ultimo reporte de la carpeta de Drive y descarga en PDF (ver "Generacion de Reporte").
+  - Pestana Generacion de Reporte, dentro de Archivo de Reportes: el Reporte de Publicidad con el diseño del modelo de la agencia, mensual o semanal, y descarga en PDF (ver "Generacion de Reporte").
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 
 El pie del panel lateral lleva el nombre de la cuenta, el WhatsApp de Agencia Lima Retail
@@ -126,23 +126,33 @@ El modulo Proyecciones usa los mismos datos (`window.TPData`) y proyecta el ulti
 
 ## Generacion de Reporte
 
-Pestana que arma el reporte de la semana que acaba de pasar, de lunes a domingo, con el mismo orden del
-ultimo reporte publicado en la carpeta Reportes de Drive: resumen del periodo, resultados por dia,
-mejores anuncios, conjuntos y campanas, y conclusiones.
+Pestana que arma el "Reporte de Publicidad" con el diseño del modelo de la agencia (`Modelo Reporte
+Terminal Pesquero`): laminas 16:9 con fondo claro, tarjetas blancas de borde fino y acentos en azul.
 
-- **De donde salen los numeros:** de las mismas filas del barrido de Meta que usa Gasto publicitario (una
-  fila por dia, campana, conjunto y anuncio). No hay una fuente nueva ni una lectura extra.
-- **Que semana muestra:** la ultima de lunes a domingo ya cerrada (en hora de Lima). El selector deja ver
-  las 12 anteriores. La semana en curso no se lista: el reporte es de semana completa.
-- **Cada lunes se puebla solo:** el tablero relee el barrido al abrirse y con Actualizar, y el workflow de Pages vuelve a publicar todos los dias despues del barrido.
-- **Si la descarga del mes no llega al domingo**, el reporte lo avisa arriba y nombra los dias que faltan:
-  los totales pueden subir cuando se suba la descarga nueva.
-- **Resultados:** cada objetivo mide el suyo (ThruPlay, interacciones, contactos...), asi que no se suman
-  entre si. Esta cuenta no tiene columna de conversaciones: encabeza el tipo de resultado con mas inversion y los demas van en el desglose "Resultados por tipo".
-- **Conclusiones:** las dos primeras vienen propuestas con lo que dice la semana y se editan en la pestana;
-  quedan guardadas por semana en el navegador (`tp-week-notes-v1`), no se publican con el tablero.
-- **Descargar PDF** abre el dialogo de impresion con el reporte solo (sin panel lateral ni barra superior)
-  y el nombre del archivo ya armado.
+| Pagina | Contenido |
+| --- | --- |
+| Portada | Logo de Lima Retail, "Reporte de Publicidad", cliente, periodo comparado y fecha de emision. |
+| Contenido | Una tarjeta por seccion con su icono y su numero de pagina. |
+| Comparativa | Inversion, resultados, alcance y conversaciones con su variacion; tabla de resultados por objetivo (anterior, actual, variacion y costo por resultado) e inversion total; recuadro "Lectura". |
+| Una por objetivo | Reconocimiento, Interaccion, Mensajes WhatsApp (y Trafico si corrio): inversion, resultados, costo por resultado, CPM, alcance y frecuencia; barras anterior vs actual; mejores anuncios (hasta 4, con "Ver »" a la vista previa); recuadro "Analisis". |
+| Conclusiones | Una tarjeta por objetivo (los tres con mas inversion) y, en un mes en curso, la nota de ventanas equivalentes. |
+| Cierre | Logo y firma de Lima Retail. |
+
+- **Periodo:** un mes contra el mismo tramo del mes anterior ("Octubre (1–18) vs Septiembre (1–18)", con el
+  periodo de Gasto publicitario; un mes cerrado va completo) o una semana de lunes a domingo contra la
+  anterior (las 12 ultimas cerradas). Por defecto, el ultimo mes con datos.
+- **De donde salen los numeros:** de las mismas filas del barrido de Meta que usa Gasto publicitario. No hay
+  una fuente nueva ni una lectura extra. Cada objetivo mide su propio resultado; como en el modelo, el
+  total de "Resultados" y de alcance de la comparativa es la suma de los objetivos. Las dos campanas de
+  WhatsApp (pedidos y mensajes) van juntas en "Mensajes", y Notoriedad se llama "Reconocimiento".
+- **Textos:** la lectura, el analisis de cada objetivo y las conclusiones vienen propuestos con lo que dicen
+  los numeros. Se editan con un clic sobre la lamina (`**texto**` va en negrita) y quedan guardados por
+  periodo en el navegador (`tp-report-notes-v2`); no se publican con el tablero. "Restablecer textos" vuelve
+  a los propuestos.
+- **Si la descarga del mes no llega al domingo** de la semana elegida, arriba se avisa que dias faltan.
+- **Descargar PDF** abre el dialogo de impresion con las laminas solas, una por hoja de 13.33 x 7.5 in (el
+  tamaño del modelo), y el nombre del archivo ya armado. Activar "Graficos de fondo" si el navegador no lo
+  hace solo.
 
 El modulo es `js/report-week.js` y es el mismo archivo en todos los tableros de marca: lo unico que cambia
 es el bloque `CONFIG` de arriba. Sus estilos y los de impresion estan al final de `css/dashboard.css`.
@@ -231,7 +241,7 @@ Ojo: mientras el repo sea publico, lo que se publique en la bitácora tambien lo
 | Carpetas de descargas de Meta y de reportes | `scripts/google-sheets-sync.gs` (`DATA_FOLDER_ID`, `REPORTS_FOLDER_ID`) |
 | URL del Web App | secret de GitHub `TP_DATA_ENDPOINT` (lo incrusta `scripts/build.js`) |
 | Clave de acceso al tablero | secret de GitHub `TP_PAGE_PASSWORD` (ver "Publicacion en terminalpesquero.limaretail.com") |
-| Logo | `assets/logo-terminal-pesquero.png` |
+| Logo | `assets/logo-terminal-pesquero.png` (tablero) y `assets/logo-lima-retail.png` (Reporte de Publicidad) |
 | Favicon | `assets/favicon.png` |
 
 ## Desarrollo

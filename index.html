@@ -14,7 +14,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.29.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.30.0</span></div></div>
     <div class="s-group-lbl">Modulos activos</div>
     <button title="Gasto publicitario" class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -332,18 +332,19 @@
           <button type="button" class="month-tab" data-view-target="view-week">Generación de Reporte</button>
         </div>
         <h1 class="section-title">Generación de Reporte</h1>
-        <p class="section-desc">El reporte de la semana que acaba de pasar, de lunes a domingo, con el mismo orden del último reporte publicado en la carpeta Reportes de Drive. Se arma con las descargas de Meta Ads, así que cada lunes la semana cerrada ya está aquí: solo hay que revisar las conclusiones y descargarlo en PDF.</p>
+        <p class="section-desc">El Reporte de Publicidad con el diseño del modelo de la agencia: portada, contenido, comparativa, una página por objetivo, conclusiones y cierre. Elige un mes (contra el mismo tramo del mes anterior) o una semana de lunes a domingo; la lectura, los análisis y las conclusiones vienen propuestos y se editan con un clic sobre la página antes de descargar el PDF.</p>
         <div class="panel week-toolbar">
           <label class="reports-field" for="week-select">
-            <span class="sr-only">Semana del reporte</span>
-            <select id="week-select"><option value="">Cargando semanas...</option></select>
+            <span class="sr-only">Periodo del reporte</span>
+            <select id="week-select"><option value="">Cargando periodos...</option></select>
           </label>
           <div class="week-toolbar-meta">
             <span class="week-model" id="week-model"></span>
+            <button class="refresh-sheet-btn secondary" type="button" id="week-reset" title="Vuelve a los textos propuestos con los números del periodo">Restablecer textos</button>
             <button class="refresh-sheet-btn" type="button" id="week-print" title="Abre el diálogo de impresión para guardar el reporte como PDF">Descargar PDF</button>
           </div>
         </div>
-        <div id="week-report"><div class="panel"><div class="empty-state"><strong>Cargando la semana...</strong><span>Leyendo las descargas de Meta Ads.</span></div></div></div>
+        <div id="week-report"><div class="panel"><div class="empty-state"><strong>Cargando el reporte...</strong><span>Leyendo las descargas de Meta Ads.</span></div></div></div>
       </section>
 
       <section class="view" id="view-log">
