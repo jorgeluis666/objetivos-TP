@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.30.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.30.1`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -65,7 +65,7 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Filtro Todas / Activas / Finalizadas, con la cantidad de cada una en el mes elegido. Los indicadores de
     arriba siguen los dos filtros.
 - Archivo de Reportes: catalogo de la carpeta de reportes en Google Drive y validacion contra Gasto publicitario.
-  - Pestana Generacion de Reporte, dentro de Archivo de Reportes: el Reporte de Publicidad con el diseño del modelo de la agencia, mensual o semanal, y descarga en PDF (ver "Generacion de Reporte").
+  - Pestana Generacion de Reporte, dentro de Archivo de Reportes: el Reporte de Publicidad con el diseño del modelo de la agencia, por mes contra el mes anterior, y descarga en PDF (ver "Generacion de Reporte").
 - Bitácora: checklist mensual editable de cambios, comentarios y decisiones de la cuenta (ver "Bitácora").
 
 El pie del panel lateral lleva el nombre de la cuenta, el WhatsApp de Agencia Lima Retail
@@ -138,18 +138,18 @@ Terminal Pesquero`): laminas 16:9 con fondo claro, tarjetas blancas de borde fin
 | Conclusiones | Una tarjeta por objetivo (los tres con mas inversion) y, en un mes en curso, la nota de ventanas equivalentes. |
 | Cierre | Logo y firma de Lima Retail. |
 
-- **Periodo:** un mes contra el mismo tramo del mes anterior ("Octubre (1–18) vs Septiembre (1–18)", con el
-  periodo de Gasto publicitario; un mes cerrado va completo) o una semana de lunes a domingo contra la
-  anterior (las 12 ultimas cerradas). Por defecto, el ultimo mes con datos.
+- **Periodo:** se elige el mes y el reporte lo compara con el mismo tramo del mes anterior ("Octubre (1–18) vs
+  Septiembre (1–18)", con el periodo de Gasto publicitario; un mes cerrado va completo). Por defecto, el
+  ultimo mes con datos. No hay reporte semanal: la comparacion contra el periodo anterior ya va dentro del
+  reporte.
 - **De donde salen los numeros:** de las mismas filas del barrido de Meta que usa Gasto publicitario. No hay
   una fuente nueva ni una lectura extra. Cada objetivo mide su propio resultado; como en el modelo, el
   total de "Resultados" y de alcance de la comparativa es la suma de los objetivos. Las dos campanas de
   WhatsApp (pedidos y mensajes) van juntas en "Mensajes", y Notoriedad se llama "Reconocimiento".
 - **Textos:** la lectura, el analisis de cada objetivo y las conclusiones vienen propuestos con lo que dicen
   los numeros. Se editan con un clic sobre la lamina (`**texto**` va en negrita) y quedan guardados por
-  periodo en el navegador (`tp-report-notes-v2`); no se publican con el tablero. "Restablecer textos" vuelve
+  mes en el navegador (`tp-report-notes-v2`); no se publican con el tablero. "Restablecer textos" vuelve
   a los propuestos.
-- **Si la descarga del mes no llega al domingo** de la semana elegida, arriba se avisa que dias faltan.
 - **Descargar PDF** abre el dialogo de impresion con las laminas solas, una por hoja de 13.33 x 7.5 in (el
   tamaño del modelo), y el nombre del archivo ya armado. Activar "Graficos de fondo" si el navegador no lo
   hace solo.

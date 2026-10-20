@@ -42,7 +42,7 @@
       title: 'Archivo de Reportes',
       caption: 'Generación de Reporte · Reporte de Publicidad en PDF',
       source: 'Fuente: descargas de Meta Ads / carpeta Reportes de Drive',
-      footer: 'La semana que acaba de pasar, lista cada lunes',
+      footer: 'El mes elegido frente al mismo tramo del mes anterior',
     },
     'view-log': {
       title: 'Bitácora',

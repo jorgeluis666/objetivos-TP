@@ -2959,18 +2959,6 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   background: #f8fafc;
 }
 
-/* La descarga del mes todavia no llega hasta el domingo: el total puede subir. */
-.week-warning {
-  margin-bottom: 14px;
-  padding: 12px 15px;
-  border: 1px solid #fcd34d;
-  border-radius: 10px;
-  background: #fffbeb;
-  color: #92400e;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
 .rp-deck {
   --rp-ink: #0f172a;
   --rp-text: #334155;
@@ -3556,8 +3544,7 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   .site-footer,
   .reports-modal,
   .view:not(#view-week),
-  #view-week > :not(#week-report),
-  .week-warning {
+  #view-week > :not(#week-report) {
     display: none !important;
   }
 

@@ -4,10 +4,10 @@
   // conclusiones y cierre. No trae datos nuevos: usa las mismas filas del barrido de Meta que ya tiene el
   // tablero (<Marca>Data.snapshot(), una fila por dia, campaña, conjunto y anuncio).
   //
-  // Se elige el periodo arriba: un mes contra el mismo tramo del mes anterior ("Octubre (1–18) vs
-  // Septiembre (1–18)", como el modelo) o una semana de lunes a domingo contra la anterior. La lectura, el
-  // analisis de cada objetivo y las conclusiones vienen propuestos con lo que dicen los numeros; el equipo
-  // los reescribe sobre la misma lamina y quedan guardados por periodo en este navegador.
+  // Se elige el mes arriba y el reporte lo compara con el mismo tramo del mes anterior ("Octubre (1–18) vs
+  // Septiembre (1–18)", como el modelo). La lectura, el analisis de cada objetivo y las conclusiones vienen
+  // propuestos con lo que dicen los numeros; el equipo los reescribe sobre la misma lamina y quedan
+  // guardados por mes en este navegador.
   //
   // El template es propio de Terminal Pesquero: cada tablero de marca tiene el suyo, adaptado por la marca.
   const CONFIG = {
@@ -18,7 +18,6 @@
     notesKey: 'tp-report-notes-v2',
   };
 
-  const WEEKS_IN_LIST = 12;
   const MAX_ADS = 4;
   const PAGE_WIDTH = 1280;
   const LOGO = 'assets/logo-lima-retail.png';
@@ -57,7 +56,6 @@
   const brandName = () => (api()?.brandLabel ? `${CONFIG.brand} · ${api().brandLabel()}` : CONFIG.brand);
   const brandSlug = () => (api()?.brandLabel ? `${CONFIG.slug}-${api().brandLabel().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-')}` : CONFIG.slug);
   const normalize = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
-  const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);
 
   // ── Formatos del modelo ("S/ 685", "S/ 0.0063", "66,692", "-36%") ───────
   const integer = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 });
@@ -85,37 +83,12 @@
     return isoOf(year, month + 1, day);
   }
 
-  function shiftDays(day, amount) {
-    const moved = new Date(Date.parse(`${day}T00:00:00Z`) + amount * 86400000);
-    return isoOf(moved.getUTCFullYear(), moved.getUTCMonth() + 1, moved.getUTCDate());
-  }
-
-  // Lunes de la semana de ese dia (getUTCDay: 0 es domingo, de ahi el +6 % 7).
-  function mondayOf(day) {
-    return shiftDays(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7));
-  }
-
-  const shortMonth = day => api().SHORT_MONTHS[Number(day.split('-')[1]) - 1].toLowerCase();
-  const dayLabel = day => `${Number(day.split('-')[2])} ${shortMonth(day)}`;
-
-  // "13–19 oct"; entre dos meses, "29 sep–5 oct".
-  function weekLabel(monday) {
-    const sunday = shiftDays(monday, 6);
-    const start = shortMonth(monday) === shortMonth(sunday) ? String(Number(monday.split('-')[2])) : dayLabel(monday);
-    return `${start}–${dayLabel(sunday)}`;
-  }
-
   function issuedLabel() {
     const [year, month, day] = todayIso().split('-');
     return `${Number(day)} ${api().SHORT_MONTHS[Number(month) - 1].toLowerCase()}. ${year}`;
   }
 
-  // ── Periodos del selector ──────────────────────────────────────────────
-  function allRows() {
-    const months = api()?.snapshot()?.months || [];
-    return months.filter(month => !month.error).flatMap(month => month.rows || []);
-  }
-
+  // ── Meses del selector ─────────────────────────────────────────────────
   const activity = row => Number(row.spend) > 0 || Number(row.impressions) > 0;
 
   // Un mes contra el mismo tramo del mes anterior, con el periodo que ya usa Gasto publicitario
@@ -144,9 +117,7 @@
           option: `${cur} ${month.year} · ${range}${prev ? ` vs ${before} ${prevRange}` : ''}`,
           rows: period.rows,
           prevRows: prev ? prev.rows : null,
-          missingDays: [],
           labels: {
-            kind: 'mensual',
             cover: prev ? `${cur} (${range}) vs ${before} (${prevRange})` : `${cur} (${range})`,
             compTitle: 'Comparativa mes a mes',
             compSub: prev
@@ -178,69 +149,6 @@
         };
       })
       .filter(Boolean);
-  }
-
-  // Semanas cerradas con actividad, de la mas reciente a la mas antigua. La semana en curso no se lista:
-  // el reporte semanal es de lunes a domingo completo.
-  function weekPeriods() {
-    const rowsAll = allRows();
-    const currentMonday = mondayOf(todayIso());
-    const byWeek = new Map();
-    rowsAll.forEach(row => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(row.day || '')) return;
-      const monday = mondayOf(row.day);
-      if (monday >= currentMonday) return;
-      if (!byWeek.has(monday)) byWeek.set(monday, []);
-      byWeek.get(monday).push(row);
-    });
-    // Un dia sin filas despues del ultimo dia del barrido: la descarga del mes todavia no llega hasta ahi.
-    const dataEnd = api()?.snapshot()?.dataEnd || rowsAll.map(row => row.day).sort().pop() || '';
-    return [...byWeek.entries()]
-      .filter(([, rows]) => rows.some(activity))
-      .sort((left, right) => right[0].localeCompare(left[0]))
-      .slice(0, WEEKS_IN_LIST)
-      .map(([monday, rows]) => {
-        const prevMonday = shiftDays(monday, -7);
-        const prevRows = rowsAll.filter(row => row.day >= prevMonday && row.day < monday);
-        const hasPrev = prevRows.some(activity);
-        const curTag = weekLabel(monday);
-        const prevTag = weekLabel(prevMonday);
-        const year = shiftDays(monday, 6).slice(0, 4);
-        const missingDays = Array.from({ length: 7 }, (_, index) => shiftDays(monday, index))
-          .filter(day => day > dataEnd && !rows.some(row => row.day === day));
-        return {
-          id: `w:${monday}`,
-          option: `Semana ${curTag} ${year}`,
-          rows,
-          prevRows: hasPrev ? prevRows : null,
-          missingDays,
-          dataEnd,
-          labels: {
-            kind: 'semanal',
-            cover: hasPrev ? `Semana ${curTag} vs semana ${prevTag}` : `Semana ${curTag}`,
-            compTitle: 'Comparativa semana a semana',
-            compSub: hasPrev ? `Semana del ${curTag} frente a la semana anterior (${prevTag}).` : `Semana del ${curTag}. No hay semana anterior con datos para comparar.`,
-            compDesc: hasPrev ? 'Totales de la semana vs la anterior por objetivo.' : 'Totales de la semana por objetivo.',
-            versus: hasPrev ? `${curTag} vs ${prevTag}` : curTag,
-            sectionSub: hasPrev ? `Comparación semana ${curTag} vs ${prevTag} · su resultado propio.` : `Semana ${curTag} · su resultado propio.`,
-            curTag,
-            prevTag,
-            curRef: 'esta semana',
-            prevRef: 'la semana anterior',
-            barCur: `Semana ${curTag}`,
-            barPrev: `Semana ${prevTag}`,
-            chartSub: 'Semanas de lunes a domingo.',
-            chartRange: hasPrev ? `${prevTag} vs ${curTag}` : curTag,
-            source: `Fuente: Meta Ads · ${curTag}${hasPrev ? ` vs ${prevTag}` : ''}, ${year}`,
-            footer: `${brandName()} · Reporte Meta Ads · Semana ${curTag}`,
-            contentsSub: 'Qué encontrarás en cada sección de este informe semanal.',
-            conclusionsSub: 'Cómo evolucionó frente a la semana anterior y qué priorizar.',
-            conclusionsSource: `Fuente: análisis Lima Retail · ${brandName()} · semana ${curTag} ${year}`,
-            windowNote: '',
-            file: `Semana_${curTag.replace(/\s+/g, '').replace('–', '-')}${year}`,
-          },
-        };
-      });
   }
 
   // ── Secciones por objetivo ─────────────────────────────────────────────
@@ -672,10 +580,6 @@
   }
 
   // ── Pintado ────────────────────────────────────────────────────────────
-  function periods() {
-    return [...monthPeriods(), ...weekPeriods()];
-  }
-
   function fitDeck() {
     const host = document.getElementById('week-report');
     if (!host || !host.clientWidth) return;
@@ -704,11 +608,11 @@
     if (!host || !api()) return;
     const { esc } = api();
 
-    const available = periods();
+    const available = monthPeriods();
     const select = document.getElementById('week-select');
     if (!available.length) {
       if (select) select.innerHTML = '<option value="">Sin periodos con datos</option>';
-      host.innerHTML = '<div class="panel"><div class="empty-state"><strong>Todavia no hay datos para el reporte</strong><span>El reporte se arma con las descargas de Meta Ads de la carpeta de Drive. En cuanto haya un mes o una semana con entregas, aparece aqui.</span></div></div>';
+      host.innerHTML = '<div class="panel"><div class="empty-state"><strong>Todavia no hay datos para el reporte</strong><span>El reporte se arma con las descargas de Meta Ads de la carpeta de Drive. En cuanto haya un mes con entregas, aparece aqui.</span></div></div>';
       return;
     }
 
@@ -716,9 +620,8 @@
     const period = available.find(item => item.id === selectedPeriod);
 
     if (select) {
-      const options = kind => available.filter(item => item.id.startsWith(kind))
+      select.innerHTML = available
         .map(item => `<option value="${esc(item.id)}"${item.id === selectedPeriod ? ' selected' : ''}>${esc(item.option)}</option>`).join('');
-      select.innerHTML = `<optgroup label="Mes contra el mes anterior">${options('m:')}</optgroup><optgroup label="Semana de lunes a domingo">${options('w:')}</optgroup>`;
     }
 
     const model = modelReport();
@@ -734,7 +637,6 @@
     const pages = { comparison: 3, firstSection: 4, conclusions: 4 + report.sections.length };
     const total = pages.conclusions + 1;
     host.innerHTML = `
-      ${period.missingDays.length ? `<div class="week-warning">La descarga de Meta llega hasta el ${esc(dayLabel(period.dataEnd))}: ${esc(period.missingDays.map(dayLabel).join(', '))} todavia no estan en la hoja del mes, asi que los totales pueden subir.</div>` : ''}
       <div class="rp-deck" id="week-doc">
         ${coverPage(report)}
         ${contentsPage(report, pages, total)}
@@ -758,7 +660,7 @@
 
   // El nombre del PDF lo pone el navegador con el titulo del documento: se cambia solo mientras imprime.
   function printReport() {
-    const period = periods().find(item => item.id === selectedPeriod);
+    const period = monthPeriods().find(item => item.id === selectedPeriod);
     if (!period) return;
     document.activeElement?.blur?.();
     const title = document.title;
