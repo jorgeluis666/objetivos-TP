@@ -9,7 +9,7 @@
   // analisis de cada objetivo y las conclusiones vienen propuestos con lo que dicen los numeros; el equipo
   // los reescribe sobre la misma lamina y quedan guardados por periodo en este navegador.
   //
-  // Este archivo es el mismo en todos los tableros de marca: lo unico que cambia es CONFIG.
+  // El template es propio de Terminal Pesquero: cada tablero de marca tiene el suyo, adaptado por la marca.
   const CONFIG = {
     brand: 'Terminal Pesquero',
     slug: 'Terminal-Pesquero',

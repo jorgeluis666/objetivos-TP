@@ -154,8 +154,9 @@ Terminal Pesquero`): laminas 16:9 con fondo claro, tarjetas blancas de borde fin
   tamaño del modelo), y el nombre del archivo ya armado. Activar "Graficos de fondo" si el navegador no lo
   hace solo.
 
-El modulo es `js/report-week.js` y es el mismo archivo en todos los tableros de marca: lo unico que cambia
-es el bloque `CONFIG` de arriba. Sus estilos y los de impresion estan al final de `css/dashboard.css`.
+El modulo es `js/report-week.js` y su template es propio de Terminal Pesquero: cada tablero de marca tiene
+el suyo, adaptado por la marca, asi que un cambio aqui no se copia a los demas. Sus estilos y los de
+impresion estan al final de `css/dashboard.css`.
 
 ## Calculadora de Inversión
 
