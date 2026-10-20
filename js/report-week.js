@@ -681,7 +681,8 @@
     });
     document.getElementById('week-print')?.addEventListener('click', printReport);
     document.getElementById('week-reset')?.addEventListener('click', () => {
-      if (!selectedPeriod || !window.confirm('Se reemplazan la lectura, los analisis y las conclusiones de este periodo por los textos propuestos. ¿Continuar?')) return;
+      // Sin dialogo de confirmacion: el boton vuelve directo a los textos propuestos del mes.
+      if (!selectedPeriod) return;
       resetNotes(selectedPeriod);
       render();
     });
