@@ -19,6 +19,8 @@
   // Lima no tiene horario de verano: 10:00 en Lima son las 15:00 UTC.
   const LIMA_OFFSET_HOURS = -5;
   const SWEEP_HOUR = 10;
+  // Pildora en ambar si el ultimo barrido tiene mas de un dia y medio: el automatico corre todos los dias.
+  const STALE_MS = 36 * 3600 * 1000;
   const SWEEP_ORIGINS = {
     automatico: 'barrido automático',
     manual: 'barrido manual',
@@ -61,6 +63,7 @@
     loading: false,
     // Un Actualizar pulsado mientras corre una lectura silenciosa se ejecuta en cuanto esta termina.
     pendingFresh: false,
+    refreshing: false,   // Actualizar en curso (no las lecturas silenciosas)
     error: '',
     lastFetch: 0,
   };
@@ -627,11 +630,16 @@
     return [...document.querySelectorAll('[data-tp-refresh]')];
   }
 
+  // El boton conserva su icono de recarga: cambia solo el texto y el icono gira mientras dura el barrido.
   function setRefreshing(isLoading) {
+    state.refreshing = isLoading;
     refreshButtons().forEach(button => {
       button.disabled = isLoading;
-      button.textContent = isLoading ? 'Actualizando...' : 'Actualizar';
+      button.classList.toggle('loading', isLoading);
+      const label = button.querySelector('.topbar-refresh-label') || button;
+      label.textContent = isLoading ? 'Actualizando…' : 'Actualizar';
     });
+    updateStatusLabel();
   }
 
   // Boton Actualizar: barrido en el momento de las dos carpetas de Drive (descargas de Meta y reportes).
@@ -648,10 +656,7 @@
     // Una lectura silenciosa sin error previo puede saltarse el barrido que ya se ve; Actualizar siempre publica.
     const skipSame = silent && !fresh && !state.error;
     state.error = '';
-    if (!silent) {
-      setRefreshing(true);
-      updateStatusLabel('Leyendo la carpeta de Drive...');
-    }
+    if (!silent) setRefreshing(true);
     let result;
     try {
       await loadLive({ fresh, skipSame });
@@ -673,23 +678,54 @@
     return result;
   }
 
+  // Estado completo en una linea (datos al dia N, origen y hora del barrido): va en el title de la pildora.
   function statusLabel() {
     const data = state.data;
-    if (!data) return state.error ? 'Sin datos: no se pudo leer Google' : 'Cargando datos...';
+    if (!data) return state.error ? 'Sin datos: no se pudo leer Google' : 'Cargando datos…';
     const month = monthByKey(data.latestKey);
     const dataPart = month && month.lastDay ? `Datos al ${month.lastDay} de ${month.name.toLowerCase()}` : 'Sin datos';
-    if (state.error) return `${dataPart} | sin conexión con Google`;
-    if (data.source === 'local') return `${dataPart} | copia guardada`;
+    if (state.error) return `${dataPart} · sin conexión con Google`;
+    if (data.source === 'local') return `${dataPart} · copia guardada`;
     if (!data.sweptAt) return dataPart;
     // El origen deja ver de un vistazo si el ultimo barrido fue el automatico o el boton Actualizar.
-    return `${dataPart} | ${SWEEP_ORIGINS[data.origin] || 'barrido'} ${formatStamp(data.sweptAt)}`;
+    return `${dataPart} · ${SWEEP_ORIGINS[data.origin] || 'barrido'} ${formatStamp(data.sweptAt)}`;
   }
 
-  function updateStatusLabel(text) {
+  // Pildora de sincronizacion como Royal Baby: el estado en pocas palabras y hace cuanto fue el ultimo barrido.
+  // ok = verde, loading = ambar con el punto latiendo, warn = ambar (copia guardada, sin barrido o viejo), err = rojo.
+
+  function formatRelative(value) {
+    const time = value ? new Date(value).getTime() : NaN;
+    if (Number.isNaN(time)) return '';
+    const minutes = Math.round((Date.now() - time) / 60000);
+    if (minutes < 1) return 'hace segundos';
+    if (minutes < 60) return `hace ${minutes} min`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `hace ${hours} h`;
+    return `hace ${Math.round(hours / 24)} d`;
+  }
+
+  function pillState() {
+    const data = state.data;
+    if (state.refreshing) return { tone: 'loading', text: 'Recargando…' };
+    if (!data) return state.error ? { tone: 'err', text: 'Sin datos de Google' } : { tone: 'loading', text: 'Cargando…' };
+    if (state.error) return { tone: 'err', text: 'Sin conexión con Google' };
+    const ago = formatRelative(data.sweptAt);
+    if (!ago) return { tone: 'warn', text: 'Aún no sincronizado' };
+    if (data.source === 'local') return { tone: 'warn', text: `Copia guardada · ${ago}` };
+    const stale = Date.now() - new Date(data.sweptAt).getTime() > STALE_MS;
+    return { tone: stale ? 'warn' : 'ok', text: `Sincronizado · ${ago}` };
+  }
+
+  function updateStatusLabel() {
     const label = document.getElementById('topbar-status');
-    if (label) label.textContent = text || statusLabel();
     const pill = label?.closest('.topbar-pill');
-    if (pill) pill.classList.toggle('warn', Boolean(state.error) || state.data?.source === 'local');
+    if (label && pill) {
+      const { tone, text } = pillState();
+      label.textContent = text;
+      ['ok', 'loading', 'warn', 'err'].forEach(name => pill.classList.toggle(name, name === tone));
+      pill.title = `${statusLabel()} · clic para ver el detalle`;
+    }
     renderStatusCard();
   }
 
@@ -775,6 +811,8 @@
       updateStatusLabel();
       window.dispatchEvent(new CustomEvent('tp:data-error', { detail: { error: state.error } }));
     }
+    // "hace N min" avanza aunque no llegue un barrido nuevo.
+    setInterval(updateStatusLabel, 60 * 1000);
     // Sin Web App (desarrollo) no hay lectura en vivo que repetir: solo el boton Actualizar la intenta.
     if (!live) return;
     setInterval(() => refresh({ fresh: false, silent: true }), POLL_MS);

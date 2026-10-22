@@ -1,9 +1,10 @@
 (function () {
   const VIEW_KEY = 'tp-active-view';
+  // La bajada (caption) de la barra superior repite la descripcion del modulo en el panel lateral, como Royal Baby.
   const VIEW_META = {
     'view-obj': {
       title: 'Gasto publicitario 2026',
-      caption: 'Agencia Lima Retail',
+      caption: 'Meta Ads por objetivo',
       source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
       footer: 'Barrido automático todos los días a las 10:00',
     },
@@ -21,32 +22,32 @@
     },
     'view-calculator': {
       title: 'Calculadora de inversión',
-      caption: 'Objetivo comercial e inversión por CPL',
+      caption: 'Inversión por CPL',
       source: 'Fuente: valores ingresados / CPL real de Meta Ads',
       footer: 'Los valores se guardan en este navegador',
     },
     'view-history': {
       title: 'Histórico de campañas',
-      caption: 'Campañas activas y finalizadas',
+      caption: 'Activas y finalizadas',
       source: 'Fuente: Meta Ads / todos los meses con descarga',
       footer: 'Todas las campañas de las descargas de Drive',
     },
     'view-reports': {
       title: 'Archivo de Reportes',
-      caption: 'Documentos en Google Drive',
+      caption: 'Documentos y reporte mensual',
       source: 'Fuente: Carpeta compartida Reportes Terminal Pesquero / Google Drive',
       footer: 'Validado contra las descargas de Meta del módulo Gasto publicitario',
     },
     'view-week': {
       parent: 'view-reports',   // va dentro de Archivo de Reportes, con su pestaña
       title: 'Archivo de Reportes',
-      caption: 'Generación de Reporte · Reporte de Publicidad en PDF',
+      caption: 'Documentos y reporte mensual',
       source: 'Fuente: descargas de Meta Ads / carpeta Reportes de Drive',
       footer: 'El mes elegido frente al mismo tramo del mes anterior',
     },
     'view-log': {
       title: 'Bitácora',
-      caption: 'Checklist de cambios, comentarios y decisiones',
+      caption: 'Cambios, comentarios y decisiones',
       source: 'Fuente: Bitácora del equipo de Agencia Lima Retail',
       footer: 'Las ediciones quedan como borrador hasta exportar y publicar el archivo',
     },
