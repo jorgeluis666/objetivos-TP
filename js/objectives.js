@@ -23,7 +23,7 @@
   ];
   // Sin "Acumulado del mes": un total corrido siempre sube y hace ver un crecimiento que no hay.
   const MODES = [
-    { key: 'daily', label: 'Por dia' },
+    { key: 'daily', label: 'Por día' },
     { key: 'monthly', label: 'Por mes' },
   ];
   // Indicadores del grafico de cada campana (Resultados toma el nombre del resultado del objetivo). Se puede elegir
@@ -31,7 +31,7 @@
   // color: el de su linea cuando los indicadores van juntos en un solo cuadro (el resultado lleva el del objetivo).
   const CAMPAIGN_METRICS = [
     { key: 'results', label: 'Resultados', field: 'results', unit: 'count' },
-    { key: 'spend', label: 'Inversion', field: 'spend', unit: 'money', color: '#334155' },
+    { key: 'spend', label: 'Inversión', field: 'spend', unit: 'money', color: '#334155' },
     { key: 'impressions', label: 'Impresiones', field: 'impressions', unit: 'count', color: '#0891b2' },
     { key: 'reach', label: 'Alcance', field: 'reach', unit: 'count', color: '#b45309' },
     // Cociente: inversion / resultados del dia o del mes; sin resultados queda como hueco.
@@ -43,7 +43,7 @@
   // KPIs de la cabecera de cada campana, con su variacion contra el mes anterior.
   const CAMPAIGN_KPIS = [
     { key: 'results', label: null, format: 'count', better: 'up' },
-    { key: 'spend', label: 'Inversion', format: 'money', better: null },
+    { key: 'spend', label: 'Inversión', format: 'money', better: null },
     { key: 'costPerResult', label: 'Costo por resultado', format: 'unitCost', better: 'down' },
     { key: 'reach', label: 'Alcance', format: 'count', better: 'up' },
     { key: 'impressions', label: 'Impresiones', format: 'count', better: 'up' },
@@ -52,9 +52,9 @@
   // Indicadores del resumen ejecutivo del reporte. better: hacia donde una variacion es buena (null = neutra).
   // perMonth: en la vista anual se muestra su promedio mensual (los cocientes llevan su descripcion).
   const KPIS = [
-    { key: 'spend', label: 'Inversion', hint: 'Importe gastado', better: null, format: 'money', perMonth: true },
+    { key: 'spend', label: 'Inversión', hint: 'Importe gastado', better: null, format: 'money', perMonth: true },
     { key: 'impressions', label: 'Impresiones', hint: 'Veces que se mostraron los anuncios', better: 'up', format: 'count', perMonth: true },
-    { key: 'reach', label: 'Alcance', hint: 'Suma diaria por publico, como en el reporte', better: 'up', format: 'count', perMonth: true },
+    { key: 'reach', label: 'Alcance', hint: 'Suma diaria por público, como en el reporte', better: 'up', format: 'count', perMonth: true },
     { key: 'frequency', label: 'Frecuencia', hint: 'Impresiones / alcance', better: null, format: 'decimal' },
     { key: 'cpm', label: 'CPM prom.', hint: 'Costo por mil impresiones', better: 'down', format: 'money' },
   ];
@@ -163,7 +163,7 @@
   function variationCell(current, previous) {
     if (previous == null) return '<span class="delta-pill new">Nuevo</span>';
     const change = data().metrics.change(current, previous);
-    if (change == null) return '<span class="no-data">-</span>';
+    if (change == null) return '<span class="no-data">—</span>';
     return `<span class="delta-pill ${change >= 0 ? 'good' : 'bad'}">${change >= 0 ? '&#9650;' : '&#9660;'} ${fmt('pct', Math.abs(change), 0)}</span>`;
   }
 
@@ -179,10 +179,10 @@
   // Dias activos del anuncio: "3-18 Sep" en un mes, rango de fechas en la vista anual.
   function adDays(ad, period) {
     if (period.annual) {
-      if (!ad.firstDate) return '-';
+      if (!ad.firstDate) return '—';
       return ad.firstDate === ad.lastDate ? shortDate(ad.firstDate, false) : `${shortDate(ad.firstDate, false)} - ${shortDate(ad.lastDate, false)}`;
     }
-    if (!ad.firstDay) return '-';
+    if (!ad.firstDay) return '—';
     const monthShort = period.month?.shortName;
     return ad.firstDay === ad.lastDay ? `${ad.firstDay} ${monthShort}` : `${ad.firstDay}-${ad.lastDay} ${monthShort}`;
   }
@@ -242,7 +242,7 @@
     const month = period.month;
     title.textContent = `Periodo: ${period.label} ${month.year}${period.closed ? '' : ' (mes en curso)'}`;
     // El archivo del mes y el aviso de descarga incompleta viven en el estado de la barra superior.
-    sub.textContent = period.compare ? `Comparacion vs ${period.compare.label}` : 'Sin mes anterior para comparar';
+    sub.textContent = period.compare ? `Comparación vs ${period.compare.label}` : 'Sin mes anterior para comparar';
   }
 
   // ── Resumen ejecutivo ────────────────────────────────────────────────────
@@ -284,7 +284,7 @@
   function objectiveMonths(period, key) {
     const months = period.months.filter(month => month.rows.some(row => row.group === key && hasActivity(row)));
     if (months.length === period.months.length) return `Activo en los ${months.length} ${months.length === 1 ? 'mes' : 'meses'}`;
-    return `Activo en ${months.map(month => month.shortName).join(', ') || 'ningun mes'}`;
+    return `Activo en ${months.map(month => month.shortName).join(', ') || 'ningún mes'}`;
   }
 
   // ── Graficos lineales ────────────────────────────────────────────────────
@@ -336,7 +336,7 @@
       const previousValues = dailyMetric(previous, metric).slice(0, month.daysInMonth);
       if (previousValues.some(value => value)) {
         series.datasets.push({ label: previous.name, unit: metric.unit, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 });
-        series.legend.push(`<span><i class="legend-line dashed" style="color:${PREVIOUS_COLOR}"></i><b>${esc(previous.name)} (mismo dia del mes)</b></span>`);
+        series.legend.push(`<span><i class="legend-line dashed" style="color:${PREVIOUS_COLOR}"></i><b>${esc(previous.name)} (mismo día del mes)</b></span>`);
       }
     }
     return series;
@@ -349,7 +349,7 @@
     if (metrics.length === 1) return lineSeries(metrics[0], modeKey, month);
     const parts = metrics.map(metric => lineSeries(metric, modeKey, month, false));
     if (combined) {
-      const what = modeKey === 'monthly' ? 'Por mes' : `Por dia, ${esc(month.name)} ${month.year}`;
+      const what = modeKey === 'monthly' ? 'Por mes' : `Por día, ${esc(month.name)} ${month.year}`;
       return {
         labels: parts[0].labels,
         datasets: parts.map((part, index) => {
@@ -395,8 +395,8 @@
   // no significarian nada. En un solo cuadro (combined) cada indicador tiene su escala sin eje visible: se compara la
   // forma de las lineas y el valor va en cada punto.
   function yScales(metrics, combined = false) {
-    const base = unit => ({ beginAtZero: true, border: { display: false }, ticks: { color: '#7890b5', font: { size: 10 }, callback: value => tickValue(unit, value) } });
-    if (metrics.length === 1) return { y: { ...base(metrics[0].unit), grid: { color: 'rgba(148,163,184,.20)' } } };
+    const base = unit => ({ beginAtZero: true, border: { display: false }, ticks: { color: '#94A3B8', font: { size: 10 }, callback: value => tickValue(unit, value) } });
+    if (metrics.length === 1) return { y: { ...base(metrics[0].unit), grid: { color: 'rgba(15,23,42,.06)' } } };
     if (combined) return Object.fromEntries(metrics.map((metric, index) => [`y${index}`, { display: false, beginAtZero: true, grace: '18%' }]));
     // Chart.js apila de abajo hacia arriba en el orden de los ejes: se dan al reves para que el resultado quede arriba.
     return Object.fromEntries(metrics.map((metric, index) => [`y${index}`, {
@@ -407,7 +407,7 @@
       // El tope de cada panel cae sobre el cero del panel de arriba: se omite para que no se encimen.
       ticks: { ...base(metric.unit).ticks, maxTicksLimit: 5, callback: (value, tickIndex, ticks) => (index > 0 && tickIndex === ticks.length - 1 ? '' : tickValue(metric.unit, value)) },
       // La linea del cero marca el piso de cada panel.
-      grid: { color: context => (context.tick?.value === 0 ? '#cbd5e1' : 'rgba(148,163,184,.20)') },
+      grid: { color: context => (context.tick?.value === 0 ? '#cbd5e1' : 'rgba(15,23,42,.06)') },
       panelLabel: metric.label,
     }]).reverse());
   }
@@ -416,7 +416,7 @@
     destroyChart(id);
     if (!canvas) return;
     if (typeof Chart === 'undefined') {
-      canvas.parentElement.innerHTML = '<div class="empty-state"><strong>Grafico no disponible sin conexion.</strong><span>Los indicadores y las tablas siguen visibles.</span></div>';
+      canvas.parentElement.innerHTML = '<div class="empty-state"><strong>Gráfico no disponible sin conexión.</strong><span>Los indicadores y las tablas siguen visibles.</span></div>';
       return;
     }
     state.charts.set(id, new Chart(canvas, {
@@ -433,13 +433,13 @@
           tooltip: {
             filter: item => item.raw != null,
             callbacks: {
-              title: items => (modeKey === 'monthly' ? data().MONTHS[items[0].dataIndex] : `Dia ${items[0].label}`),
+              title: items => (modeKey === 'monthly' ? data().MONTHS[items[0].dataIndex] : `Día ${items[0].label}`),
               label: context => ` ${context.dataset.label}: ${formatValue(context.dataset.unit, context.raw)}`,
             },
           },
         },
         scales: {
-          x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#7890b5', font: { size: 10 }, autoSkip: true, maxTicksLimit: modeKey === 'monthly' ? 12 : 16 } },
+          x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#94A3B8', font: { size: 10 }, autoSkip: true, maxTicksLimit: modeKey === 'monthly' ? 12 : 16 } },
           ...yScales(metrics, combined),
         },
       },
@@ -597,8 +597,8 @@
     const manyCampaigns = objective.campaigns.length > 1;
     // [titulo, numerica]
     const head = [['Conjunto']].concat(manyCampaigns ? [['Campaña']] : [], [['Resultados', true]])
-      .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variacion', true]] : [])
-      .concat([['Costo por resultado', true], ['Inversion', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true]]);
+      .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variación', true]] : [])
+      .concat([['Costo por resultado', true], ['Inversión', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true]]);
     const body = sets.map(set => {
       const before = previous.get(set.key);
       return `
@@ -606,7 +606,7 @@
           <td class="campaign-name">${esc(set.name || '(sin conjunto)')}<small>${set.adCount} ${set.adCount === 1 ? 'anuncio' : 'anuncios'}</small></td>
           ${manyCampaigns ? `<td class="campaign-set-col">${esc(set.campaigns.join(' / '))}</td>` : ''}
           <td class="num"><b>${fmt('count', set.results)}</b></td>
-          ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">-</span>'}</td><td class="num">${variationCell(set.results, before?.results)}</td>` : ''}
+          ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">—</span>'}</td><td class="num">${variationCell(set.results, before?.results)}</td>` : ''}
           <td class="num">${fmt('unitCost', set.costPerResult)}</td>
           <td class="num">${fmt('money', set.spend)}</td>
           <td class="share-col"><div class="share-bar"><span style="width:${Math.min(100, set.share).toFixed(1)}%"></span></div><b class="share-value">${fmt('pct', set.share)}</b></td>
@@ -639,17 +639,17 @@
     const manySets = new Set(ads.flatMap(ad => ad.adSets)).size > 1;
     // [titulo, numerica]
     const head = [['Anuncio']].concat(manySets ? [['Conjunto']] : [], [['Resultados', true]])
-      .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variacion', true]] : [])
-      .concat([['Costo por resultado', true], ['Inversion', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true], ['Dias activos']]);
+      .concat(compare ? [[`Resultados ${period.compare.label}`, true], ['Variación', true]] : [])
+      .concat([['Costo por resultado', true], ['Inversión', true], ['% de la campaña'], ['Impresiones', true], ['Alcance', true], ['CPM', true], ['Clics', true], ['Días activos']]);
     const body = ads.map((ad, index) => {
       const before = previous.get(ad.key);
       const share = objective.spend > 0 ? (ad.spend / objective.spend) * 100 : 0;
       return `
         <tr>
-          <td class="campaign-name campaign-ad-name" title="${esc(ad.ad)}">${index === 0 && ad.results > 0 ? '<b class="leader-star" title="Lider de la campaña">&#9733;</b> ' : ''}${adNameLink(ad)}</td>
-          ${manySets ? `<td class="campaign-set-col">${esc(ad.adSets.join(' / ') || '-')}</td>` : ''}
+          <td class="campaign-name campaign-ad-name" title="${esc(ad.ad)}">${index === 0 && ad.results > 0 ? '<b class="leader-star" title="Líder de la campaña">&#9733;</b> ' : ''}${adNameLink(ad)}</td>
+          ${manySets ? `<td class="campaign-set-col">${esc(ad.adSets.join(' / ') || '—')}</td>` : ''}
           <td class="num"><b>${fmt('count', ad.results)}</b></td>
-          ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">-</span>'}</td><td class="num">${variationCell(ad.results, before?.results)}</td>` : ''}
+          ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">—</span>'}</td><td class="num">${variationCell(ad.results, before?.results)}</td>` : ''}
           <td class="num">${fmt('unitCost', ad.costPerResult)}</td>
           <td class="num">${fmt('money', ad.spend)}</td>
           <td class="share-col"><div class="share-bar"><span style="width:${Math.min(100, share).toFixed(1)}%"></span></div><b class="share-value">${fmt('pct', share)}</b></td>
@@ -663,7 +663,7 @@
     return `
       <div class="adset-head">
         <div class="panel-title">Anuncios</div>
-        <div class="panel-sub">${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'} con gasto o impresiones en ${esc(period.label)}${compare ? `. Resultados contra ${esc(period.compare.label)}` : ''}. La estrella marca al lider.</div>
+        <div class="panel-sub">${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'} con gasto o impresiones en ${esc(period.label)}${compare ? `. Resultados contra ${esc(period.compare.label)}` : ''}. La estrella marca al líder.</div>
       </div>
       <div class="table-scroll">
         <table class="data-table adset-table campaign-ads-table">
@@ -678,25 +678,25 @@
     const settings = campaignSettings(objective.key);
     let comparison = '';
     if (period.annual) comparison = `. ${objectiveMonths(period, objective.key)}`;
-    else if (period.compare) comparison = before ? ` vs ${period.compare.label}` : `. Nueva: no corria en ${period.compare.label}`;
+    else if (period.compare) comparison = before ? ` vs ${period.compare.label}` : `. Nueva: no corría en ${period.compare.label}`;
     const kpis = CAMPAIGN_KPIS.map(kpi => `
       <div><dt>${esc(kpi.label || objective.resultLabel)}</dt><dd>${fmt(kpi.format, objective[kpi.key])}${before ? deltaHtml(objective[kpi.key], before[kpi.key], kpi.better) : ''}</dd></div>`).join('');
     return `
       <section class="campaign-block${settings.collapsed ? ' is-collapsed' : ''}" id="campaign-${key}" data-objective="${key}" style="--campaign-color:${objective.color}">
         <div class="panel-head chart-panel-head">
           <div>
-            <div class="campaign-block-title"><i class="campaign-dot"></i>Campaña ${esc(objective.label)}<em>${fmt('pct', objective.share)} de la inversion</em></div>
+            <div class="campaign-block-title"><i class="campaign-dot"></i>Campaña ${esc(objective.label)}<em>${fmt('pct', objective.share)} de la inversión</em></div>
             <div class="panel-sub">${esc(objective.campaigns.join(' / '))} | ${esc(period.label)}${esc(comparison)}</div>
           </div>
           <div class="chart-controls">
-            <div class="chart-series-toggles" data-campaign-modes role="radiogroup" aria-label="Vista del grafico de ${esc(objective.label)}"></div>
+            <div class="chart-series-toggles" data-campaign-modes role="radiogroup" aria-label="Vista del gráfico de ${esc(objective.label)}"></div>
             <button type="button" class="chart-toggle" data-campaign-toggle="${key}" aria-controls="campaign-body-${key}">${CHEVRON}</button>
           </div>
         </div>
         <dl class="chart-kpis">${kpis}</dl>
         <div class="campaign-block-body" id="campaign-body-${key}">
-          <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="group" aria-label="Indicadores del grafico de ${esc(objective.label)}"></div>
-          <div class="chart-wrap h-300"><canvas role="img" aria-label="Grafico de la campaña ${esc(objective.label)}"></canvas></div>
+          <div class="chart-series-toggles chart-metrics" data-campaign-metrics role="group" aria-label="Indicadores del gráfico de ${esc(objective.label)}"></div>
+          <div class="chart-wrap h-300"><canvas role="img" aria-label="Gráfico de la campaña ${esc(objective.label)}"></canvas></div>
           <div class="chart-legend projection-legend" data-campaign-legend></div>
           ${adSetsHtml(period, objective)}
           ${campaignAdsHtml(period, objective)}
@@ -821,7 +821,7 @@
       .slice(0, 3);
     const head = '<div class="ad-top-head">Top 3 de anuncios por contactos de WhatsApp</div>';
     if (!top.length) {
-      host.innerHTML = `${head}<p class="ad-top-note">Ningun anuncio de las campañas de WhatsApp registro contactos en el periodo.</p>`;
+      host.innerHTML = `${head}<p class="ad-top-note">Ningún anuncio de las campañas de WhatsApp registró contactos en el periodo.</p>`;
       return;
     }
     host.innerHTML = `${head}<div class="ad-top-list">${top.map((ad, index) => `
@@ -831,7 +831,7 @@
           <div class="ad-top-name" title="${esc(ad.ad)}">${adNameLink(ad)}</div>
           <div class="ad-top-group"><i class="campaign-dot"></i>${esc(ad.groupLabel)} · ${esc(ad.campaigns.join(' / '))}</div>
           <div class="ad-top-value">${fmt('count', ad.results)}<small>${esc(ad.resultLabel)}</small></div>
-          <div class="ad-top-meta">${fmt('unitCost', ad.costPerResult)} por resultado · ${fmt('money', ad.spend)} de inversion</div>
+          <div class="ad-top-meta">${fmt('unitCost', ad.costPerResult)} por resultado · ${fmt('money', ad.spend)} de inversión</div>
         </div>
       </div>`).join('')}</div>`;
   }
@@ -873,7 +873,7 @@
     const rows = state.adsObjective === 'all' ? all : all.filter(ad => ad.group === state.adsObjective);
 
     if (title) title.textContent = `Anuncios | ${period.label} ${period.year}`;
-    if (sub) sub.textContent = `${rows.length} ${rows.length === 1 ? 'anuncio' : 'anuncios'} ordenados por resultados dentro de cada objetivo. La estrella marca al lider de cada objetivo.`;
+    if (sub) sub.textContent = `${rows.length} ${rows.length === 1 ? 'anuncio' : 'anuncios'} ordenados por resultados dentro de cada objetivo. La estrella marca al líder de cada objetivo.`;
     if (prevHead) prevHead.textContent = period.compare ? `Resultados ${period.compare.label}` : 'Mes anterior';
 
     if (!rows.length) {
@@ -882,15 +882,15 @@
     }
     body.innerHTML = rows.map(ad => {
       const before = previous.get(ad.key);
-      const changeCell = period.compare ? variationCell(ad.results, before?.results) : '<span class="no-data">-</span>';
+      const changeCell = period.compare ? variationCell(ad.results, before?.results) : '<span class="no-data">—</span>';
       return `
         <tr>
           <td class="type-col"><span class="objective-label" style="--campaign-color:${colors.get(ad.group) || PREVIOUS_COLOR}"><i class="campaign-dot"></i>${esc(ad.groupLabel)}</span></td>
-          <td class="ad-name-col" title="${esc(ad.ad)}"><span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Lider del objetivo">&#9733;</b> ' : ''}${adNameLink(ad)}</span></td>
-          <td class="campaign-set-col">${esc(ad.campaigns.join(' / '))}<small>${esc(ad.adSets.join(' / ') || '-')}</small></td>
+          <td class="ad-name-col" title="${esc(ad.ad)}"><span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Líder del objetivo">&#9733;</b> ' : ''}${adNameLink(ad)}</span></td>
+          <td class="campaign-set-col">${esc(ad.campaigns.join(' / '))}<small>${esc(ad.adSets.join(' / ') || '—')}</small></td>
           <td><span class="objective-pill">${esc(ad.resultLabel)}</span></td>
           <td class="num"><b>${fmt('count', ad.results)}</b></td>
-          <td class="num">${before ? fmt('count', before.results) : '<span class="no-data">-</span>'}</td>
+          <td class="num">${before ? fmt('count', before.results) : '<span class="no-data">—</span>'}</td>
           <td class="num">${changeCell}</td>
           <td class="num">${fmt('unitCost', ad.costPerResult)}</td>
           <td class="num">${fmt('money', ad.spend)}</td>
@@ -942,7 +942,7 @@
 
   function shortDate(iso, withYear = true) {
     const [year, month, day] = String(iso || '').split('-').map(Number);
-    if (!year || !month || !day) return '-';
+    if (!year || !month || !day) return '—';
     return `${day} ${data().SHORT_MONTHS[month - 1]}${withYear ? ` ${year}` : ''}`;
   }
 
@@ -1017,9 +1017,9 @@
     }[state.historyStatus];
     host.innerHTML = [
       ['Campañas', fmt('count', entries.length), statusNote],
-      ['Inversion', fmt('money', totals.spend), month ? `Gasto en ${month.name}` : 'Gasto acumulado'],
-      ['Impresiones', fmt('count', totals.impressions), month ? `En ${month.name}` : 'Total historico'],
-      ['Alcance', fmt('count', totals.reach), 'Suma diaria por publico'],
+      ['Inversión', fmt('money', totals.spend), month ? `Gasto en ${month.name}` : 'Gasto acumulado'],
+      ['Impresiones', fmt('count', totals.impressions), month ? `En ${month.name}` : 'Total histórico'],
+      ['Alcance', fmt('count', totals.reach), 'Suma diaria por público'],
       ['CPM prom.', fmt('money', totals.cpm), 'Costo por mil impresiones'],
     ].map(([label, value, meta]) => `<div class="kpi-pill"><span>${label}</span><strong>${value}</strong><small>${esc(meta)}</small></div>`).join('');
   }
@@ -1033,7 +1033,7 @@
 
   // La lista de anuncios va plegada: abierta estiraba la fila una linea por anuncio y ensanchaba la tabla.
   function historyAdsCell(ads, campaign) {
-    if (!ads.length) return '<span class="no-data">-</span>';
+    if (!ads.length) return '<span class="no-data">—</span>';
     return `<details class="history-ads" data-campaign="${esc(campaign)}"><summary>${ads.length} ${ads.length === 1 ? 'anuncio' : 'anuncios'}</summary><div class="history-ads-list">${ads.map(historyAdChip).join('')}</div></details>`;
   }
 
@@ -1060,7 +1060,7 @@
       const partial = !item.complete && !item.past;
       return `<th class="num" title="${esc(item.fileName || `${item.name} ${item.year}`)}">${item.shortName}${multiYear ? ` ${String(item.year).slice(2)}` : ''}${partial ? ` (al ${item.lastDay})` : ''}</th>`;
     }).join('')}<th class="num">${month ? `Gasto ${month.shortName}` : 'Gasto total'}</th><th class="num">Resultados</th><th class="num th-wrap">Costo por resultado</th><th class="num">Impresiones</th><th class="num">Alcance</th><th>Anuncios</th>${month
-      ? '<th>Dias activos</th><th class="num" title="Gasto de la campaña en todos los meses">Gasto acumulado</th>'
+      ? '<th>Días activos</th><th class="num" title="Gasto de la campaña en todos los meses">Gasto acumulado</th>'
       : '<th>Periodo</th>'}</tr>`;
 
     const status = HISTORY_STATUS.find(item => item.key === state.historyStatus);
@@ -1070,7 +1070,7 @@
       if (!entries.length) {
         sub.textContent = `Ninguna ${status.one} ${month ? `con gasto en ${month.name} ${month.year}` : 'en las descargas de Meta en Drive'}.`;
       } else if (month) {
-        sub.textContent = `${entries.length} ${noun} con gasto en ${month.name} ${month.year} segun su archivo en Drive (${month.fileName || 'sin nombre'}).`;
+        sub.textContent = `${entries.length} ${noun} con gasto en ${month.name} ${month.year} según su archivo en Drive (${month.fileName || 'sin nombre'}).`;
       } else {
         const first = months[0];
         const last = months[months.length - 1];
@@ -1099,7 +1099,7 @@
         <td class="campaign-name">${esc(item.name)}</td>
         <td><span class="objective-label" style="--campaign-color:${item.color}"><i class="campaign-dot"></i>${esc(item.groupLabel)}</span></td>
         <td>${item.finished ? '<span class="type-pill slate">Finalizada</span>' : '<span class="type-pill green">Activa</span>'}</td>
-        ${months.map(column => `<td class="num">${item.months.includes(column.key) ? fmt('money', spendIn(item.rows, column.key)) : '<span class="no-data">-</span>'}</td>`).join('')}
+        ${months.map(column => `<td class="num">${item.months.includes(column.key) ? fmt('money', spendIn(item.rows, column.key)) : '<span class="no-data">—</span>'}</td>`).join('')}
         <td class="num"><b>${fmt('money', stats.spend)}</b></td>
         <td class="num history-results"><b>${fmt('count', stats.results)}</b><small>${esc(stats.resultLabel)}</small></td>
         <td class="num">${fmt('unitCost', stats.costPerResult)}</td>
@@ -1113,7 +1113,7 @@
       <tr class="total-row">
         <td class="campaign-name">${month ? `Total de ${esc(month.name)}` : 'Total'}</td>
         <td></td><td></td>
-        ${months.map(item => `<td class="num">${entries.some(entry => entry.item.months.includes(item.key)) ? fmt('money', spendIn(allRows, item.key)) : '<span class="no-data">-</span>'}</td>`).join('')}
+        ${months.map(item => `<td class="num">${entries.some(entry => entry.item.months.includes(item.key)) ? fmt('money', spendIn(allRows, item.key)) : '<span class="no-data">—</span>'}</td>`).join('')}
         <td class="num">${fmt('money', total.spend)}</td>
         <td class="num"><span class="no-data" title="Cada objetivo mide su propio resultado">No se suman</span></td>
         <td></td>
@@ -1132,7 +1132,7 @@
     if (!panel || !button) return;
     panel.classList.toggle('is-compact', state.tableCompact);
     button.setAttribute('aria-pressed', String(state.tableCompact));
-    button.textContent = state.tableCompact ? 'Comodo' : 'Compacto';
+    button.textContent = state.tableCompact ? 'Cómodo' : 'Compacto';
     button.setAttribute('title', state.tableCompact ? 'Volver a filas amplias' : 'Reducir el alto de las filas');
   }
 

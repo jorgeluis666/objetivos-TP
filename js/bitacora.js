@@ -109,7 +109,7 @@
         const [year, month] = key.split('-').map(Number);
         const done = items.filter(item => item.done).length;
         return `<section class="log-group">
-          <div class="log-group-head"><span>${window.TPData.MONTHS[month - 1] || '-'} ${year}</span><span class="log-progress">${done}/${items.length}</span></div>
+          <div class="log-group-head"><span>${window.TPData.MONTHS[month - 1] || '—'} ${year}</span><span class="log-progress">${done}/${items.length}</span></div>
           <ul class="log-items">${items.map(renderItem).join('')}</ul>
         </section>`;
       }).join('')

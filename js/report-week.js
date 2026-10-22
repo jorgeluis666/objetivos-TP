@@ -57,15 +57,21 @@
   const brandSlug = () => (api()?.brandLabel ? `${CONFIG.slug}-${api().brandLabel().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-')}` : CONFIG.slug);
   const normalize = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 
-  // ── Formatos del modelo ("S/ 685", "S/ 0.0063", "66,692", "-36%") ───────
+  // ── Formatos ("S/. 685", "S/. 0.0063", "66,692", "−36%"): la moneda y los miles como en el resto del tablero ──
   const integer = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 });
+  // Montos con separador de miles es-PE y decimales fijos (un Intl.NumberFormat por cantidad de decimales).
+  const decimalFormats = new Map();
+  const decimals = (value, digits) => {
+    if (!decimalFormats.has(digits)) decimalFormats.set(digits, new Intl.NumberFormat('es-PE', { minimumFractionDigits: digits, maximumFractionDigits: digits }));
+    return decimalFormats.get(digits).format(Number(value));
+  };
   const finite = value => value != null && Number.isFinite(Number(value));
   const num = value => (finite(value) ? integer.format(Math.round(value)) : '—');
-  const money = value => (finite(value) ? `S/ ${integer.format(Math.round(value))}` : '—');
-  const money2 = value => (finite(value) ? `S/ ${Number(value).toFixed(2)}` : '—');
-  // Los costos por resultado de branding son centavos: bajo S/ 1 van con cuatro decimales.
-  const cost = value => (finite(value) && value > 0 ? `S/ ${Number(value).toFixed(value < 1 ? 4 : 2)}` : '—');
-  const pct = value => (Math.round(value) === 0 ? '0%' : `${value > 0 ? '+' : '-'}${Math.abs(Math.round(value))}%`);
+  const money = value => (finite(value) ? `S/. ${integer.format(Math.round(value))}` : '—');
+  const money2 = value => (finite(value) ? `S/. ${decimals(value, 2)}` : '—');
+  // Los costos por resultado de branding son centavos: bajo S/. 1 van con cuatro decimales.
+  const cost = value => (finite(value) && value > 0 ? `S/. ${decimals(value, value < 1 ? 4 : 2)}` : '—');
+  const pct = value => (Math.round(value) === 0 ? '0%' : `${value > 0 ? '+' : '−'}${Math.abs(Math.round(value))}%`);
   // Flecha y color de una variacion; la que redondea a 0% va sin flecha y en gris.
   const trendClass = (value, inverse) => (Math.round(value) === 0 ? 'muted' : (inverse ? value < 0 : value > 0) ? 'good' : 'bad');
   const arrow = value => (Math.round(value) === 0 ? '' : `${value > 0 ? '▲' : '▼'}&nbsp; `);
@@ -612,7 +618,7 @@
     const select = document.getElementById('week-select');
     if (!available.length) {
       if (select) select.innerHTML = '<option value="">Sin periodos con datos</option>';
-      host.innerHTML = '<div class="panel"><div class="empty-state"><strong>Todavia no hay datos para el reporte</strong><span>El reporte se arma con las descargas de Meta Ads de la carpeta de Drive. En cuanto haya un mes con entregas, aparece aqui.</span></div></div>';
+      host.innerHTML = '<div class="panel"><div class="empty-state"><strong>Todavía no hay datos para el reporte</strong><span>El reporte se arma con las descargas de Meta Ads de la carpeta de Drive. En cuanto haya un mes con entregas, aparece aquí.</span></div></div>';
       return;
     }
 
@@ -629,7 +635,7 @@
     if (modelHost) {
       modelHost.innerHTML = model
         ? `Modelo: <a href="https://drive.google.com/file/d/${esc(model.id)}/view" target="_blank" rel="noopener">${esc(model.title)}</a>`
-        : 'Modelo: el ultimo reporte de la carpeta Reportes de Drive';
+        : 'Modelo: el último reporte de la carpeta Reportes de Drive';
     }
 
     const report = buildReport(period);

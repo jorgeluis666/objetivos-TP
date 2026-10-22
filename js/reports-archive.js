@@ -138,7 +138,7 @@
 
   function formatSize(bytes) {
     const value = Number(bytes);
-    if (!Number.isFinite(value) || value <= 0) return '--';
+    if (!Number.isFinite(value) || value <= 0) return '—';
     if (value < 1024) return `${value} B`;
     if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)} KB`;
     return `${(value / (1024 * 1024)).toFixed(1)} MB`;
@@ -147,7 +147,7 @@
   // Fecha corta en hora de Lima ("7 sep 2026"), la misma que usa la cobertura (limaDay).
   function formatDate(iso) {
     const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return '--';
+    if (Number.isNaN(date.getTime())) return '—';
     const { year, month, day } = window.TPData.limaParts(date);
     return `${day} ${window.TPData.SHORT_MONTHS[month].toLowerCase()} ${year}`;
   }
@@ -236,7 +236,7 @@
       if (!month) {
         // reports viene ordenado del mas reciente al mas antiguo.
         best = reports[0];
-        issues.push({ status: 'orphan', detail: 'Hay reportes de este mes, pero su descarga de Meta no esta en la carpeta de datos.' });
+        issues.push({ status: 'orphan', detail: 'Hay reportes de este mes, pero su descarga de Meta no está en la carpeta de datos.' });
       } else if (month.error) {
         issues.push({ status: 'error', detail: month.error });
       } else {
@@ -256,9 +256,9 @@
           const closed = month.complete || month.past;
           const required = closed ? month.daysInMonth : Math.max(month.firstDay || 1, (month.lastDay || 1) - 1);
           if (month.past && !month.complete) {
-            issues.push({ status: 'incomplete', detail: `La descarga llega al ${month.lastDay} de ${month.daysInMonth} dias: vuelve a bajarla de Meta con el mes completo.` });
+            issues.push({ status: 'incomplete', detail: `La descarga llega al ${month.lastDay} de ${month.daysInMonth} días: vuelve a bajarla de Meta con el mes completo.` });
           }
-          if (!best) issues.push({ status: 'missing', detail: `Hay gasto del ${month.firstDay} al ${month.lastDay}, pero ningun reporte de ${month.name.toLowerCase()} en la carpeta de reportes.` });
+          if (!best) issues.push({ status: 'missing', detail: `Hay gasto del ${month.firstDay} al ${month.lastDay}, pero ningún reporte de ${month.name.toLowerCase()} en la carpeta de reportes.` });
           else if (coverage < required) issues.push({ status: 'stale', detail: `El reporte llega al ${coverage}; los datos de Meta, al ${month.lastDay}.` });
         }
       }
@@ -297,7 +297,7 @@
         const status = STATUS[row.status];
         const download = month
           ? `<span class="report-name">${esc(month.fileName || 'Descarga sin nombre')}</span><span class="report-file">${month.hasData ? `Datos del ${month.firstDay} al ${month.lastDay}` : 'Sin gasto'}${month.modifiedTime ? ` | editado ${esc(window.TPData.formatStamp(month.modifiedTime))}` : ''}</span>`
-          : '<span class="no-data">No esta en la carpeta de datos</span>';
+          : '<span class="no-data">No está en la carpeta de datos</span>';
         const report = row.best
           ? `<div class="sync-report"><span><span class="report-name">${esc(row.best.name)}</span><span class="report-file">${esc(row.best.title)}${row.reports > 1 ? ` | ${row.reports} reportes del mes` : ''}</span></span><button type="button" class="report-btn primary" data-preview="${esc(row.best.id)}">Ver</button></div>`
           : '<span class="no-data">Sin reporte</span>';
@@ -305,9 +305,9 @@
           <tr>
             <td class="campaign-name">${esc(row.label)}</td>
             <td class="report-name-col">${download}</td>
-            <td class="num">${row.spend != null ? window.TPData.fmt.money(row.spend) : '-'}</td>
+            <td class="num">${row.spend != null ? window.TPData.fmt.money(row.spend) : '—'}</td>
             <td class="report-name-col">${report}</td>
-            <td class="date-col">${row.best && month ? esc(coverageLabel(row.best, row.coverage, month)) : '-'}</td>
+            <td class="date-col">${row.best && month ? esc(coverageLabel(row.best, row.coverage, month)) : '—'}</td>
             <td><span class="type-pill ${status.tone}">${status.label}</span>${row.issues.map(issue => `<span class="sync-detail">${esc(issue.detail)}</span>`).join('')}</td>
           </tr>`;
       }).join('');
@@ -319,8 +319,8 @@
       if (state.reportsError) notes.push(`<b>Carpeta de reportes</b>: ${esc(state.reportsError)}${state.reports.length ? ' Se muestra la lista del barrido anterior.' : ''}`);
       snapshot.ignored.forEach(item => notes.push(`<b>${esc(item.fileName)}</b>: ${esc(item.reason)}`));
       snapshot.months.forEach(month => {
-        if (month.duplicates.length) notes.push(`<b>${esc(month.name)} ${month.year}</b>: hay otro archivo del mismo mes (${esc(month.duplicates.join(', '))}); se usa "${esc(month.fileName)}", el editado mas reciente.`);
-        if (month.outOfRange) notes.push(`<b>${esc(month.fileName)}</b>: ${month.outOfRange} filas con dias de otro mes se dejaron fuera.`);
+        if (month.duplicates.length) notes.push(`<b>${esc(month.name)} ${month.year}</b>: hay otro archivo del mismo mes (${esc(month.duplicates.join(', '))}); se usa "${esc(month.fileName)}", el editado más reciente.`);
+        if (month.outOfRange) notes.push(`<b>${esc(month.fileName)}</b>: ${month.outOfRange} filas con días de otro mes se dejaron fuera.`);
       });
       els.syncNotes.hidden = !notes.length;
       els.syncNotes.innerHTML = notes.map(note => `<li>${note}</li>`).join('');
@@ -360,7 +360,7 @@
     const cards = [
       { label: 'Archivos en la carpeta', value: String(total), hint: `${latest} vigentes + ${total - latest} versiones anteriores` },
       { label: 'Reportes de campaña', value: String(monthly), hint: 'Mensuales y parciales' },
-      { label: 'Ultimo documento', value: newest ? formatDate(newest.modifiedTime) : '--', hint: newest ? newest.name : 'Sin registros' },
+      { label: 'Último documento', value: newest ? formatDate(newest.modifiedTime) : '—', hint: newest ? newest.name : 'Sin registros' },
     ];
 
     els.kpis.innerHTML = cards.map(card => `
@@ -406,13 +406,13 @@
 
     const stamp = state.reportsError
       ? ' | no se pudo releer la carpeta'
-      : state.syncedAt ? ` | lista leida ${window.TPData.formatStamp(state.syncedAt)}` : '';
+      : state.syncedAt ? ` | lista leída ${window.TPData.formatStamp(state.syncedAt)}` : '';
     els.count.textContent = rows.length === state.reports.length
       ? `${state.reports.length} documentos${stamp}`
       : `${rows.length} de ${state.reports.length} documentos`;
 
     if (!rows.length) {
-      const empty = state.reportsError ? esc(state.reportsError) : 'La carpeta de reportes esta vacia.';
+      const empty = state.reportsError ? esc(state.reportsError) : 'La carpeta de reportes está vacía.';
       els.body.innerHTML = `<tr><td class="table-empty" colspan="7">${state.reports.length ? 'No hay documentos que coincidan con el filtro.' : empty}</td></tr>`;
       return;
     }
@@ -427,7 +427,7 @@
         <td class="date-col">${report.period ? report.period.label : '<span class="no-data">Sin periodo</span>'}${report.range ? `<span class="report-range">${esc(report.range.label)}</span>` : ''}</td>
         <td><span class="format-tag ${report.isVideo ? 'video' : 'pdf'}">${esc(report.format)}</span></td>
         <td class="num">${formatSize(report.sizeBytes)}</td>
-        <td class="date-col">${formatDate(report.modifiedTime)}${report.latest ? '<span class="version-flag current">Version vigente</span>' : '<span class="version-flag old">Version anterior</span>'}</td>
+        <td class="date-col">${formatDate(report.modifiedTime)}${report.latest ? '<span class="version-flag current">Versión vigente</span>' : '<span class="version-flag old">Versión anterior</span>'}</td>
         <td>
           <div class="report-actions">
             <button type="button" class="report-btn primary" data-preview="${esc(report.id)}">Ver</button>

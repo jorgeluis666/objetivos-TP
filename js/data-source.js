@@ -20,9 +20,9 @@
   const LIMA_OFFSET_HOURS = -5;
   const SWEEP_HOUR = 10;
   const SWEEP_ORIGINS = {
-    automatico: 'barrido automatico',
+    automatico: 'barrido automático',
     manual: 'barrido manual',
-    instalacion: 'barrido de instalacion',
+    instalacion: 'barrido de instalación',
     prueba: 'barrido de prueba',
     inicial: 'primera lectura',
   };
@@ -38,10 +38,10 @@
   const OBJECTIVES = [
     { key: 'pedidos-whatsapp', label: 'Pedidos WhatsApp', match: /pedidos.*whatsapp|whatsapp.*pedidos/, color: '#16a34a' },
     { key: 'mensajes-whatsapp', label: 'Mensajes WhatsApp', match: /whatsapp/, color: '#ca8a04' },
-    { key: 'interaccion', label: 'Interaccion', match: /^interacc/, color: '#ea580c' },
+    { key: 'interaccion', label: 'Interacción', match: /^interacc/, color: '#ea580c' },
     { key: 'notoriedad', label: 'Notoriedad', match: /notoriedad|thruplay/, color: '#7c3aed' },
-    { key: 'trafico-ig', label: 'Trafico al Perfil (IG)', match: /trafico ig|perfil/, color: '#db2777' },
-    { key: 'trafico-web', label: 'Trafico Web', match: /trafico web/, color: '#0d9488' },
+    { key: 'trafico-ig', label: 'Tráfico al perfil (IG)', match: /trafico ig|perfil/, color: '#db2777' },
+    { key: 'trafico-web', label: 'Tráfico web', match: /trafico web/, color: '#0d9488' },
   ];
   const FALLBACK_COLORS = ['#0891b2', '#4f46e5', '#b45309', '#be123c'];
   // Un objetivo fuera de OBJECTIVES toma el siguiente color la primera vez que aparece y lo conserva: no cambia
@@ -50,7 +50,7 @@
   const RESULT_LABELS = [
     { match: /interacciones con la publicacion/, label: 'Interacciones' },
     { match: /thruplay/, label: 'Reproducciones (ThruPlay)' },
-    { match: /contactos en el sitio web/, label: 'Clics al boton WhatsApp' },
+    { match: /contactos en el sitio web/, label: 'Clics al botón WhatsApp' },
     { match: /visitas al perfil/, label: 'Visitas al perfil' },
     { match: /visitas a la pagina de destino/, label: 'Visitas a la web' },
     { match: /conversaciones con mensajes/, label: 'Conversaciones' },
@@ -71,6 +71,9 @@
   // anuncios sin ninguno de los dos quedan fuera. Sirve para filas y para agregados.
   const hasActivity = item => item.spend > 0 || item.impressions > 0;
 
+  // Graficos con la tipografia del tablero (Inter), como Royal Baby. Chart.js se carga antes que este archivo.
+  if (window.Chart) window.Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
   // ── Formatos compartidos ────────────────────────────────────────────────
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const safeUrl = value => (/^https:\/\//i.test(String(value || '').trim()) ? esc(String(value).trim()) : '');
@@ -83,10 +86,10 @@
     return numberFormats.get(key).format(Number(value));
   }
   const fmt = {
-    money: value => (finite(value) ? `S/. ${formatNumber(value, 2, 2)}` : '-'),
-    count: value => (finite(value) ? Math.round(Number(value)).toLocaleString('es-PE') : '-'),
-    decimal: (value, digits = 2) => (finite(value) ? formatNumber(value, digits, digits) : '-'),
-    pct: (value, digits = 1) => (finite(value) ? `${formatNumber(value, digits, digits)}%` : '-'),
+    money: value => (finite(value) ? `S/. ${formatNumber(value, 2, 2)}` : '—'),
+    count: value => (finite(value) ? Math.round(Number(value)).toLocaleString('es-PE') : '—'),
+    decimal: (value, digits = 2) => (finite(value) ? formatNumber(value, digits, digits) : '—'),
+    pct: (value, digits = 1) => (finite(value) ? `${formatNumber(value, digits, digits)}%` : '—'),
     // Los costos por resultado de branding son centavos: se muestran con mas decimales para que no queden en 0.01.
     unitCost: value => (finite(value) && Number(value) > 0 && Number(value) < 0.1
       ? `S/. ${formatNumber(value, 3, 4)}`
@@ -165,7 +168,7 @@
 
   function formatStamp(value) {
     const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
+    if (Number.isNaN(date.getTime())) return '—';
     try {
       return date.toLocaleString('es-PE', { timeZone: TIMEZONE, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     } catch {
@@ -184,7 +187,7 @@
   }
 
   function rangeLabel(month, from, to) {
-    if (!month) return '-';
+    if (!month) return '—';
     return from === to ? `${from} ${MONTHS[month.month - 1]}` : `${from}-${to} ${MONTHS[month.month - 1]}`;
   }
 
@@ -554,7 +557,7 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      if (error?.name === 'AbortError') throw new Error('Google no respondio a tiempo');
+      if (error?.name === 'AbortError') throw new Error('Google no respondió a tiempo');
       throw error;
     } finally {
       clearTimeout(timer);
@@ -639,7 +642,7 @@
         state.pendingFresh = true;
         setRefreshing(true);
       }
-      return { ok: false, error: 'Ya hay una actualizacion en curso' };
+      return { ok: false, error: 'Ya hay una actualización en curso' };
     }
     state.loading = true;
     // Una lectura silenciosa sin error previo puede saltarse el barrido que ya se ve; Actualizar siempre publica.
@@ -675,7 +678,7 @@
     if (!data) return state.error ? 'Sin datos: no se pudo leer Google' : 'Cargando datos...';
     const month = monthByKey(data.latestKey);
     const dataPart = month && month.lastDay ? `Datos al ${month.lastDay} de ${month.name.toLowerCase()}` : 'Sin datos';
-    if (state.error) return `${dataPart} | sin conexion con Google`;
+    if (state.error) return `${dataPart} | sin conexión con Google`;
     if (data.source === 'local') return `${dataPart} | copia guardada`;
     if (!data.sweptAt) return dataPart;
     // El origen deja ver de un vistazo si el ultimo barrido fue el automatico o el boton Actualizar.
@@ -699,27 +702,27 @@
     const month = data ? monthByKey(data.latestKey) : null;
     const set = (id, value) => {
       const node = document.getElementById(id);
-      if (node) node.textContent = value || '-';
+      if (node) node.textContent = value || '—';
     };
     set('status-data', month && month.lastDay
       ? `${month.firstDay || 1}-${month.lastDay} ${month.name} ${month.year}`
       : (data ? 'Sin descargas con gasto' : (state.error ? 'Sin datos' : 'Cargando...')));
     set('status-last', data?.sweptAt ? `${SWEEP_ORIGINS[data.origin] || 'barrido'} · ${formatStamp(data.sweptAt)}` : 'sin registro');
     renderNextSweep();
-    set('status-file', month?.fileName || '-');
-    set('status-source', data ? (data.source === 'live' ? 'Google Drive en vivo' : 'copia guardada en el tablero') : '-');
+    set('status-file', month?.fileName || '—');
+    set('status-source', data ? (data.source === 'live' ? 'Google Drive en vivo' : 'copia guardada en el tablero') : '—');
     const note = document.getElementById('status-note');
     if (!note) return;
     // Un solo aviso, por orden de gravedad: sin conexion, copia guardada o descarga del mes en curso.
     let message = '';
     let isError = false;
     if (state.error) {
-      message = `Sin conexion con Google: ${state.error}.${data ? ' Se muestran los ultimos datos leidos.' : ''}`;
+      message = `Sin conexión con Google: ${state.error}.${data ? ' Se muestran los últimos datos leídos.' : ''}`;
       isError = true;
     } else if (data?.source === 'local') {
-      message = 'Copia guardada en el tablero: todavia no llego la lectura en vivo.';
+      message = 'Copia guardada en el tablero: todavía no llegó la lectura en vivo.';
     } else if (month && month.lastDay && !month.complete) {
-      message = `El dia ${month.lastDay} es el de la descarga y puede estar incompleto.`;
+      message = `El día ${month.lastDay} es el de la descarga y puede estar incompleto.`;
     }
     note.textContent = message;
     note.classList.toggle('error', isError);
@@ -730,7 +733,7 @@
     const node = document.getElementById('status-next');
     if (!node) return;
     const next = nextSweep();
-    node.textContent = next ? `${formatStamp(next)} · cada dia a las ${SWEEP_HOUR}:00` : '-';
+    node.textContent = next ? `${formatStamp(next)} · cada día a las ${SWEEP_HOUR}:00` : '—';
   }
 
   function wireStatusCard() {

@@ -89,7 +89,7 @@
       const status = document.getElementById(statusId);
       const discard = document.getElementById(discardId);
       if (status) {
-        const date = validDate(published.updatedAt) ? published.updatedAt.split('-').reverse().join('/') : '-';
+        const date = validDate(published.updatedAt) ? published.updatedAt.split('-').reverse().join('/') : '—';
         status.textContent = isDraft ? 'Borrador en este navegador: exporta el archivo para publicarlo.' : `Publicado al ${date}.`;
         status.classList.toggle('draft', isDraft);
       }

@@ -77,7 +77,7 @@
   }
 
   function money(value) {
-    return `S/ ${number(value).toLocaleString('es-PE', {
+    return `S/. ${number(value).toLocaleString('es-PE', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -105,7 +105,7 @@
       <tr data-index="${index}">
         <td><input class="messages-table-input name" type="text" data-field="name" value="${esc(row.name)}" aria-label="Nombre del conjunto ${index + 1}"></td>
         <td class="num"><input class="messages-table-input" type="number" min="0" step="1" data-field="messages" value="${row.messages}" aria-label="Mensajes objetivo del conjunto ${index + 1}"></td>
-        <td class="num"><span class="messages-cell-money"><b>S/</b><input class="messages-table-input" type="number" min="0" step="0.10" data-field="cpl" value="${row.cpl}" aria-label="Costo por lead del conjunto ${index + 1}"></span></td>
+        <td class="num"><span class="messages-cell-money"><b>S/.</b><input class="messages-table-input" type="number" min="0" step="0.10" data-field="cpl" value="${row.cpl}" aria-label="Costo por lead del conjunto ${index + 1}"></span></td>
         <td class="num"><strong>${money(row.investment)}</strong></td>
         <td class="messages-row-action"><button type="button" class="messages-remove" data-remove-set="${index}" aria-label="Eliminar ${esc(row.name)}" title="Eliminar conjunto">×</button></td>
       </tr>
@@ -289,14 +289,14 @@
     const rows = [
       ['CALCULADORA DE MENSAJES · TERMINAL PESQUERO'],
       [],
-      ['Facturación objetivo (S/)', state.target],
-      ['Facturación realizada (S/)', state.actual],
-      ['Facturación restante (S/)', result.remaining],
-      ['Ticket promedio (S/)', state.ticket],
+      ['Facturación objetivo (S/.)', state.target],
+      ['Facturación realizada (S/.)', state.actual],
+      ['Facturación restante (S/.)', result.remaining],
+      ['Ticket promedio (S/.)', state.ticket],
       ['Ventas necesarias', result.salesNeeded],
-      ['CPL promedio (S/)', state.averageCpl],
+      ['CPL promedio (S/.)', state.averageCpl],
       [],
-      ['Conjunto', 'Mensajes objetivo', 'Costo por lead (S/)', 'Inversión (S/)'],
+      ['Conjunto', 'Mensajes objetivo', 'Costo por lead (S/.)', 'Inversión (S/.)'],
       ...result.rows.map(row => [row.name, row.messages, row.cpl, row.investment]),
       ['INVERSIÓN TOTAL EN MENSAJES', '', '', result.totalInvestment],
     ];

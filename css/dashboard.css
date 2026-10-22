@@ -3,6 +3,8 @@
   --brand-dark: #1F97AA;
   --brand-soft: #E5F7F9;
   --brand-text: #156572;
+  /* Borde suave de la marca (pestana de mes activa). */
+  --brand-border: #BEEAF1;
   --ink: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
@@ -222,17 +224,18 @@ select {
   gap: 7px;
 }
 
+/* Como en Royal Baby: 13px / 500, y la activa en el tono suave de la marca. */
 .month-tab {
   position: relative;
-  height: 38px;
-  padding: 0 10px;
+  padding: 9px 14px;
   white-space: nowrap;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  color: var(--ink);
+  border-radius: 10px;
+  color: #52647d;
   background: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
   cursor: pointer;
 }
 
@@ -241,9 +244,10 @@ select {
 }
 
 .month-tab.active {
-  border-color: #f59e0b;
-  color: #9a3412;
-  background: #fff7ed;
+  border-color: var(--brand-border);
+  color: var(--brand-text);
+  background: var(--brand-soft);
+  font-weight: 700;
 }
 
 .month-tab:disabled {
@@ -299,13 +303,16 @@ select {
   font-size: 11px;
 }
 
+/* Tablas como en Royal Baby: encabezado en mayusculas 10px / 700 sobre #f8fbff, filas con borde #edf2f7 y
+   numeros en monoespaciada alineados a la derecha. */
 .data-table th {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
-  color: #526987;
-  background: #f8fafc;
-  font-size: 9px;
-  letter-spacing: .04em;
+  color: #52647d;
+  background: #f8fbff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -313,7 +320,7 @@ select {
 
 .data-table td {
   padding: 13px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #edf2f7;
   color: #334155;
   vertical-align: middle;
 }
@@ -325,6 +332,17 @@ select {
 .data-table .num {
   text-align: right;
   white-space: nowrap;
+}
+
+.data-table td.num,
+.messages-table td.num {
+  font-family: "SF Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pastillas y notas dentro de una celda numerica siguen en Inter. */
+.data-table td.num :is(.delta-pill, .no-data, small, .objective-pill) {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .campaign-name {
@@ -509,7 +527,7 @@ select {
 
 .history-table thead th:first-child,
 .history-table .total-row td:first-child {
-  background: #f8fafc;
+  background: #f8fbff;
 }
 
 @media(max-width:760px) {
@@ -760,10 +778,11 @@ select {
 
 .messages-table th {
   padding: 10px 12px;
-  color: #526987;
-  background: #f8fafc;
-  font-size: 9px;
-  letter-spacing: .04em;
+  color: #52647d;
+  background: #f8fbff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -771,7 +790,7 @@ select {
 
 .messages-table td {
   padding: 9px 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #edf2f7;
   color: #334155;
   vertical-align: middle;
 }
@@ -1803,7 +1822,8 @@ body.modal-open {
 }
 
 .projection-table .projection-cost-row td {
-  background: #f8fafc;
+  background: #f8fbff;
+  font-weight: 700;
 }
 
 .projection-gap {
@@ -1905,7 +1925,7 @@ body.modal-open {
 
 .campaigns-table thead th:nth-child(-n+2) {
   z-index: 4;
-  background: #f8fafc;
+  background: #f8fbff;
 }
 
 .campaigns-table .type-col,
@@ -2240,7 +2260,7 @@ body.tp-table-fullscreen {
 }
 
 .data-table .total-row td {
-  background: #f8fafc;
+  background: #f8fbff;
   font-weight: 700;
 }
 
@@ -2917,8 +2937,7 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
 }
 
 .report-tabs .month-tab {
-  padding: 0 16px;
-  font-size: 12px;
+  padding: 9px 16px;
 }
 
 /* ===== Generacion de Reporte (diseño del modelo de la agencia) ===== */

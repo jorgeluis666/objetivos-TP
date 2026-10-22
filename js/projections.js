@@ -134,9 +134,9 @@
   function renderKpis(projection) {
     const host = document.getElementById('projection-kpis');
     if (!host) return;
-    const budgetHint = `Ritmo real ${money(projection.spendPace)} por dia`;
+    const budgetHint = `Ritmo real ${money(projection.spendPace)} por día`;
     const spendCards = [
-      `<div class="kpi-pill"><span>Gasto al ${projection.daysWithData}-${projection.shortMonth}</span><strong>${money(projection.spendActual)}</strong><small>${projection.closed ? 'Mes cerrado' : `Quedan ${projection.daysLeft} dias del mes`}</small></div>`,
+      `<div class="kpi-pill"><span>Gasto al ${projection.daysWithData}-${projection.shortMonth}</span><strong>${money(projection.spendActual)}</strong><small>${projection.closed ? 'Mes cerrado' : `Quedan ${projection.daysLeft} días del mes`}</small></div>`,
       `<div class="kpi-pill"><span>Gasto proyectado</span><strong>${money(projection.spendProjected)}</strong><small>${projection.spendAdjusted ? 'Incluye escenarios ajustados' : budgetHint}</small></div>`,
     ];
     const selected = selectedCampaign(projection);
@@ -204,7 +204,7 @@
     const head = document.getElementById('projection-actual-head');
     if (head) head.textContent = `Resultados al ${projection.daysWithData}-${projection.shortMonth}`;
     const closeHead = document.getElementById('projection-close-head');
-    if (closeHead) closeHead.textContent = `Proyeccion al ${projection.daysInMonth}-${projection.shortMonth}`;
+    if (closeHead) closeHead.textContent = `Proyección al ${projection.daysInMonth}-${projection.shortMonth}`;
   }
 
   function renderLegend(projection, campaign) {
@@ -219,7 +219,7 @@
       items.push(`<span><i class="legend-line" style="background:${SPEND_COLOR}"></i><b>Gasto real</b></span>`);
       items.push(`<span><i class="legend-line dashed" style="color:${SPEND_COLOR}"></i><b>Gasto proyectado</b></span>`);
     }
-    if (campaign.adjusted) items.push('<span><i class="legend-line dashed" style="color:#94a3b8"></i><b>Proyeccion original</b></span>');
+    if (campaign.adjusted) items.push('<span><i class="legend-line dashed" style="color:#94a3b8"></i><b>Proyección original</b></span>');
     if (!projection.closed) items.push('<span><i class="legend-handle"></i><b>Punto actual (arrastrar arriba o abajo)</b></span>');
     host.innerHTML = items.join('');
   }
@@ -289,7 +289,7 @@
         ctx.fillStyle = '#7890b5';
         ctx.font = '700 9px Inter, sans-serif';
         ctx.textAlign = x > (left + right) / 2 ? 'right' : 'left';
-        ctx.fillText(options.label || 'Ultima actualizacion', x + (ctx.textAlign === 'right' ? -6 : 6), top + 10);
+        ctx.fillText(options.label || 'Última actualización', x + (ctx.textAlign === 'right' ? -6 : 6), top + 10);
         ctx.restore();
       }
       chart.data.datasets.forEach((dataset, datasetIndex) => {
@@ -344,7 +344,7 @@
       { ...base, label: `${meta.label} proyectado`, data: projection.closed ? [] : forecast, borderColor: meta.color, borderDash: [6, 5], borderWidth: 2, fill: false },
     ];
     if (series.adjusted) {
-      datasets.push({ ...base, label: `${meta.label} proyeccion original`, data: original, borderColor: '#94a3b8', borderDash: [3, 4], borderWidth: 1.5, fill: false });
+      datasets.push({ ...base, label: `${meta.label} proyección original`, data: original, borderColor: '#94a3b8', borderDash: [3, 4], borderWidth: 1.5, fill: false });
     }
     if (draggable) {
       datasets.push({ ...base, label: `${meta.label} punto actual`, data: handle, borderColor: meta.color, backgroundColor: '#fff', borderWidth: 3, pointRadius: 7, pointHoverRadius: 9, showLine: false, handle: true, handleIndex: series.day - 1, realValue: series.actual });
@@ -399,17 +399,17 @@
           },
         },
         scales: {
-          x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#7890b5', font: { size: 10 }, maxTicksLimit: 10, autoSkip: true } },
+          x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#94A3B8', font: { size: 10 }, maxTicksLimit: 10, autoSkip: true } },
           y: {
-            display: 'auto', position: 'left', beginAtZero: true, border: { display: false }, grid: { color: 'rgba(148,163,184,.20)' },
+            display: 'auto', position: 'left', beginAtZero: true, border: { display: false }, grid: { color: 'rgba(15,23,42,.06)' },
             title: { display: true, text: campaign.resultLabel, color: campaign.color, font: { size: 10, weight: '700' } },
-            ticks: { color: '#7890b5', font: { size: 10 }, callback: value => Number(value).toLocaleString('es-PE') },
+            ticks: { color: '#94A3B8', font: { size: 10 }, callback: value => Number(value).toLocaleString('es-PE') },
           },
           y1: {
             // Con ambas series visibles el gasto recibe margen extra para que su linea corra por debajo de la de resultados.
             display: 'auto', position: 'right', beginAtZero: true, grace: state.visible.results ? '60%' : 0, border: { display: false }, grid: { drawOnChartArea: !state.visible.results },
             title: { display: true, text: 'Gasto', color: SPEND_COLOR, font: { size: 10, weight: '700' } },
-            ticks: { color: '#7890b5', font: { size: 10 }, callback: money0 },
+            ticks: { color: '#94A3B8', font: { size: 10 }, callback: money0 },
           },
         },
       },
@@ -421,22 +421,22 @@
 
   function renderHeader(projection) {
     const title = document.getElementById('projection-title');
-    if (title) title.textContent = `Linea de tiempo | ${projection.monthLabel}`;
+    if (title) title.textContent = `Línea de tiempo | ${projection.monthLabel}`;
     const sub = document.getElementById('projection-sub');
     if (sub) {
       sub.textContent = projection.closed
-        ? `Mes cerrado con ${projection.daysInMonth} dias de datos.`
-        : `Datos reales hasta el dia ${projection.daysWithData} y proyeccion lineal hasta el ${projection.daysInMonth}. Arrastra el punto actual hacia arriba o abajo para simular otro escenario.`;
+        ? `Mes cerrado con ${projection.daysInMonth} días de datos.`
+        : `Datos reales hasta el día ${projection.daysWithData} y proyección lineal hasta el ${projection.daysInMonth}. Arrastra el punto actual hacia arriba o abajo para simular otro escenario.`;
     }
     const note = document.getElementById('projection-note');
     if (note) {
-      note.textContent = `Cada objetivo mide un resultado distinto (interacciones, ThruPlays, clics al boton de WhatsApp), por eso se proyectan por separado. La linea continua es el acumulado real de cada dia; la punteada mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: Meta Ads | ${window.TPData.statusLabel()}.`;
+      note.textContent = `Cada objetivo mide un resultado distinto (interacciones, ThruPlays, clics al botón de WhatsApp), por eso se proyectan por separado. La línea continua es el acumulado real de cada día; la punteada mantiene el ritmo diario del punto actual hasta el cierre del mes. Fuente: Meta Ads | ${window.TPData.statusLabel()}.`;
     }
     const desc = document.getElementById('projection-desc');
     if (desc) {
       desc.textContent = projection.closed
-        ? `${projection.monthLabel} ya cerro: se muestran sus resultados finales por objetivo con los datos del modulo Gasto publicitario.`
-        : `Proyeccion al cierre de ${projection.monthLabel} por objetivo, calculada con los datos reales del modulo Gasto publicitario hasta el ${projection.daysWithData} de ${projection.monthName.toLowerCase()}.`;
+        ? `${projection.monthLabel} ya cerró: se muestran sus resultados finales por objetivo con los datos del módulo Gasto publicitario.`
+        : `Proyección al cierre de ${projection.monthLabel} por objetivo, calculada con los datos reales del módulo Gasto publicitario hasta el ${projection.daysWithData} de ${projection.monthName.toLowerCase()}.`;
     }
   }
 
