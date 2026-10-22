@@ -7,7 +7,7 @@
   // El barrido no trae compras: el Top 3 de Anuncios es por contactos de WhatsApp (clics al boton en Pedidos
   // WhatsApp y conversaciones en Mensajes WhatsApp).
   const TOP_GROUPS = ['pedidos-whatsapp', 'mensajes-whatsapp'];
-  // Indicador, vista y minimizado del grafico de cada campana, por clave de objetivo.
+  // Indicadores, vista, un solo cuadro y minimizado del grafico de cada campana, por clave de objetivo.
   const CAMPAIGN_CHARTS_KEY = 'tp-campaign-charts-v1';
   const PREVIOUS_COLOR = '#94a3b8';
   const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
@@ -21,19 +21,24 @@
     { key: 'activas', label: 'Activas', one: 'campaña activa', many: 'campañas activas' },
     { key: 'finalizadas', label: 'Finalizadas', one: 'campaña finalizada', many: 'campañas finalizadas' },
   ];
+  // Sin "Acumulado del mes": un total corrido siempre sube y hace ver un crecimiento que no hay.
   const MODES = [
-    { key: 'cumulative', label: 'Acumulado del mes' },
     { key: 'daily', label: 'Por dia' },
     { key: 'monthly', label: 'Por mes' },
   ];
   // Indicadores del grafico de cada campana (Resultados toma el nombre del resultado del objetivo). Se puede elegir
   // mas de uno; por defecto va el resultado junto a la inversion, que es la relacion que se quiere leer.
+  // color: el de su linea cuando los indicadores van juntos en un solo cuadro (el resultado lleva el del objetivo).
   const CAMPAIGN_METRICS = [
     { key: 'results', label: 'Resultados', field: 'results', unit: 'count' },
-    { key: 'spend', label: 'Inversion', field: 'spend', unit: 'money' },
-    { key: 'impressions', label: 'Impresiones', field: 'impressions', unit: 'count' },
-    { key: 'reach', label: 'Alcance', field: 'reach', unit: 'count' },
+    { key: 'spend', label: 'Inversion', field: 'spend', unit: 'money', color: '#334155' },
+    { key: 'impressions', label: 'Impresiones', field: 'impressions', unit: 'count', color: '#0891b2' },
+    { key: 'reach', label: 'Alcance', field: 'reach', unit: 'count', color: '#b45309' },
+    // Cociente: inversion / resultados del dia o del mes; sin resultados queda como hueco.
+    { key: 'costPerResult', label: 'Costo por resultado', ratio: ['spend', 'results'], unit: 'money', color: '#be123c' },
   ];
+  // En un solo cuadro, un indicador cuyo color coincide con el del objetivo toma este.
+  const COMBINED_ALT_COLOR = '#64748b';
   const DEFAULT_CAMPAIGN_METRICS = ['results', 'spend'];
   // KPIs de la cabecera de cada campana, con su variacion contra el mes anterior.
   const CAMPAIGN_KPIS = [
@@ -289,16 +294,29 @@
     return row => row.group === metric.group;
   }
 
+  // Cociente del costo por resultado: sin resultados (o sin dato) queda como hueco.
+  const ratioValue = (top, bottom) => (top == null || !(bottom > 0) ? null : top / bottom);
+
   // Un mes sin gasto ni impresiones del objetivo queda como hueco, igual que un mes sin descarga.
   function monthlyValue(month, metric) {
     if (!month?.hasData) return null;
     const rows = month.rows.filter(metricFilter(metric));
     if (!rows.some(hasActivity)) return null;
-    return rows.reduce((sum, row) => sum + row[metric.field], 0);
+    const sum = field => rows.reduce((total, row) => total + row[field], 0);
+    return metric.ratio ? ratioValue(...metric.ratio.map(sum)) : sum(metric.field);
   }
 
-  // Total de cada mes del año, o dia a dia del mes (acumulado o no) frente al mes anterior en el mismo dia.
-  // compare = false deja solo el mes elegido (varios indicadores a la vez).
+  // Valores por dia del indicador (indice 0 = dia 1); el costo por resultado sale de la inversion y los resultados
+  // de cada dia.
+  function dailyMetric(month, metric) {
+    const values = field => data().metrics.dailyValues(month, field, metricFilter(metric));
+    if (!metric.ratio) return values(metric.field);
+    const [top, bottom] = metric.ratio.map(values);
+    return top.map((value, index) => ratioValue(value, bottom[index]));
+  }
+
+  // Total de cada mes del año, o dia a dia del mes frente al mes anterior en el mismo dia. compare = false deja
+  // solo el mes elegido (varios indicadores a la vez). Cada punto del mes elegido lleva su valor (valueLabels).
   function lineSeries(metric, modeKey, month, compare = true) {
     if (modeKey === 'monthly') {
       const year = viewYear();
@@ -308,16 +326,14 @@
         legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(metric.label)} por mes</b></span>`],
       };
     }
-    const cumulative = modeKey === 'cumulative';
-    const transform = values => (cumulative ? data().metrics.cumulative(values) : values);
     const series = {
       labels: Array.from({ length: month.daysInMonth }, (_, index) => `${index + 1}`),
-      datasets: [{ label: compare ? month.name : metric.label, unit: metric.unit, data: transform(data().metrics.dailyValues(month, metric.field, metricFilter(metric))), borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: cumulative, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 }],
+      datasets: [{ label: compare ? month.name : metric.label, unit: metric.unit, data: dailyMetric(month, metric), borderColor: metric.color, backgroundColor: `${metric.color}14`, fill: false, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 4, pointBackgroundColor: metric.color, tension: 0.2, spanGaps: false, valueLabels: true }],
       legend: [`<span><i class="legend-line" style="background:${metric.color}"></i><b>${esc(month.name)} ${month.year}</b></span>`],
     };
     const previous = data().previousMonth(month);
     if (compare && previous?.hasData) {
-      const previousValues = transform(data().metrics.dailyValues(previous, metric.field, metricFilter(metric))).slice(0, month.daysInMonth);
+      const previousValues = dailyMetric(previous, metric).slice(0, month.daysInMonth);
       if (previousValues.some(value => value)) {
         series.datasets.push({ label: previous.name, unit: metric.unit, data: previousValues, borderColor: PREVIOUS_COLOR, borderDash: [6, 5], fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2 });
         series.legend.push(`<span><i class="legend-line dashed" style="color:${PREVIOUS_COLOR}"></i><b>${esc(previous.name)} (mismo dia del mes)</b></span>`);
@@ -327,10 +343,23 @@
   }
 
   // Un indicador: su linea contra el mes anterior. Varios: una linea por indicador, sin comparacion, cada una en su
-  // propio panel (eje y) para ver como se mueve el resultado frente a la inversion sin mezclar escalas.
-  function campaignSeries(metrics, modeKey, month) {
+  // propio panel (eje y) para ver como se mueve el resultado frente a la inversion sin mezclar escalas. Con combined,
+  // todas en un solo cuadro, un color por indicador y cada una con su escala (sin eje: el valor va en el punto).
+  function campaignSeries(metrics, modeKey, month, combined = false) {
     if (metrics.length === 1) return lineSeries(metrics[0], modeKey, month);
     const parts = metrics.map(metric => lineSeries(metric, modeKey, month, false));
+    if (combined) {
+      const what = modeKey === 'monthly' ? 'Por mes' : `Por dia, ${esc(month.name)} ${month.year}`;
+      return {
+        labels: parts[0].labels,
+        datasets: parts.map((part, index) => {
+          const color = metrics[index].combinedColor;
+          return { ...part.datasets[0], label: metrics[index].label, yAxisID: `y${index}`, borderColor: color, pointBackgroundColor: color, fill: false };
+        }),
+        legend: metrics.map(metric => `<span><i class="legend-line" style="background:${metric.combinedColor}"></i><b>${esc(metric.label)}</b></span>`)
+          .concat(`<span>${what}. Cada indicador con su escala: compara la forma y lee el valor en el punto.</span>`),
+      };
+    }
     const color = metrics[0].color;
     const what = modeKey === 'monthly' ? `${metrics.length} indicadores por mes` : `${esc(month.name)} ${month.year}`;
     const previous = modeKey === 'monthly' ? null : data().previousMonth(month);
@@ -349,16 +378,26 @@
     state.charts.delete(id);
   }
 
-  const formatValue = (unit, value) => (unit === 'money' ? fmt('money', value) : fmt('count', value));
+  // El costo por resultado de branding son centavos: unitCost les da mas decimales (en lo demas es igual a money).
+  const formatValue = (unit, value) => (unit === 'money' ? fmt('unitCost', value) : fmt('count', value));
+  // Etiqueta del punto: soles sin decimales, salvo montos chicos (S/. 0.40 no debe leerse S/. 0).
+  const pointValue = (unit, value) => (unit === 'money'
+    ? (Math.abs(value) >= 10 ? tickValue('money', Math.round(value)) : fmt('unitCost', value))
+    : Number(value).toLocaleString('es-PE', { notation: Math.abs(value) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
+  // Ejes en soles enteros; por debajo de 10 (el costo por resultado de branding son centavos) van con decimales para
+  // que las marcas no se repitan.
   const tickValue = (unit, value) => (unit === 'money'
-    ? (value === 0 ? 'S/. 0' : `S/. ${Number(value).toLocaleString('es-PE', { maximumFractionDigits: 0 })}`)
+    ? (value === 0 ? 'S/. 0' : `S/. ${Number(value).toLocaleString('es-PE', { maximumFractionDigits: Math.abs(value) >= 10 ? 0 : Math.abs(value) >= 1 ? 2 : 3 })}`)
     : Number(value).toLocaleString('es-PE', { notation: Math.abs(value) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
 
   // Con un indicador hay un solo eje y; con varios, un eje por indicador apilado en vertical (paneles con su
-  // escala) sobre el mismo eje de dias. Nunca dos escalas superpuestas: los cruces entre lineas no significarian nada.
-  function yScales(metrics) {
+  // escala) sobre el mismo eje de dias. Nunca dos escalas a la vista sobre las mismas lineas: los cruces entre lineas
+  // no significarian nada. En un solo cuadro (combined) cada indicador tiene su escala sin eje visible: se compara la
+  // forma de las lineas y el valor va en cada punto.
+  function yScales(metrics, combined = false) {
     const base = unit => ({ beginAtZero: true, border: { display: false }, ticks: { color: '#7890b5', font: { size: 10 }, callback: value => tickValue(unit, value) } });
     if (metrics.length === 1) return { y: { ...base(metrics[0].unit), grid: { color: 'rgba(148,163,184,.20)' } } };
+    if (combined) return Object.fromEntries(metrics.map((metric, index) => [`y${index}`, { display: false, beginAtZero: true, grace: '18%' }]));
     // Chart.js apila de abajo hacia arriba en el orden de los ejes: se dan al reves para que el resultado quede arriba.
     return Object.fromEntries(metrics.map((metric, index) => [`y${index}`, {
       ...base(metric.unit),
@@ -373,7 +412,7 @@
     }]).reverse());
   }
 
-  function drawLineChart(id, canvas, series, metrics, modeKey) {
+  function drawLineChart(id, canvas, series, metrics, modeKey, combined = false) {
     destroyChart(id);
     if (!canvas) return;
     if (typeof Chart === 'undefined') {
@@ -401,24 +440,59 @@
         },
         scales: {
           x: { grid: { display: false }, border: { color: '#cbd5e1' }, ticks: { color: '#7890b5', font: { size: 10 }, autoSkip: true, maxTicksLimit: modeKey === 'monthly' ? 12 : 16 } },
-          ...yScales(metrics),
+          ...yScales(metrics, combined),
         },
       },
       plugins: [{
+        // Valor en cada punto (valueLabels), menos los ceros (el punto ya esta en la base). Va arriba en un pico y
+        // abajo en un valle, para no montarse en la linea; si choca con otra etiqueta o con el nombre de un panel, o
+        // se sale de su panel, prueba el otro lado y, si tampoco cabe, se omite (queda en el tooltip).
         id: 'valueLabels',
         afterDatasetsDraw(chart) {
           const ctx = chart.ctx;
+          const placed = [];
+          const overlaps = box => placed.some(other => !(box.right < other.left || box.left > other.right || box.bottom < other.top || box.top > other.bottom));
+          const isValue = value => value != null && Number.isFinite(Number(value));
           ctx.save();
+          // Los nombres de los paneles (panelLabels) tambien ocupan lugar.
+          ctx.font = '600 11px Inter, sans-serif';
+          Object.values(chart.scales).forEach(scale => {
+            if (!scale.options.panelLabel) return;
+            const left = chart.chartArea.left + 4;
+            placed.push({ left, right: left + ctx.measureText(scale.options.panelLabel).width + 8, top: scale.top + 2, bottom: scale.top + 18 });
+          });
           ctx.font = '600 10px Inter, sans-serif';
           ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(255,255,255,.92)';
           chart.data.datasets.forEach((dataset, index) => {
             if (!dataset.valueLabels) return;
+            const meta = chart.getDatasetMeta(index);
+            const scale = chart.scales[meta.yAxisID];
+            if (!scale) return;
+            // Solo el panel de arriba puede usar el margen superior del grafico.
+            const top = scale.top <= chart.chartArea.top + 1 ? chart.chartArea.top - 22 : scale.top;
             ctx.fillStyle = dataset.borderColor;
-            chart.getDatasetMeta(index).data.forEach((point, pointIndex) => {
+            meta.data.forEach((point, pointIndex) => {
               const value = dataset.data[pointIndex];
-              if (value == null) return;
-              const text = dataset.unit === 'money' ? tickValue('money', Math.round(value)) : Number(value).toLocaleString('es-PE', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 });
-              ctx.fillText(text, point.x, point.y - 12);
+              if (!isValue(value) || Number(value) === 0) return;
+              const text = pointValue(dataset.unit, value);
+              const half = ctx.measureText(text).width / 2 + 2;
+              const before = dataset.data[pointIndex - 1];
+              const after = dataset.data[pointIndex + 1];
+              const valley = isValue(before) && isValue(after) && value < before && value < after;
+              const sides = valley ? [point.y + 13, point.y - 12] : [point.y - 12, point.y + 13];
+              // Pegada al borde, la etiqueta se corre hacia adentro para no cortarse.
+              const x = Math.min(Math.max(point.x, half), chart.width - half);
+              const box = sides
+                .map(y => ({ y, left: x - half, right: x + half, top: y - 6, bottom: y + 6 }))
+                .find(item => item.top >= top && item.bottom <= scale.bottom && !overlaps(item));
+              if (!box) return;
+              placed.push(box);
+              ctx.strokeText(text, x, box.y);
+              ctx.fillText(text, x, box.y);
             });
           });
           ctx.restore();
@@ -479,7 +553,7 @@
   // La vista anual solo tiene sentido por mes; el modo elegido se conserva para cuando se vuelva a un mes.
   function chartModes(savedMode, annual) {
     if (annual) return { modes: MODES.filter(item => item.key === 'monthly'), modeKey: 'monthly' };
-    return { modes: MODES, modeKey: MODES.some(item => item.key === savedMode) ? savedMode : 'cumulative' };
+    return { modes: MODES, modeKey: MODES.some(item => item.key === savedMode) ? savedMode : 'daily' };
   }
 
   function setToggle(button, collapsed, what) {
@@ -490,14 +564,17 @@
 
   // ── Cuadro de cada campana ───────────────────────────────────────────────
   // Cada objetivo (la "campana" del reporte) tiene su cuadro: KPIs contra el mes anterior, su grafico y sus
-  // conjuntos de anuncios. Indicadores, vista y minimizado se recuerdan por objetivo.
+  // conjuntos de anuncios. Indicadores, vista, un solo cuadro y minimizado se recuerdan por objetivo.
   function campaignSettings(key) {
     const saved = state.campaignCharts[key] || {};
     const metrics = CAMPAIGN_METRICS.map(item => item.key).filter(metricKey => Array.isArray(saved.metrics) && saved.metrics.includes(metricKey));
     return {
       metrics: metrics.length ? metrics : DEFAULT_CAMPAIGN_METRICS,
-      mode: MODES.some(item => item.key === saved.mode) ? saved.mode : 'cumulative',
+      // Abre por dia; una vista guardada en el acumulado (ya no se ofrece) vuelve a Por dia.
+      mode: MODES.some(item => item.key === saved.mode) ? saved.mode : 'daily',
       collapsed: saved.collapsed === true,
+      // Varios indicadores en un solo cuadro (cada uno con su escala) en vez de paneles apilados.
+      combined: saved.combined === true,
     };
   }
 
@@ -635,22 +712,34 @@
     if (!block || !objective || !month) return;
     const settings = campaignSettings(key);
     const { modes, modeKey } = chartModes(settings.mode, period.annual);
-    const metrics = CAMPAIGN_METRICS.map(item => ({ ...item, label: item.key === 'results' ? objective.resultLabel : item.label, color: objective.color, group: key }));
+    const metrics = CAMPAIGN_METRICS.map(item => ({
+      ...item,
+      label: item.key === 'results' ? objective.resultLabel : item.label,
+      color: objective.color,
+      combinedColor: !item.color ? objective.color : item.color === objective.color ? COMBINED_ALT_COLOR : item.color,
+      group: key,
+    }));
     const selected = metrics.filter(item => settings.metrics.includes(item.key));
+    const combined = settings.combined && selected.length > 1;
     block.classList.toggle('is-collapsed', settings.collapsed);
     setToggle(block.querySelector('[data-campaign-toggle]'), settings.collapsed, `la campaña ${objective.label}`);
     replaceHtml(block.querySelector('[data-campaign-modes]'), chipsHtml(modes, modeKey, `campaign-mode-${key}`, 'var(--brand-text)'));
-    replaceHtml(block.querySelector('[data-campaign-metrics]'), chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true));
+    // El boton de un solo cuadro aparece con dos o mas indicadores marcados.
+    const combineButton = selected.length > 1
+      ? `<button type="button" class="series-toggle campaign-chip campaign-combine${combined ? ' active' : ''}" data-campaign-combine aria-pressed="${combined}" title="${combined ? 'Volver a un panel por indicador' : 'Juntar los indicadores en un solo cuadro'}">Un solo cuadro</button>`
+      : '';
+    replaceHtml(block.querySelector('[data-campaign-metrics]'), chipsHtml(metrics, settings.metrics, `campaign-metric-${key}`, null, true) + combineButton);
     if (settings.collapsed) {
       destroyChart(key);
       return;
     }
-    const series = campaignSeries(selected, modeKey, month);
+    const series = campaignSeries(selected, modeKey, month, combined);
     const canvas = block.querySelector('canvas');
-    // Cada panel extra suma alto para que ninguno quede aplastado. Sin Chart.js el canvas ya es el aviso.
-    if (canvas) canvas.parentElement.style.height = selected.length > 1 ? `${90 + 135 * selected.length}px` : '';
+    // Cada panel extra suma alto para que ninguno quede aplastado; en un solo cuadro, algo mas de alto para las
+    // etiquetas. Sin Chart.js el canvas ya es el aviso.
+    if (canvas) canvas.parentElement.style.height = combined ? '380px' : selected.length > 1 ? `${90 + 135 * selected.length}px` : '';
     block.querySelector('[data-campaign-legend]').innerHTML = series.legend.join('');
-    drawLineChart(key, canvas, series, selected, modeKey);
+    drawLineChart(key, canvas, series, selected, modeKey, combined);
   }
 
   function renderCampaigns(period, objectives) {
@@ -1147,7 +1236,7 @@
       state.historyStatus = input.value;
       renderHistory();
     });
-    // Indicadores, vista y minimizado de cada cuadro de campana.
+    // Indicadores, vista, un solo cuadro y minimizado de cada cuadro de campana.
     const campaigns = document.getElementById('campaign-blocks');
     campaigns?.addEventListener('change', event => {
       const input = event.target.closest('input');
@@ -1164,9 +1253,11 @@
       renderCampaignChart(key);
     });
     campaigns?.addEventListener('click', event => {
-      const key = event.target.closest('[data-campaign-toggle]')?.closest('.campaign-block')?.dataset.objective;
+      const combine = event.target.closest('[data-campaign-combine]');
+      const key = (combine || event.target.closest('[data-campaign-toggle]'))?.closest('.campaign-block')?.dataset.objective;
       if (!key) return;
-      saveCampaignSettings(key, { collapsed: !campaignSettings(key).collapsed });
+      // "Un solo cuadro" junta o separa los indicadores; el chevron minimiza o expande el cuadro.
+      saveCampaignSettings(key, combine ? { combined: !campaignSettings(key).combined } : { collapsed: !campaignSettings(key).collapsed });
       renderCampaignChart(key);
     });
     document.getElementById('ads-objective')?.addEventListener('change', event => {

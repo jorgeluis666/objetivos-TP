@@ -2178,6 +2178,16 @@ body.tp-table-fullscreen {
   margin: -4px 0 14px;
 }
 
+/* Boton "Un solo cuadro": al final de los indicadores, separado de las casillas. */
+.campaign-combine {
+  margin-left: auto;
+}
+
+.campaign-combine:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--campaign-color) 22%, transparent);
+}
+
 .campaign-block .chart-controls {
   flex-wrap: wrap;
   justify-content: flex-end;

@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.30.2`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.31.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -27,18 +27,23 @@ El proyecto usa la nomenclatura `vMAJOR.MINOR.PATCH`:
   - Las campanas en un solo marco: arriba la distribucion de inversion por campana y debajo un cuadro por
     campana (objetivo: Interaccion, Notoriedad, Pedidos WhatsApp, Trafico...): KPIs con su variacion contra
     el mes anterior (resultado, inversion, costo por resultado, alcance, impresiones y CPM), su propio
-    grafico (acumulado del mes, por dia o por mes), la tabla de sus conjuntos de anuncios
+    grafico (por dia o por mes; sin acumulado del mes, que siempre sube y exagera el crecimiento), la tabla
+    de sus conjuntos de anuncios
     (resultados contra el mes anterior, costo por resultado, inversion, % de la campana, impresiones,
     alcance, CPM, clics y anuncios activos) y al final la tabla de sus anuncios, de mas a menos resultados,
     con la estrella en el lider, el nombre con enlace a la vista previa, resultados contra el mes anterior,
     costo por resultado, inversion y % de la campana, impresiones, alcance, CPM, clics y dias activos (la
     columna Conjunto aparece si la campana tiene mas de uno). Cada cuadro se minimiza con el boton de la
-    derecha y recuerda sus indicadores, su vista y si esta minimizado.
-  - Indicadores del grafico de cada campana: resultado, inversion, impresiones y alcance, se puede marcar mas
-    de uno (por defecto resultado + inversion, para leer como responde el objetivo al gasto). Con uno solo va
+    derecha y recuerda sus indicadores, su vista, si van en un solo cuadro y si esta minimizado.
+  - Indicadores del grafico de cada campana: resultado, inversion, impresiones, alcance y costo por resultado
+    (inversion / resultados de cada dia o mes; un dia sin resultados queda como hueco), se puede marcar mas
+    de uno (por defecto resultado + inversion, para leer como responde el objetivo al gasto). Cada punto lleva
+    su valor (si dos etiquetas chocan, una baja bajo el punto o queda solo en el tooltip). Con uno solo va
     contra el mes anterior en el mismo dia; con varios no hay comparacion y cada uno va en su propio panel,
     apilados sobre el mismo eje de dias, con una linea vertical y un tooltip con todos los valores del dia.
-    No se superponen dos escalas en un mismo panel: los cruces entre lineas de distinta escala no significan nada.
+    No se superponen dos escalas a la vista: los cruces entre lineas de distinta escala no significan nada. Con
+    el boton `Un solo cuadro` los indicadores marcados van juntos, un color por indicador y cada uno con su
+    escala sin eje visible (se compara la forma y el valor se lee en el punto).
 - Anuncios: Meta Ads por anuncio, en el menu justo despues de Gasto publicitario. Usa los mismos datos,
   periodos y comparaciones, y comparte el mes elegido: cambiar de mes en una vista hace que la otra se repinte
   al abrirse.
