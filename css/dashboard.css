@@ -2613,7 +2613,10 @@ body.tp-table-fullscreen {
   font-weight: 800;
 }
 
+/* Con la pieza debajo la tarjeta envuelve, asi que el cuerpo tiene que encoger al lado del numero
+   en vez de caer a la linea siguiente: sin el flex, un nombre largo empujaba el titulo hacia abajo. */
 .ad-top-body {
+  flex: 1 1 0;
   min-width: 0;
 }
 
