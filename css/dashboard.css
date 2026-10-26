@@ -1873,6 +1873,17 @@ body.modal-open {
   margin-bottom: 4px;
 }
 
+/* Los KPIs de proyeccion son dos fijos mas uno por objetivo: con cuatro objetivos pasan de los cinco
+   de .kpi-strip y el ultimo caia solo a una segunda fila. En pantalla ancha van todos en una,
+   repartiendose el ancho; mas abajo mandan las reglas de .kpi-strip y vuelven a envolver. */
+@media (min-width: 1181px) {
+  .projection-kpis {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: none;
+  }
+}
+
 .projection-panel {
   margin-top: 20px;
   padding: 20px;
