@@ -273,6 +273,37 @@
     };
   }
 
+  // Las piezas de "06 Artes" del barrido, por la clave con la que un anuncio encuentra la suya (el
+  // nombre del archivo sin extension, sin "(Carrusel)", sin tildes ni signos). Solo hay pieza de
+  // algunos anuncios: el que no la tenga se pinta igual, sin miniatura.
+  function normalizeArtes(raw) {
+    const source = raw?.piezas && typeof raw.piezas === 'object' ? raw.piezas : {};
+    const piezas = {};
+    Object.keys(source).forEach(key => {
+      const pieza = source[key];
+      if (!pieza) return;
+      const id = /^[A-Za-z0-9_-]+$/.test(String(pieza.id || '')) ? String(pieza.id) : '';
+      const laminas = (Array.isArray(pieza.laminas) ? pieza.laminas : [])
+        .map(String).filter(lamina => /^[A-Za-z0-9_-]+$/.test(lamina));
+      if (!id && !laminas.length) return;
+      piezas[key] = {
+        tipo: String(pieza.tipo || ''),
+        nombre: String(pieza.nombre || ''),
+        campana: String(pieza.campana || ''),
+        id,
+        laminas,
+        ordenIncierto: Boolean(pieza.ordenIncierto),
+      };
+    });
+    return {
+      folder: raw?.folder && typeof raw.folder === 'object'
+        ? { id: String(raw.folder.id || ''), name: String(raw.folder.name || ''), url: String(raw.folder.url || '') }
+        : null,
+      piezas,
+      error: raw?.error ? String(raw.error) : '',
+    };
+  }
+
   function normalizeReports(raw) {
     const files = Array.isArray(raw?.files) ? raw.files : [];
     return {
@@ -332,6 +363,7 @@
       dataEnd: latest && latest.lastDay ? `${latest.key}-${String(latest.lastDay).padStart(2, '0')}` : null,
       ignored: Array.isArray(payload.ignored) ? payload.ignored.map(item => ({ fileName: String(item?.fileName || ''), reason: String(item?.reason || '') })) : [],
       reports: normalizeReports(payload.reports),
+      artes: normalizeArtes(payload.artes),
     };
   }
 
