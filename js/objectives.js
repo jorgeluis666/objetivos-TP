@@ -200,7 +200,68 @@
     if (!id) return '';
     const etiqueta = arte.tipo === 'carrusel' ? 'Carrusel' : arte.tipo === 'video' ? 'Video' : 'Imagen';
     return `<img class="ad-thumb" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160"
-      alt="" loading="lazy" title="${esc(arte.nombre)} · ${etiqueta}">`;
+      alt="" loading="lazy" referrerpolicy="no-referrer" title="${esc(arte.nombre)} · ${etiqueta}">`;
+  }
+
+  // La pieza grande de las tarjetas del Top 3, como en Royal Baby: la miniatura de Drive hace de
+  // portada y el reproductor se carga al hacer clic. Drive rechaza la miniatura si la peticion lleva
+  // el referer del tablero, de ahi el referrerpolicy. Un carrusel muestra su primera lamina y el
+  // clic pasa a la siguiente, en vez de abrir el reproductor.
+  const sinArte = '<div class="ad-arte-media is-empty"><span>Sin arte</span></div>';
+  const arteImg = (id, sz) => `<img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&amp;sz=w${sz}" alt="" loading="lazy" referrerpolicy="no-referrer">`;
+
+  function arteMedia(ad) {
+    const arte = arteDe(ad);
+    if (!arte) return sinArte;
+    const laminas = arte.laminas || [];
+    if (arte.tipo === 'carrusel' && laminas.length > 1) {
+      return `<div class="ad-arte-media">
+          <button type="button" class="ad-arte-poster is-carrusel" data-slides="${esc(laminas.join(','))}" data-slide="0" aria-label="Siguiente lámina de ${esc(arte.nombre)}">
+            ${arteImg(laminas[0], 480)}<span class="ad-arte-slide-count" aria-hidden="true">1/${laminas.length}</span>
+          </button>
+        </div>`;
+    }
+    const id = arte.id || laminas[0];
+    if (!id) return sinArte;
+    // Una imagen no tiene nada que reproducir: se deja la pieza, sin boton.
+    if (arte.tipo !== 'video') return `<div class="ad-arte-media">${arteImg(id, 480)}</div>`;
+    return `<div class="ad-arte-media">
+        <button type="button" class="ad-arte-poster" data-arte="${esc(id)}" aria-label="Reproducir ${esc(arte.nombre)}">
+          ${arteImg(id, 480)}<span class="ad-arte-play" aria-hidden="true">&#9654;</span>
+        </button>
+      </div>`;
+  }
+
+  // Drive no deja reproducir sus videos fuera de su reproductor, y ese reproductor se descuadra en
+  // marcos angostos (franja negra, controles cortados). Se pinta a 360x640, donde encaja justo en
+  // 9:16, y se escala al ancho del marco.
+  const DRIVE_PLAYER = { width: 360, height: 640 };
+
+  function reproducirArte(poster) {
+    const box = poster.closest('.ad-arte-media');
+    if (!box) return;
+    const frame = document.createElement('iframe');
+    frame.src = `https://drive.google.com/file/d/${encodeURIComponent(poster.dataset.arte)}/preview`;
+    frame.title = poster.getAttribute('aria-label') || 'Arte del anuncio';
+    frame.allow = 'autoplay; fullscreen';
+    frame.allowFullscreen = true;
+    frame.className = 'ad-arte-player';
+    frame.style.width = `${DRIVE_PLAYER.width}px`;
+    frame.style.height = `${DRIVE_PLAYER.height}px`;
+    const ajustar = () => { frame.style.transform = `scale(${box.clientWidth / DRIVE_PLAYER.width})`; };
+    poster.remove();
+    box.appendChild(frame);
+    ajustar();
+    window.addEventListener('resize', ajustar);
+  }
+
+  function pasarLamina(poster) {
+    const laminas = String(poster.dataset.slides || '').split(',').filter(Boolean);
+    if (laminas.length < 2) return;
+    const siguiente = (Number(poster.dataset.slide || 0) + 1) % laminas.length;
+    poster.dataset.slide = String(siguiente);
+    poster.querySelector('img').src = `https://drive.google.com/thumbnail?id=${encodeURIComponent(laminas[siguiente])}&sz=w480`;
+    poster.querySelector('.ad-arte-slide-count').textContent = `${siguiente + 1}/${laminas.length}`;
   }
 
   // Dias activos del anuncio: "3-18 Sep" en un mes, rango de fechas en la vista anual.
@@ -860,6 +921,7 @@
           <div class="ad-top-value">${fmt('count', ad.results)}<small>${esc(ad.resultLabel)}</small></div>
           <div class="ad-top-meta">${fmt('unitCost', ad.costPerResult)} por resultado · ${fmt('money', ad.spend)} de inversión</div>
         </div>
+        <div class="ad-top-arte">${arteMedia(ad)}</div>
       </div>`).join('')}</div>`;
   }
 
@@ -1329,10 +1391,22 @@
     });
   }
 
+  // Las piezas se repintan con cada barrido, asi que el clic se escucha en el documento y no en cada
+  // tarjeta: un carrusel pasa de lamina, un video abre el reproductor de Drive.
+  function wireArtes() {
+    document.addEventListener('click', event => {
+      const poster = event.target.closest?.('.ad-arte-poster');
+      if (!poster) return;
+      if (poster.classList.contains('is-carrusel')) pasarLamina(poster);
+      else if (poster.dataset.arte) reproducirArte(poster);
+    });
+  }
+
   function init() {
     if (state.wired || !window.TPData) return;
     state.wired = true;
     wireEvents();
+    wireArtes();
     renderAll();
   }
 

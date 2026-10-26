@@ -464,6 +464,117 @@ select {
   background: #f8fafc;
 }
 
+/* La pieza grande, debajo de las cifras de cada tarjeta del Top 3. Como en Royal Baby. */
+.ad-top-card:has(.ad-top-arte) {
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.ad-top-arte {
+  flex-basis: 100%;
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.ad-arte-media {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 230px;
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.ad-arte-media > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ad-arte-media.is-empty {
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* El reproductor de Drive se pinta a 360x640 y objectives.js lo escala al ancho del marco. */
+.ad-arte-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: 0 0;
+}
+
+.ad-arte-poster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.ad-arte-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ad-arte-poster:focus-visible {
+  outline: 3px solid var(--brand-border);
+  outline-offset: -3px;
+}
+
+.ad-arte-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .72);
+  color: #fff;
+  font-size: 17px;
+  transform: translate(-50%, -50%);
+  transition: background .15s ease;
+}
+
+.ad-arte-poster:hover .ad-arte-play {
+  background: var(--brand);
+}
+
+/* Carrusel: en vez del play, la lamina en la que va. El clic pasa a la siguiente. */
+.ad-arte-slide-count {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background .15s ease;
+}
+
+.ad-arte-poster.is-carrusel:hover .ad-arte-slide-count {
+  background: var(--brand);
+}
+
 .date-col {
   white-space: nowrap;
   font-size: 10px;
