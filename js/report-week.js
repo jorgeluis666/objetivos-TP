@@ -97,32 +97,64 @@
   // ── Meses del selector ─────────────────────────────────────────────────
   const activity = row => Number(row.spend) > 0 || Number(row.impressions) > 0;
 
-  // Un mes contra el mismo tramo del mes anterior, con el periodo que ya usa Gasto publicitario
-  // (metrics.period: el mes en curso hasta el ultimo dia con datos, un mes cerrado completo).
+  // Un mes, o un tramo acumulado suyo, contra el mismo tramo de dias del mes anterior. El periodo
+  // base es el que ya usa Gasto publicitario (metrics.period: el mes en curso hasta el ultimo dia
+  // con datos, un mes cerrado completo).
   function monthPeriods() {
     const { metrics } = api();
     return (api().snapshot()?.months || [])
       .filter(month => month.hasData && !month.error)
       .reverse()
-      .map(month => {
+      .flatMap(month => {
         const period = metrics.period(month);
-        if (!period) return null;
-        const prev = period.compare;
+        if (!period) return [];
         // El primer mes con datos empieza el dia que arranco la pauta (Junio, desde el 15).
         const from = Math.max(period.from, month.firstDay || 1);
-        const range = `${from}–${period.to}`;
-        const prevFrom = prev ? Math.max(prev.from, prev.month.firstDay || 1) : 1;
-        const prevRange = prev ? `${prevFrom}–${prev.to}` : '';
-        const cur = month.name;
-        const before = prev ? prev.month.name : '';
-        const curTag = month.shortName.toLowerCase();
-        const prevTag = prev ? prev.month.shortName.toLowerCase() : '';
-        const same = prev && range === prevRange;
-        return {
-          id: `m:${month.key}`,
-          option: `${cur} ${month.year} · ${range}${prev ? ` vs ${before} ${prevRange}` : ''}`,
-          rows: period.rows,
-          prevRows: prev ? prev.rows : null,
+        return cutsOf(month, from, period.to)
+          .map(to => cutPeriod(month, period, from, to))
+          .filter(Boolean)
+          .reverse();
+      });
+  }
+
+  // Los cortes de un mes: cada domingo, que es el cierre de semana, y el ultimo dia con datos si no
+  // cae en domingo. Siempre acumulados desde el primer dia: en octubre de 2026 salen 1–4, 1–11,
+  // 1–18 y 1–25. Cada uno se compara con el mismo tramo de dias del mes anterior.
+  function cutsOf(month, from, last) {
+    const cuts = [];
+    for (let day = from; day <= last; day += 1) {
+      if (new Date(month.year, month.month - 1, day).getDay() === 0) cuts.push(day);
+    }
+    if (!cuts.length || cuts[cuts.length - 1] !== last) cuts.push(last);
+    return cuts;
+  }
+
+  function cutPeriod(month, period, from, to) {
+    const rows = month.rows.filter(row => row.d >= from && row.d <= to);
+    if (!rows.some(activity)) return null;
+    const compare = period.compare;
+    const prevFrom = compare ? Math.max(compare.from, compare.month.firstDay || 1) : 1;
+    const prevTo = compare ? Math.min(to, compare.month.daysInMonth) : 0;
+    const prevRows = compare ? compare.month.rows.filter(row => row.d >= prevFrom && row.d <= prevTo) : null;
+    // Sin entregas en el mismo tramo del mes anterior no hay con que comparar: el corte va solo.
+    const prev = prevRows && prevRows.some(activity) ? compare : null;
+    {
+      const range = `${from}–${to}`;
+      const prevRange = prev ? `${prevFrom}–${prevTo}` : '';
+      const cur = month.name;
+      const before = prev ? prev.month.name : '';
+      const curTag = month.shortName.toLowerCase();
+      const prevTag = prev ? prev.month.shortName.toLowerCase() : '';
+      const same = prev && range === prevRange;
+      const whole = to === period.to;
+      return {
+        id: `m:${month.key}:${to}`,
+        group: `${cur} ${month.year}`,
+        option: `${range}${whole ? ' · hasta el último día' : ''}${prev ? ` vs ${before} ${prevRange}` : ''}`,
+        rows,
+        prevRows: prev ? prevRows : null,
+        // Los dias del corte y los del tramo equivalente del mes anterior, para el acumulado diario.
+        span: { from, to, prevFrom: prev ? prevFrom : null, prevTo: prev ? prevTo : null },
           labels: {
             cover: prev ? `${cur} (${range}) vs ${before} (${prevRange})` : `${cur} (${range})`,
             compTitle: 'Comparativa mes a mes',
@@ -140,21 +172,20 @@
             prevRef: before.toLowerCase(),
             barCur: cur,
             barPrev: before,
-            chartSub: period.closed ? 'Meses completos.' : 'Mismo período comparado.',
-            chartRange: prev ? `${prevFrom}-${prev.to} ${before.toLowerCase()} vs ${from}-${period.to} ${cur.toLowerCase()}` : `${from}-${period.to} ${cur.toLowerCase()}`,
+            chartSub: `Acumulado del día ${from} al ${to} de cada mes.`,
+            chartRange: prev ? `${prevFrom}-${prevTo} ${before.toLowerCase()} vs ${from}-${to} ${cur.toLowerCase()}` : `${from}-${to} ${cur.toLowerCase()}`,
             source: `Fuente: Meta Ads · ${curTag} ${range}${prev ? ` vs ${prevTag} ${prevRange}` : ''}, ${month.year}`,
             footer: `${brandName()} · Reporte Meta Ads · ${prev ? `${cur} vs ${before}` : `${cur} ${month.year}`}`,
             contentsSub: 'Qué encontrarás en cada sección de este informe mensual.',
             conclusionsSub: 'Cómo evolucionó frente al mes anterior y qué priorizar.',
             conclusionsSource: `Fuente: análisis Lima Retail · ${brandName()} · ${cur.toLowerCase()} ${month.year}`,
-            windowNote: prev && same && !period.closed
-              ? `**Comparación de ventanas equivalentes:** ${cur.toLowerCase()} y ${before.toLowerCase()}, ambos del ${from} al ${period.to}. Las variaciones son indicativas del ritmo.`
+            windowNote: prev && same
+              ? `**Comparación de ventanas equivalentes:** ${cur.toLowerCase()} y ${before.toLowerCase()}, ambos del ${from} al ${to}. Las variaciones son indicativas del ritmo.`
               : '',
-            file: `${cur}${month.year}_${from}-${period.to}`,
+            file: `${cur}${month.year}_${from}-${to}`,
           },
-        };
-      })
-      .filter(Boolean);
+      };
+    }
   }
 
   // ── Secciones por objetivo ─────────────────────────────────────────────
@@ -182,16 +213,48 @@
     api().metrics.ads(rows).forEach(ad => {
       const key = normalize(ad.ad);
       const hit = byName.get(key);
-      if (!hit) byName.set(key, { name: ad.ad, spend: ad.spend, results: ad.results, preview: ad.preview });
+      if (!hit) byName.set(key, { name: ad.ad, spend: ad.spend, results: ad.results, preview: ad.preview, sets: new Set(ad.adSets || []) });
       else {
         hit.spend += ad.spend;
         hit.results += ad.results;
         hit.preview = hit.preview || ad.preview;
+        (ad.adSets || []).forEach(set => hit.sets.add(set));
       }
     });
-    return [...byName.values()]
+    // El primer dia con entrega de cada anuncio: en el modelo acompaña al formato ("desde el 4").
+    const firstDay = new Map();
+    (rows || []).forEach(row => {
+      const key = normalize(row.ad);
+      const day = Number(row.d);
+      if (!Number.isFinite(day)) return;
+      if (!firstDay.has(key) || day < firstDay.get(key)) firstDay.set(key, day);
+    });
+    return [...byName.entries()]
+      .map(([key, ad]) => ({
+        ...ad,
+        sets: [...ad.sets],
+        firstDay: firstDay.get(key) || null,
+        costPerResult: ad.results > 0 ? ad.spend / ad.results : null,
+      }))
       .sort((left, right) => right.results - left.results || right.spend - left.spend)
       .slice(0, MAX_ADS);
+  }
+
+  // ── La pieza de cada anuncio ("06 Artes", del barrido) ─────────────────
+  // Misma clave que el resto del tablero: sin extension, sin "(Carrusel)", sin tildes ni signos.
+  const arteKey = name => normalize(name)
+    .replace(/\s*\((carrusel|carousel)\)\s*$/, '')
+    .replace(/\.[a-z0-9]{2,5}$/, '')
+    .replace(/[^a-z0-9]+/g, '');
+
+  function arteDe(name) {
+    const piezas = api().snapshot()?.artes?.piezas;
+    return piezas ? piezas[arteKey(name)] || null : null;
+  }
+
+  function formatoDe(arte, ad) {
+    const tipo = !arte ? 'Sin pieza' : arte.tipo === 'carrusel' ? 'Carrusel' : arte.tipo === 'video' ? 'Video' : 'Imagen';
+    return ad.firstDay ? `${tipo} · desde el ${ad.firstDay}` : tipo;
   }
 
   function buildReport(period) {
@@ -207,7 +270,7 @@
         const prevRows = previous.get(section.key)?.rows || [];
         const prev = period.prevRows && prevRows.some(activity) ? metrics.summarize(prevRows) : null;
         const noun = section.noun || (metrics.objectives(rows)[0]?.resultLabel || 'resultados').toLowerCase();
-        return { ...section, noun, rows, cur, prev, ads: bestAds(rows), resultChange: prev ? change(cur.results, prev.results) : null };
+        return { ...section, noun, rows, prevRows, cur, prev, ads: bestAds(rows), resultChange: prev ? change(cur.results, prev.results) : null };
       })
       .filter(section => activity(section.cur))
       .sort((left, right) => order(left.key) - order(right.key) || right.cur.spend - left.cur.spend);
@@ -228,7 +291,7 @@
       reach: prevOverall.reach,
       impressions: prevOverall.impressions,
     } : null;
-    return { period, labels: period.labels, sections, totals, prevTotals, messages };
+    return { period, labels: period.labels, span: period.span, sections, totals, prevTotals, messages };
   }
 
   // ── Textos propuestos (el equipo los reescribe sobre la lamina) ─────────
@@ -387,50 +450,96 @@
   }
 
   // Barras del resultado: periodo anterior en gris y el actual en rojo, con el valor encima.
-  function barChart(section, labels) {
+  // El acumulado de cada dia dentro del tramo: el valor del dia 11 es todo lo que lleva el mes hasta
+  // el 11. Es la forma del modelo, y deja ver en que dia se despego una curva de la otra.
+  function cumulativeSeries(rows, from, to) {
+    if (!(to >= from)) return [];
+    const perDay = new Array(to - from + 1).fill(0);
+    (rows || []).forEach(row => {
+      const index = row.d - from;
+      if (index >= 0 && index < perDay.length) perDay[index] += Number(row.results) || 0;
+    });
+    let total = 0;
+    return perDay.map(value => (total += value));
+  }
+
+  function barChart(section, labels, span) {
     const { esc } = api();
-    const current = section.cur.results;
-    const previous = section.prev ? section.prev.results : null;
-    const top = 50;
-    const bottom = 178;
+    const from = span?.from || 1;
+    const to = span?.to || from;
+    const current = cumulativeSeries(section.rows, from, to);
+    const previous = span?.prevFrom ? cumulativeSeries(section.prevRows, span.prevFrom, span.prevTo) : [];
+    if (!current.length) return '<p class="rp-empty">Sin entregas en el período.</p>';
+
+    const top = 52;
+    const bottom = 170;
     const left = 46;
     const right = 600;
-    const max = Math.max(current, previous || 0) * 1.25 || 1;
+    const max = Math.max(...current, ...previous, 0) * 1.15 || 1;
+    const x = index => left + (current.length < 2 ? (right - left) / 2 : (index / (current.length - 1)) * (right - left));
     const y = value => bottom - (value / max) * (bottom - top);
     const grid = [0, 1 / 3, 2 / 3, 1].map(step => {
       const value = max * step;
       return `<line x1="${left}" x2="${right}" y1="${y(value)}" y2="${y(value)}" class="rp-grid"/><text x="${left - 6}" y="${y(value) + 3}" text-anchor="end" class="rp-tick">${step ? compact(value) : 0}</text>`;
     }).join('');
-    const bar = (value, center, className, label) => {
-      if (value == null) return `<text x="${center}" y="${bottom - 8}" text-anchor="middle" class="rp-bar-value prev">Sin datos</text><text x="${center}" y="${bottom + 15}" text-anchor="middle" class="rp-axis">${esc(label)}</text>`;
-      const height = Math.max(bottom - y(value), value > 0 ? 2 : 0);
-      return `
-        <rect x="${center - 76}" y="${bottom - height}" width="152" height="${height}" rx="3" class="rp-bar ${className}"/>
-        <text x="${center}" y="${bottom - height - 8}" text-anchor="middle" class="rp-bar-value ${className}">${compact(value)}</text>
-        <text x="${center}" y="${bottom + 15}" text-anchor="middle" class="rp-axis">${esc(label)}</text>`;
+    const line = (values, className) => {
+      if (!values.length) return '';
+      const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
+      const last = values[values.length - 1];
+      const lastX = x(values.length - 1);
+      return `<polyline class="rp-line ${className}" points="${points}"/>
+        <circle class="rp-dot ${className}" cx="${lastX.toFixed(1)}" cy="${y(last).toFixed(1)}" r="3.5"/>
+        <text x="${Math.min(lastX + 7, right).toFixed(1)}" y="${(y(last) - 7).toFixed(1)}" text-anchor="end" class="rp-bar-value ${className}">${compact(last)}</text>`;
     };
+    // Con muchos dias se etiqueta uno de cada tres, para que no se amontonen.
+    const step = current.length > 16 ? 3 : current.length > 9 ? 2 : 1;
+    const axis = current.map((value, index) => {
+      const day = from + index;
+      if (index % step && index !== current.length - 1) return '';
+      return `<text x="${x(index).toFixed(1)}" y="${bottom + 15}" text-anchor="middle" class="rp-axis">${day}</text>`;
+    }).join('');
+    const leyenda = labels.prevTag
+      ? `<text x="${right}" y="27" text-anchor="end" class="rp-chart-sub">${esc(labels.barCur)} ${compact(current[current.length - 1])} · ${esc(labels.barPrev)} ${previous.length ? compact(previous[previous.length - 1]) : 'sin datos'}</text>`
+      : '';
     return `
-      <svg class="rp-chart" viewBox="0 0 620 196" role="img" aria-label="${esc(section.short)}: ${esc(labels.barPrev || '')} ${previous == null ? '' : num(previous)} vs ${esc(labels.barCur)} ${num(current)}">
-        <text x="${left}" y="14" class="rp-chart-title">${esc(section.short)} · resultados</text>
-        <text x="${left}" y="27" class="rp-chart-sub">${esc(labels.chartRange)} (${esc(section.noun)})</text>
+      <svg class="rp-chart" viewBox="0 0 620 190" role="img" aria-label="${esc(section.short)}: acumulado ${esc(labels.chartRange)}">
+        <text x="${left}" y="14" class="rp-chart-title">${esc(section.noun.charAt(0).toUpperCase() + section.noun.slice(1))} acumulados por día</text>
+        <text x="${left}" y="27" class="rp-chart-sub">${esc(labels.chartSub)}</text>
+        ${leyenda}
         ${grid}
-        ${labels.prevTag ? bar(previous, left + (right - left) * .25, 'prev', labels.barPrev) : ''}
-        ${bar(current, left + (right - left) * (labels.prevTag ? .75 : .5), 'cur', labels.barCur)}
+        ${line(previous, 'prev')}
+        ${line(current, 'cur')}
+        ${axis}
       </svg>`;
   }
 
+  // Las tarjetas del modelo: la pieza arriba y, debajo, el conjunto, el formato y las tres cifras.
+  // La miniatura la sirve Drive y la pide el navegador, por eso la carpeta de artes va compartida
+  // por enlace; Drive la rechaza si la peticion lleva el referer del tablero.
   function adsTable(section) {
     const { esc, safeUrl } = api();
     if (!section.ads.length) return '<p class="rp-empty">Sin anuncios con entrega en el período.</p>';
-    return `
-      <table class="rp-table rp-ads">
-        <colgroup><col><col style="width:16%"><col style="width:27%"><col style="width:13%"></colgroup>
-        <thead><tr><th>Anuncio</th><th class="num">Gasto</th><th class="num">${esc(section.noun)}</th><th class="num">Ver</th></tr></thead>
-        <tbody>${section.ads.map((ad, index) => {
-          const url = safeUrl(ad.preview);
-          return `<tr${index === 0 ? ' class="rp-top"' : ''}><td class="rp-name" title="${esc(ad.name)}">${esc(ad.name)}</td><td class="num">${money(ad.spend)}</td><td class="num">${num(ad.results)}</td><td class="num">${url ? `<a href="${url}" target="_blank" rel="noopener">Ver »</a>` : '—'}</td></tr>`;
-        }).join('')}</tbody>
-      </table>`;
+    const titulo = section.noun.charAt(0).toUpperCase() + section.noun.slice(1);
+    return `<div class="rp-ad-cards">${section.ads.map(ad => {
+      const url = safeUrl(ad.preview);
+      const arte = arteDe(ad.name);
+      const id = arte ? (arte.tipo === 'carrusel' ? (arte.laminas || [])[0] : arte.id) : '';
+      return `
+        <article class="rp-ad-card">
+          ${id
+            ? `<img class="rp-ad-art" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&amp;sz=w320" alt="" loading="lazy" referrerpolicy="no-referrer">`
+            : '<div class="rp-ad-art is-empty"><span>Sin arte</span></div>'}
+          <div class="rp-ad-name" title="${esc(ad.name)}">${esc(ad.name)}</div>
+          <div class="rp-ad-meta">${esc(ad.sets.join(' / ') || 'Sin conjunto')}</div>
+          <div class="rp-ad-meta">${esc(formatoDe(arte, ad))}</div>
+          <dl class="rp-ad-figures">
+            <div><dt>Inversión</dt><dd>${money(ad.spend)}</dd></div>
+            <div><dt>${esc(titulo)}</dt><dd>${num(ad.results)}</dd></div>
+            <div><dt>Costo</dt><dd>${cost(ad.costPerResult)}</dd></div>
+          </dl>
+          ${url ? `<a class="rp-ad-link" href="${url}" target="_blank" rel="noopener">Ver anuncio »</a>` : ''}
+        </article>`;
+    }).join('')}</div>`;
   }
 
   // ── Laminas ────────────────────────────────────────────────────────────
@@ -474,6 +583,20 @@
       </section>`;
   }
 
+  // La ultima columna del modelo: que explica mejor el cambio de resultados de una campaña, si lo
+  // que movio la aguja fue la inversion o el costo por resultado. Gana el que mas vario.
+  function causeOf(section) {
+    if (!section.prev) return 'Campaña nueva';
+    if (section.resultChange == null) return '—';
+    const spendChange = change(section.cur.spend, section.prev.spend);
+    const costChange = change(section.cur.costPerResult, section.prev.costPerResult);
+    if (costChange == null && spendChange == null) return '—';
+    if (costChange != null && Math.abs(costChange) >= Math.abs(spendChange ?? 0)) {
+      return costChange < 0 ? 'Menor costo' : 'Mayor costo';
+    }
+    return (spendChange ?? 0) < 0 ? 'Menor inversión' : 'Mayor inversión';
+  }
+
   function comparisonPage(report, notes, page, total) {
     const { esc } = api();
     const { labels, totals, prevTotals, sections, messages } = report;
@@ -485,10 +608,14 @@
     const rows = sections.map(section => `
       <tr${section === leader ? ' class="rp-top"' : ''}>
         <td class="rp-name">${esc(section.short)}</td>
+        ${labels.prevTag ? `<td class="num">${section.prev ? money(section.prev.spend) : '—'}</td>` : ''}
+        <td class="num">${money(section.cur.spend)}</td>
         ${labels.prevTag ? `<td class="num">${section.prev ? num(section.prev.results) : '—'}</td>` : ''}
         <td class="num"><b>${num(section.cur.results)}</b></td>
         ${labels.prevTag ? `<td class="num">${section.resultChange == null ? '<span class="rp-delta muted">Nuevo</span>' : `<span class="rp-delta ${trendClass(section.resultChange)}">${arrow(section.resultChange)}${pct(section.resultChange)}</span>`}</td>` : ''}
+        ${labels.prevTag ? `<td class="num">${section.prev ? cost(section.prev.costPerResult) : '—'}</td>` : ''}
         <td class="num">${cost(section.cur.costPerResult)}</td>
+        ${labels.prevTag ? `<td>${esc(causeOf(section))}</td>` : ''}
       </tr>`).join('');
     const lectura = notes.lectura != null ? notes.lectura : suggestLectura(report);
     return `
@@ -504,7 +631,17 @@
           <div class="rp-card rp-table-card">
             <div class="rp-card-title">Resultados por objetivo · ${esc(labels.versus)}</div>
             <table class="rp-table">
-              <thead><tr><th>Objetivo</th>${labels.prevTag ? `<th class="num">${esc(labels.prevTag)}</th>` : ''}<th class="num">${esc(labels.curTag)}</th>${labels.prevTag ? '<th class="num">Variación</th>' : ''}<th class="num">Costo/result. ${esc(labels.curTag)}</th></tr></thead>
+              <thead><tr>
+                <th>Campaña</th>
+                ${labels.prevTag ? `<th class="num">Inv. ${esc(labels.prevTag)}</th>` : ''}
+                <th class="num">Inv. ${esc(labels.curTag)}</th>
+                ${labels.prevTag ? `<th class="num">Result. ${esc(labels.prevTag)}</th>` : ''}
+                <th class="num">Result. ${esc(labels.curTag)}</th>
+                ${labels.prevTag ? '<th class="num">Var.</th>' : ''}
+                ${labels.prevTag ? `<th class="num">Costo ${esc(labels.prevTag)}</th>` : ''}
+                <th class="num">Costo ${esc(labels.curTag)}</th>
+                ${labels.prevTag ? '<th>Causa principal</th>' : ''}
+              </tr></thead>
               <tbody>${rows}</tbody>
             </table>
             <div class="rp-table-foot">Inversión total: ${money(totals.spend)} (${esc(labels.curTag)})${prevTotals ? ` vs ${money(prevTotals.spend)} (${esc(labels.prevTag)})` : ''}.</div>
@@ -536,7 +673,7 @@
             <div class="rp-card rp-chart-card">
               <div class="rp-card-title">Resultados: ${api().esc(labels.prevTag ? `${labels.curTag} vs ${labels.prevTag}` : labels.curTag)}</div>
               <div class="rp-card-sub">${api().esc(labels.chartSub)}</div>
-              ${barChart(section, labels)}
+              ${barChart(section, labels, report.span)}
             </div>
             <div class="rp-card rp-table-card">
               <div class="rp-card-title">Mejores anuncios</div>
@@ -626,8 +763,16 @@
     const period = available.find(item => item.id === selectedPeriod);
 
     if (select) {
-      select.innerHTML = available
-        .map(item => `<option value="${esc(item.id)}"${item.id === selectedPeriod ? ' selected' : ''}>${esc(item.option)}</option>`).join('');
+      // Un grupo por mes y, dentro, sus cortes acumulados: 1–4, 1–11, 1–18, 1–25.
+      const groups = [];
+      available.forEach(item => {
+        const last = groups[groups.length - 1];
+        if (last && last.label === item.group) last.items.push(item);
+        else groups.push({ label: item.group, items: [item] });
+      });
+      select.innerHTML = groups.map(group => `<optgroup label="${esc(group.label)}">${group.items
+        .map(item => `<option value="${esc(item.id)}"${item.id === selectedPeriod ? ' selected' : ''}>${esc(item.option)}</option>`)
+        .join('')}</optgroup>`).join('');
     }
 
     const model = modelReport();

@@ -3644,6 +3644,110 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   fill: var(--rp-red);
 }
 
+/* Acumulado por dia: el mes en curso en rojo sobre el mes anterior en gris. */
+.rp-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rp-line.prev {
+  stroke: #94a3b8;
+  stroke-dasharray: 4 3;
+}
+
+.rp-line.cur {
+  stroke: var(--rp-red);
+}
+
+.rp-dot.prev {
+  fill: #94a3b8;
+}
+
+.rp-dot.cur {
+  fill: var(--rp-red);
+}
+
+/* Mejores anuncios: una tarjeta por anuncio con su pieza arriba, como en el modelo. */
+.rp-ad-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  padding: 12px 18px 18px;
+}
+
+.rp-ad-card {
+  min-width: 0;
+}
+
+.rp-ad-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--rp-line);
+  border-radius: 6px;
+  object-fit: cover;
+  background: #0f172a;
+}
+
+.rp-ad-art.is-empty {
+  display: grid;
+  border-style: dashed;
+  background: #f8fafc;
+  color: var(--rp-faint);
+  font-size: 10px;
+  font-weight: 700;
+  place-items: center;
+}
+
+.rp-ad-name {
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  color: var(--rp-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rp-ad-meta {
+  margin-top: 2px;
+  color: var(--rp-muted);
+  font-size: 9.5px;
+  line-height: 1.3;
+}
+
+.rp-ad-figures {
+  margin: 6px 0 0;
+}
+
+.rp-ad-figures > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 1px 0;
+  font-size: 10px;
+}
+
+.rp-ad-figures dt {
+  color: var(--rp-muted);
+}
+
+.rp-ad-figures dd {
+  margin: 0;
+  color: var(--rp-ink);
+  font-weight: 700;
+}
+
+.rp-ad-link {
+  display: inline-block;
+  margin-top: 5px;
+  color: var(--rp-blue);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .rp-bar-value {
   font-size: 9px;
   font-weight: 700;
