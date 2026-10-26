@@ -1,15 +1,23 @@
 // Web App del tablero de Terminal Pesquero. Proyecto independiente de script.google.com.
 // Al cambiar este archivo: pegarlo en el proyecto y Implementar > Administrar implementaciones > editar > Nueva version.
-// DATA_FOLDER_ID: un Google Sheet por mes, descarga directa de Meta Ads ("Raw Data Report": una fila por
-// dia x edad x sexo x anuncio). Nombre: "Terminal Pesquero - Septiembre 2026".
-// REPORTS_FOLDER_ID: reportes (PDF / video) del modulo Archivo de Reportes.
-// ARTES_FOLDER_ID: una subcarpeta por campana y, dentro, la pieza de cada anuncio (un archivo suelto,
-// o una subcarpeta "<anuncio> (Carrusel)" con una imagen por lamina). El tablero las pide a Drive con
-// drive.google.com/thumbnail, asi que esa carpeta tiene que estar compartida por enlace.
+//
+// Las carpetas que lee van en las propiedades del script (Configuracion del proyecto > Propiedades
+// del script), no aqui: este repositorio es publico y un id deja ver que marcas atiende la agencia y
+// como esta armado su Drive. Las cuatro propiedades, con el nombre exacto:
+//
+//   DATA_FOLDER_ID     01 Meta Ads. Una hoja de Google por mes, descarga directa de Meta Ads
+//                      ("Raw Data Report": una fila por dia x edad x sexo x anuncio).
+//                      Nombre del archivo: "Terminal Pesquero - Septiembre 2026".
+//   REPORTS_FOLDER_ID  04 Reportes. Los PDF y videos del modulo Archivo de Reportes.
+//   ARTES_FOLDER_ID    06 Artes. Una subcarpeta por campana y, dentro, la pieza de cada anuncio (un
+//                      archivo suelto, o una subcarpeta "<anuncio> (Carrusel)" con una imagen por
+//                      lamina). El tablero las pide a Drive con drive.google.com/thumbnail, asi que
+//                      esa carpeta tiene que estar compartida por enlace.
+//   REACH_SHEET_ID     La hoja de alcance unico. Opcional: sin ella se muestra el alcance sumado.
+//
+// Los ids estan en la hoja "Conexiones Drive Dashboard", pestaña Subcarpetas.
+//
 // GET ?action=data -> ultimo barrido | ?action=data&fresh=1 -> barrido en el momento (boton Actualizar).
-const DATA_FOLDER_ID = '1EVeILJ9UBCMpbe5DUyiyoSOSsJ8woLx7';
-const REPORTS_FOLDER_ID = '19IDo_fygI4JRfHvs665wGmAZ7egbDeiO';
-const ARTES_FOLDER_ID = '1J4gzRbZsQlIeOxtazzcG1o55OyP0FE_P';
 const TIMEZONE = 'America/Lima';
 const SWEEP_HOUR = 10;
 const SWEEP_HANDLER = 'sweepScheduled';
@@ -43,6 +51,16 @@ const REQUIRED_RAW = ['day', 'ad', 'spend', 'impressions', 'reach', 'results', '
 const SUM_FIELDS = ['spend', 'impressions', 'reach', 'clicks', 'results'];
 // Filas que devuelve el Web App: una por dia x campana x conjunto x anuncio (se suman edad y sexo).
 const OUTPUT_COLUMNS = ['day', 'campaign', 'adSet', 'ad', 'resultType'].concat(SUM_FIELDS, ['preview']);
+
+// Las carpetas vienen de las propiedades del script, nunca del codigo (ver la cabecera). Si falta
+// una obligatoria se para aqui con un mensaje claro, en vez de fallar mas adelante sin decir por que.
+function carpetaId_(nombre, obligatoria) {
+  const valor = (PropertiesService.getScriptProperties().getProperty(nombre) || '').trim();
+  if (!valor && obligatoria) {
+    throw new Error('Falta la propiedad de script ' + nombre + '. Configuracion del proyecto > Propiedades del script.');
+  }
+  return valor;
+}
 
 function doGet(event) {
   try {
@@ -138,7 +156,7 @@ function sweep_(origin) {
 // Un archivo por mes: si hay varios del mismo mes se usa el editado mas recientemente y se avisa.
 // Un mes ya cerrado cuyo archivo no cambio desde el barrido anterior reutiliza sus filas sin abrir la hoja.
 function readMonths_(previous) {
-  const files = DriveApp.getFolderById(DATA_FOLDER_ID).getFiles();
+  const files = DriveApp.getFolderById(carpetaId_('DATA_FOLDER_ID', true)).getFiles();
   const byMonth = {};
   const ignored = [];
   while (files.hasNext()) {
@@ -273,7 +291,7 @@ function toNumber_(value) {
 }
 
 function readReports_() {
-  const folder = DriveApp.getFolderById(REPORTS_FOLDER_ID);
+  const folder = DriveApp.getFolderById(carpetaId_('REPORTS_FOLDER_ID', true));
   const files = folder.getFiles();
   const list = [];
   while (files.hasNext()) {
@@ -299,7 +317,7 @@ function readReports_() {
 // Columnas: Desde | Hasta | Ambito | Alcance | Frecuencia. Ambito es "(cuenta)" o el nombre exacto
 // de la campaña.
 function readReach_() {
-  const id = PropertiesService.getScriptProperties().getProperty('REACH_SHEET_ID');
+  const id = carpetaId_('REACH_SHEET_ID', false);
   if (!id) return { ventanas: {} };
   const values = SpreadsheetApp.openById(id).getSheets()[0].getDataRange().getValues();
   const ventanas = {};
@@ -349,7 +367,7 @@ function addArtesOf_(folder, campana, piezas) {
 }
 
 function readArtes_() {
-  const root = DriveApp.getFolderById(ARTES_FOLDER_ID);
+  const root = DriveApp.getFolderById(carpetaId_('ARTES_FOLDER_ID', true));
   const piezas = {};
   addArtesOf_(root, '', piezas);
 
