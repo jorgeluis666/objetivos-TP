@@ -451,6 +451,19 @@ select {
   white-space: nowrap;
 }
 
+/* La pieza del anuncio, de "06 Artes". Vertical (4:5) porque casi todas son reels o historias.
+   Si Drive no la sirve, el alt vacio deja el hueco y el nombre no se mueve. */
+.ad-thumb {
+  width: 28px;
+  height: 35px;
+  margin-right: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  object-fit: cover;
+  vertical-align: middle;
+  background: #f8fafc;
+}
+
 .date-col {
   white-space: nowrap;
   font-size: 10px;

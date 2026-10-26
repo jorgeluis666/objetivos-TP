@@ -3,9 +3,13 @@
 // DATA_FOLDER_ID: un Google Sheet por mes, descarga directa de Meta Ads ("Raw Data Report": una fila por
 // dia x edad x sexo x anuncio). Nombre: "Terminal Pesquero - Septiembre 2026".
 // REPORTS_FOLDER_ID: reportes (PDF / video) del modulo Archivo de Reportes.
+// ARTES_FOLDER_ID: una subcarpeta por campana y, dentro, la pieza de cada anuncio (un archivo suelto,
+// o una subcarpeta "<anuncio> (Carrusel)" con una imagen por lamina). El tablero las pide a Drive con
+// drive.google.com/thumbnail, asi que esa carpeta tiene que estar compartida por enlace.
 // GET ?action=data -> ultimo barrido | ?action=data&fresh=1 -> barrido en el momento (boton Actualizar).
 const DATA_FOLDER_ID = '1EVeILJ9UBCMpbe5DUyiyoSOSsJ8woLx7';
 const REPORTS_FOLDER_ID = '19IDo_fygI4JRfHvs665wGmAZ7egbDeiO';
+const ARTES_FOLDER_ID = '1J4gzRbZsQlIeOxtazzcG1o55OyP0FE_P';
 const TIMEZONE = 'America/Lima';
 const SWEEP_HOUR = 10;
 const SWEEP_HANDLER = 'sweepScheduled';
@@ -107,7 +111,15 @@ function sweep_(origin) {
       console.error(error);
       reports = Object.assign({}, previous ? previous.reports : { folder: null, files: [] }, { error: 'No se pudo leer la carpeta de reportes.' });
     }
-    const snapshot = { version: SWEEP_VERSION, sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports };
+    // Las piezas son accesorias: si su carpeta falla, el barrido sigue con los meses y los reportes.
+    let artes;
+    try {
+      artes = readArtes_();
+    } catch (error) {
+      console.error(error);
+      artes = Object.assign({}, previous ? previous.artes : { folder: null, piezas: {} }, { error: 'No se pudo leer la carpeta de artes.' });
+    }
+    const snapshot = { version: SWEEP_VERSION, sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports, artes };
     writeSnapshot_(snapshot);
     return snapshot;
   } finally {
@@ -265,6 +277,74 @@ function readReports_() {
     });
   }
   return { folder: { id: folder.getId(), name: folder.getName(), url: folder.getUrl() }, files: list };
+}
+
+// ── Artes: la pieza de cada anuncio ──────────────────────────────────────────
+// Devuelve { folder, piezas: { "<clave>": {tipo, nombre, campana, id | laminas} } }. La clave es el
+// nombre del archivo sin extension, sin el "(Carrusel)" del final, sin tildes y sin signos: la misma
+// que arteKey() del tablero, para que un anuncio encuentre su pieza aunque Meta escriba el nombre con
+// otra puntuacion. Una pieza suelta en la raiz de la carpeta tambien vale.
+const CARRUSEL_RE = /\s*\((carrusel|carousel)\)\s*$/i;
+
+function arteKey_(name) {
+  return String(name || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(CARRUSEL_RE, '')
+    .replace(/\.[A-Za-z0-9]{2,5}$/, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+// Los archivos sueltos de una carpeta, como piezas de un solo archivo.
+function addArtesOf_(folder, campana, piezas) {
+  const files = folder.getFiles();
+  while (files.hasNext()) {
+    const file = files.next();
+    if (file.isTrashed()) continue;
+    const mime = String(file.getMimeType() || '');
+    const tipo = mime.indexOf('video/') === 0 ? 'video' : mime.indexOf('image/') === 0 ? 'imagen' : '';
+    if (!tipo) continue;
+    const clave = arteKey_(file.getName());
+    if (!clave || piezas[clave]) continue; // la primera que aparece se queda
+    piezas[clave] = { tipo: tipo, nombre: file.getName(), campana: campana, id: file.getId() };
+  }
+}
+
+function readArtes_() {
+  const root = DriveApp.getFolderById(ARTES_FOLDER_ID);
+  const piezas = {};
+  addArtesOf_(root, '', piezas);
+
+  const campaigns = root.getFolders();
+  while (campaigns.hasNext()) {
+    const campaign = campaigns.next();
+    if (campaign.isTrashed()) continue;
+    const campana = campaign.getName();
+    addArtesOf_(campaign, campana, piezas);
+
+    // Solo una subcarpeta "(Carrusel)" es un anuncio; cualquier otra se ignora.
+    const subs = campaign.getFolders();
+    while (subs.hasNext()) {
+      const sub = subs.next();
+      if (sub.isTrashed() || !CARRUSEL_RE.test(sub.getName())) continue;
+      const laminas = [];
+      const images = sub.getFiles();
+      while (images.hasNext()) {
+        const image = images.next();
+        if (image.isTrashed() || String(image.getMimeType() || '').indexOf('image/') !== 0) continue;
+        laminas.push({ id: image.getId(), nombre: image.getName() });
+      }
+      // Las laminas no traen numero en el nombre: van alfabeticamente y el tablero lo advierte.
+      laminas.sort(function (a, b) { return a.nombre < b.nombre ? -1 : a.nombre > b.nombre ? 1 : 0; });
+      const clave = arteKey_(sub.getName());
+      if (!clave || piezas[clave]) continue;
+      piezas[clave] = {
+        tipo: 'carrusel', nombre: sub.getName().replace(CARRUSEL_RE, ''), campana: campana,
+        laminas: laminas.map(function (lamina) { return lamina.id; }), ordenIncierto: true,
+      };
+    }
+  }
+
+  return { folder: { id: root.getId(), name: root.getName(), url: root.getUrl() }, piezas: piezas };
 }
 
 // Si el nombre no trae ano se asume el ano en curso; si ese mes aun no llega, el ano anterior.

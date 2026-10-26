@@ -176,6 +176,33 @@
       : name;
   }
 
+  // ── La pieza del anuncio ("06 Artes", del barrido) ───────────────────────
+  // Misma clave que arteKey_() del Apps Script: sin extension, sin "(Carrusel)", sin tildes ni
+  // signos. Solo hay pieza de algunos anuncios; el que no la tenga se dibuja igual, sin miniatura.
+  const arteKey = name => String(name || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s*\((carrusel|carousel)\)\s*$/i, '')
+    .replace(/\.[A-Za-z0-9]{2,5}$/, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+  function arteDe(ad) {
+    const piezas = data().snapshot()?.artes?.piezas;
+    if (!piezas) return null;
+    return piezas[arteKey(ad.ad)] || null;
+  }
+
+  // La miniatura la sirve Drive y la pide el navegador de quien mira el tablero: la carpeta de artes
+  // esta compartida por enlace. Un video trae su fotograma, un carrusel su primera lamina.
+  function arteThumb(ad) {
+    const arte = arteDe(ad);
+    if (!arte) return '';
+    const id = arte.tipo === 'carrusel' ? (arte.laminas || [])[0] : arte.id;
+    if (!id) return '';
+    const etiqueta = arte.tipo === 'carrusel' ? 'Carrusel' : arte.tipo === 'video' ? 'Video' : 'Imagen';
+    return `<img class="ad-thumb" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160"
+      alt="" loading="lazy" title="${esc(arte.nombre)} · ${etiqueta}">`;
+  }
+
   // Dias activos del anuncio: "3-18 Sep" en un mes, rango de fechas en la vista anual.
   function adDays(ad, period) {
     if (period.annual) {
@@ -646,7 +673,7 @@
       const share = objective.spend > 0 ? (ad.spend / objective.spend) * 100 : 0;
       return `
         <tr>
-          <td class="campaign-name campaign-ad-name" title="${esc(ad.ad)}">${index === 0 && ad.results > 0 ? '<b class="leader-star" title="Líder de la campaña">&#9733;</b> ' : ''}${adNameLink(ad)}</td>
+          <td class="campaign-name campaign-ad-name" title="${esc(ad.ad)}">${arteThumb(ad)}${index === 0 && ad.results > 0 ? '<b class="leader-star" title="Líder de la campaña">&#9733;</b> ' : ''}${adNameLink(ad)}</td>
           ${manySets ? `<td class="campaign-set-col">${esc(ad.adSets.join(' / ') || '—')}</td>` : ''}
           <td class="num"><b>${fmt('count', ad.results)}</b></td>
           ${compare ? `<td class="num">${before ? fmt('count', before.results) : '<span class="no-data">—</span>'}</td><td class="num">${variationCell(ad.results, before?.results)}</td>` : ''}
@@ -886,7 +913,7 @@
       return `
         <tr>
           <td class="type-col"><span class="objective-label" style="--campaign-color:${colors.get(ad.group) || PREVIOUS_COLOR}"><i class="campaign-dot"></i>${esc(ad.groupLabel)}</span></td>
-          <td class="ad-name-col" title="${esc(ad.ad)}"><span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Líder del objetivo">&#9733;</b> ' : ''}${adNameLink(ad)}</span></td>
+          <td class="ad-name-col" title="${esc(ad.ad)}">${arteThumb(ad)}<span class="ad-name-text">${ad.leader ? '<b class="leader-star" title="Líder del objetivo">&#9733;</b> ' : ''}${adNameLink(ad)}</span></td>
           <td class="campaign-set-col">${esc(ad.campaigns.join(' / '))}<small>${esc(ad.adSets.join(' / ') || '—')}</small></td>
           <td><span class="objective-pill">${esc(ad.resultLabel)}</span></td>
           <td class="num"><b>${fmt('count', ad.results)}</b></td>
