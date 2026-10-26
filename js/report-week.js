@@ -29,12 +29,12 @@
   // El orden importa dos veces: ordena las laminas y decide que patron gana (pedidos antes que el
   // /whatsapp/ generico).
   const SECTIONS = [
-    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'ThruPlays', one: 'ThruPlay', icon: 'play' },
-    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', one: 'visita', icon: 'pointer' },
-    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', one: 'interacción', icon: 'heart' },
-    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', one: 'visita', icon: 'globe' },
-    { key: 'pedidos', match: /pedidos/, title: 'Pedidos WhatsApp', short: 'Pedidos WhatsApp', noun: 'contactos', one: 'contacto', icon: 'chat' },
-    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes WhatsApp', noun: 'conversaciones', one: 'conversación', icon: 'chat' },
+    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'ThruPlays', one: 'ThruPlay', fem: false, icon: 'play' },
+    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', one: 'visita', fem: true, icon: 'pointer' },
+    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', one: 'interacción', fem: true, icon: 'heart' },
+    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', one: 'visita', fem: true, icon: 'globe' },
+    { key: 'pedidos', match: /pedidos/, title: 'Pedidos WhatsApp', short: 'Pedidos WhatsApp', noun: 'contactos', one: 'contacto', fem: false, icon: 'chat' },
+    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes WhatsApp', noun: 'conversaciones', one: 'conversación', fem: true, icon: 'chat' },
   ];
 
   // Iconos de linea (24x24) de las tarjetas de contenido y conclusiones.
@@ -368,13 +368,13 @@
     }
     if (spendChange <= -15) {
       return {
-        title: `Sostener ${section.short.toLowerCase()}`,
+        title: `Sostener ${section.short}`,
         text: `${section.short} cayó ${pct(resultsChange)} al reducir su inversión (${pct(spendChange)}). Mantener una base de inversión que sostenga el alcance y el resto del embudo.`,
       };
     }
     return {
-      title: `Recuperar ${section.short.toLowerCase()}`,
-      text: `Las ${noun} bajaron ${pct(resultsChange)}${costLine}. Conviene renovar los anuncios con piezas nuevas para recuperar el volumen.`,
+      title: `Recuperar ${section.short}`,
+      text: `${section.fem ? 'Las' : 'Los'} ${noun} bajaron ${pct(resultsChange)}${costLine}. Conviene renovar los anuncios con piezas nuevas para recuperar el volumen.`,
     };
   }
 
@@ -509,7 +509,7 @@
       : '';
     return `
       <svg class="rp-chart" viewBox="0 0 620 190" role="img" aria-label="${esc(section.short)}: acumulado ${esc(labels.chartRange)}">
-        <text x="${left}" y="14" class="rp-chart-title">${esc(cap(section.noun))} acumulados por día</text>
+        <text x="${left}" y="14" class="rp-chart-title">${esc(cap(section.noun))} ${section.fem ? 'acumuladas' : 'acumulados'} por día</text>
         <text x="${left}" y="27" class="rp-chart-sub">${esc(labels.chartSub)}</text>
         ${leyenda}
         ${grid}
@@ -681,8 +681,6 @@
           </div>
           <div class="rp-split">
             <div class="rp-card rp-chart-card">
-              <div class="rp-card-title">Resultados: ${api().esc(labels.prevTag ? `${labels.curTag} vs ${labels.prevTag}` : labels.curTag)}</div>
-              <div class="rp-card-sub">${api().esc(labels.chartSub)}</div>
               ${barChart(section, labels, report.span)}
             </div>
             <div class="rp-card rp-table-card">

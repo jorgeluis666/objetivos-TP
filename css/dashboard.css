@@ -3603,10 +3603,12 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   overflow: hidden;
 }
 
+/* El titulo y el subtitulo van dentro del SVG, asi que la tarjeta solo aporta el margen. */
 .rp-chart-card {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding: 16px 18px;
 }
 
 .rp-chart {
