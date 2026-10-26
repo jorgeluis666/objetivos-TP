@@ -23,14 +23,18 @@
   const LOGO = 'assets/logo-lima-retail.png';
   const AGENCY_LINE = 'Lima Retail · Data Driven Marketing · Power KPI · Digital Analytics';
 
-  // Cada objetivo del barrido va a una seccion del reporte, en el orden del embudo y con el nombre del
-  // modelo. Las dos campañas de WhatsApp (clics al boton y conversaciones) son una sola: Mensajes.
+  // Cada objetivo del barrido va a una seccion del reporte, en el orden del embudo y con el nombre, el
+  // resultado y el costo que usa el modelo. Las dos campañas de WhatsApp van separadas, como alli:
+  // Pedidos cuenta contactos y Mensajes conversaciones, y sus costos no son comparables entre si.
+  // El orden importa dos veces: ordena las laminas y decide que patron gana (pedidos antes que el
+  // /whatsapp/ generico).
   const SECTIONS = [
-    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'reproducciones', icon: 'play' },
-    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', icon: 'pointer' },
-    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', icon: 'heart' },
-    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', icon: 'globe' },
-    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes', noun: 'conversaciones', icon: 'chat' },
+    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'ThruPlays', one: 'ThruPlay', icon: 'play' },
+    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', one: 'visita', icon: 'pointer' },
+    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', one: 'interacción', icon: 'heart' },
+    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', one: 'visita', icon: 'globe' },
+    { key: 'pedidos', match: /pedidos/, title: 'Pedidos WhatsApp', short: 'Pedidos WhatsApp', noun: 'contactos', one: 'contacto', icon: 'chat' },
+    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes WhatsApp', noun: 'conversaciones', one: 'conversación', icon: 'chat' },
   ];
 
   // Iconos de linea (24x24) de las tarjetas de contenido y conclusiones.
@@ -56,6 +60,7 @@
   const brandName = () => (api()?.brandLabel ? `${CONFIG.brand} · ${api().brandLabel()}` : CONFIG.brand);
   const brandSlug = () => (api()?.brandLabel ? `${CONFIG.slug}-${api().brandLabel().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-')}` : CONFIG.slug);
   const normalize = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  const cap = value => String(value || '').charAt(0).toUpperCase() + String(value || '').slice(1);
 
   // ── Formatos ("S/. 685", "S/. 0.0063", "66,692", "−36%"): la moneda y los miles como en el resto del tablero ──
   const integer = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 });
@@ -278,6 +283,7 @@
     const overall = metrics.summarize(period.rows);
     const prevOverall = period.prevRows ? metrics.summarize(period.prevRows) : null;
     const messages = sections.find(section => section.key === 'mensajes');
+    const orders = sections.find(section => section.key === 'pedidos');
     // Como en el modelo: el resultado y el alcance de la cuenta son la suma de los de cada objetivo.
     const totals = {
       spend: overall.spend,
@@ -291,7 +297,7 @@
       reach: prevOverall.reach,
       impressions: prevOverall.impressions,
     } : null;
-    return { period, labels: period.labels, span: period.span, sections, totals, prevTotals, messages };
+    return { period, labels: period.labels, span: period.span, sections, totals, prevTotals, messages, orders };
   }
 
   // ── Textos propuestos (el equipo los reescribe sobre la lamina) ─────────
@@ -503,7 +509,7 @@
       : '';
     return `
       <svg class="rp-chart" viewBox="0 0 620 190" role="img" aria-label="${esc(section.short)}: acumulado ${esc(labels.chartRange)}">
-        <text x="${left}" y="14" class="rp-chart-title">${esc(section.noun.charAt(0).toUpperCase() + section.noun.slice(1))} acumulados por día</text>
+        <text x="${left}" y="14" class="rp-chart-title">${esc(cap(section.noun))} acumulados por día</text>
         <text x="${left}" y="27" class="rp-chart-sub">${esc(labels.chartSub)}</text>
         ${leyenda}
         ${grid}
@@ -519,7 +525,7 @@
   function adsTable(section) {
     const { esc, safeUrl } = api();
     if (!section.ads.length) return '<p class="rp-empty">Sin anuncios con entrega en el período.</p>';
-    const titulo = section.noun.charAt(0).toUpperCase() + section.noun.slice(1);
+    const titulo = cap(section.noun);
     return `<div class="rp-ad-cards">${section.ads.map(ad => {
       const url = safeUrl(ad.preview);
       const arte = arteDe(ad.name);
@@ -599,10 +605,14 @@
 
   function comparisonPage(report, notes, page, total) {
     const { esc } = api();
-    const { labels, totals, prevTotals, sections, messages } = report;
-    const fourth = messages
-      ? kpi('Conversaciones', num(messages.cur.results), deltaHtml(messages.cur.results, messages.prev ? messages.prev.results : null, labels))
-      : kpi('Impresiones', num(totals.impressions), deltaHtml(totals.impressions, prevTotals?.impressions, labels));
+    const { labels, totals, prevTotals, sections, messages, orders } = report;
+    // Como en el modelo: las dos campañas de WhatsApp comparten la cuarta tarjeta, porque cuentan
+    // cosas distintas (contactos y conversaciones) y sumarlas no diria nada.
+    const fourth = orders && messages
+      ? kpi('WhatsApp', `${num(orders.cur.results)} + ${num(messages.cur.results)}`, note('Contactos + conversaciones'))
+      : orders || messages
+        ? (([one]) => kpi(cap(one.noun), num(one.cur.results), deltaHtml(one.cur.results, one.prev ? one.prev.results : null, labels)))([orders || messages])
+        : kpi('Impresiones', num(totals.impressions), deltaHtml(totals.impressions, prevTotals?.impressions, labels));
     const ranked = sections.filter(section => section.resultChange != null);
     const leader = ranked.length > 1 ? ranked.reduce((best, section) => (section.resultChange > best.resultChange ? section : best)) : null;
     const rows = sections.map(section => `
@@ -663,8 +673,8 @@
         <div class="rp-body">
           <div class="rp-grid-3">
             ${kpi('Inversión', money(cur.spend), deltaHtml(cur.spend, prev?.spend, labels))}
-            ${kpi(section.key === 'mensajes' ? 'Conversaciones' : 'Resultados', num(cur.results), deltaHtml(cur.results, prev?.results, labels))}
-            ${kpi('Costo/result.', cost(cur.costPerResult), deltaHtml(cur.costPerResult, prev?.costPerResult, labels, { inverse: true }))}
+            ${kpi(cap(section.noun), num(cur.results), deltaHtml(cur.results, prev?.results, labels))}
+            ${kpi(`Costo/${section.one || 'result.'}`, cost(cur.costPerResult), deltaHtml(cur.costPerResult, prev?.costPerResult, labels, { inverse: true }))}
             ${kpi('CPM', money2(cur.cpm), deltaHtml(cur.cpm, prev?.cpm, labels, { inverse: true }))}
             ${kpi('Alcance', num(cur.reach), note('Personas únicas'))}
             ${kpi('Frecuencia', finite(cur.frequency) ? cur.frequency.toFixed(2) : '—', note('Impr. ÷ alcance'))}
