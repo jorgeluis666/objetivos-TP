@@ -29,12 +29,12 @@
   // El orden importa dos veces: ordena las laminas y decide que patron gana (pedidos antes que el
   // /whatsapp/ generico).
   const SECTIONS = [
-    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'ThruPlays', one: 'ThruPlay', fem: false, icon: 'play' },
-    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', one: 'visita', fem: true, icon: 'pointer' },
-    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', one: 'interacción', fem: true, icon: 'heart' },
-    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', one: 'visita', fem: true, icon: 'globe' },
-    { key: 'pedidos', match: /pedidos/, title: 'Pedidos WhatsApp', short: 'Pedidos WhatsApp', noun: 'contactos', one: 'contacto', fem: false, icon: 'chat' },
-    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes WhatsApp', noun: 'conversaciones', one: 'conversación', fem: true, icon: 'chat' },
+    { key: 'reconocimiento', match: /notoriedad|thruplay|reconoc/, title: 'Reconocimiento', short: 'Reconocimiento', noun: 'ThruPlays', one: 'ThruPlay', fem: false, toc: 'ThruPlays, evolución, conjuntos y mejores anuncios.', icon: 'play' },
+    { key: 'trafico-ig', match: /trafico-ig|perfil/, title: 'Tráfico al perfil', short: 'Tráfico al perfil', noun: 'visitas al perfil', one: 'visita', fem: true, toc: 'Visitas al perfil, conjuntos y mejores anuncios.', icon: 'pointer' },
+    { key: 'interaccion', match: /interacc/, title: 'Interacción', short: 'Interacción', noun: 'interacciones', one: 'interacción', fem: true, toc: 'Interacciones, evolución, formatos y mejores anuncios.', icon: 'heart' },
+    { key: 'trafico-web', match: /trafico-web/, title: 'Tráfico web', short: 'Tráfico web', noun: 'visitas a la web', one: 'visita', fem: true, toc: 'Visitas a la web, conjuntos y mejores anuncios.', icon: 'globe' },
+    { key: 'pedidos', match: /pedidos/, title: 'Pedidos WhatsApp', short: 'Pedidos WhatsApp', noun: 'contactos', one: 'contacto', fem: false, toc: 'Contactos de pedidos, conjuntos y anuncios.', icon: 'chat' },
+    { key: 'mensajes', match: /whatsapp|mensaje/, title: 'Mensajes WhatsApp', short: 'Mensajes WhatsApp', noun: 'conversaciones', one: 'conversación', fem: true, toc: 'Conversaciones iniciadas, conjuntos y formatos.', icon: 'chat' },
   ];
 
   // Iconos de linea (24x24) de las tarjetas de contenido y conclusiones.
@@ -337,7 +337,7 @@
     const spendChange = change(cur.spend, prev.spend);
     const resultsChange = change(cur.results, prev.results);
     const costChange = change(cur.costPerResult, prev.costPerResult);
-    const what = `**Qué pasó:** la inversión ${spendChange == null || spendChange >= 0 ? 'subió' : 'bajó'} de ${money(prev.spend)} a ${money(cur.spend)}${spendChange == null ? '' : ` (${pct(spendChange)})`} y las ${noun} ${resultsChange == null || resultsChange >= 0 ? 'subieron' : 'bajaron'}${resultsChange == null ? '' : ` ${pct(resultsChange)}`}.`;
+    const what = `**Qué pasó:** la inversión ${spendChange == null || spendChange >= 0 ? 'subió' : 'bajó'} de ${money(prev.spend)} a ${money(cur.spend)}${spendChange == null ? '' : ` (${pct(spendChange)})`} y ${section.fem ? 'las' : 'los'} ${noun} ${resultsChange == null || resultsChange >= 0 ? 'subieron' : 'bajaron'}${resultsChange == null ? '' : ` ${pct(resultsChange)}`}.`;
     let why;
     if (spendChange != null && resultsChange != null && Math.abs(spendChange) >= 15 && Math.sign(spendChange) === Math.sign(resultsChange) && (costChange == null || Math.abs(costChange) < 25)) {
       why = `**Qué lo ocasionó:** el volumen siguió a la inversión: el CPM pasó de ${money2(prev.cpm)} a ${money2(cur.cpm)} y el costo por resultado quedó en ${cost(cur.costPerResult)}${costChange == null ? '' : ` (${pct(costChange)})`}.`;
@@ -349,6 +349,36 @@
       why = `**Qué lo ocasionó:** el costo por resultado se mantuvo estable (${cost(prev.costPerResult)} → ${cost(cur.costPerResult)}).`;
     }
     return `${what} ${why}`;
+  }
+
+  // El "Destacado" del modelo: un dato con gancho, distinto del analisis. Se propone el peso del
+  // anuncio que lidera y, si no hay anuncios, el ritmo diario del periodo.
+  function suggestDestacado(section, span) {
+    const best = section.ads[0];
+    const articulo = section.fem ? 'las' : 'los';
+    if (best && best.results > 0 && section.cur.results > 0) {
+      const share = Math.round((best.results / section.cur.results) * 100);
+      const spendShare = section.cur.spend > 0 ? Math.round((best.spend / section.cur.spend) * 100) : null;
+      const costLine = finite(best.costPerResult) && finite(section.cur.costPerResult) && best.costPerResult < section.cur.costPerResult
+        ? ` Su costo, ${cost(best.costPerResult)}, está por debajo del promedio del objetivo (${cost(section.cur.costPerResult)}).`
+        : '';
+      return `"${best.name}" concentra el ${share}% de ${articulo} ${section.noun}${spendShare != null ? ` con el ${spendShare}% de la inversión` : ''}.${costLine}`;
+    }
+    const days = span && span.to >= span.from ? span.to - span.from + 1 : 0;
+    if (days > 0 && section.cur.results > 0) {
+      return `Promedio de ${num(Math.round(section.cur.results / days))} ${section.noun} al día en los ${days} días del período.`;
+    }
+    return '';
+  }
+
+  // El "Destacado" de la comparativa: la campaña que mas se movio y por que.
+  function suggestDestacadoTotal(report) {
+    const moved = report.sections.filter(section => section.resultChange != null);
+    if (!moved.length) return 'Primer período con datos: todavía no hay un mes anterior con el que contrastar.';
+    const top = moved.reduce((best, section) => (Math.abs(section.resultChange) > Math.abs(best.resultChange) ? section : best));
+    const spendChange = change(top.cur.spend, top.prev.spend);
+    const causa = causeOf(top).toLowerCase();
+    return `${top.short} es ${top.resultChange >= 0 ? 'la que más creció' : 'la que más cayó'}: ${pct(top.resultChange)} en ${top.noun}${spendChange != null ? ` con ${pct(spendChange)} de inversión` : ''}, por ${causa}.`;
   }
 
   function suggestConclusion(section) {
@@ -363,7 +393,7 @@
     if (resultsChange > -5) {
       return {
         title: `${section.short} ${resultsChange >= 5 ? 'crece' : 'se mantiene'}`,
-        text: `Con ${spendChange < 0 ? 'menos' : 'más'} inversión (${pct(spendChange)}), las ${noun} ${resultsChange >= 0 ? 'subieron' : 'casi no cayeron'} (${pct(resultsChange)})${costLine}.${bestLine}`,
+        text: `Con ${spendChange < 0 ? 'menos' : 'más'} inversión (${pct(spendChange)}), ${section.fem ? 'las' : 'los'} ${noun} ${resultsChange >= 0 ? 'subieron' : 'casi no cayeron'} (${pct(resultsChange)})${costLine}.${bestLine}`,
       };
     }
     if (spendChange <= -15) {
@@ -570,7 +600,7 @@
     const { esc } = api();
     const items = [
       { title: 'Comparativa', desc: report.labels.compDesc, icon: 'chart', page: pages.comparison },
-      ...report.sections.map((section, index) => ({ title: section.short, desc: 'KPIs, comparación y mejores anuncios.', icon: section.icon, page: pages.firstSection + index })),
+      ...report.sections.map((section, index) => ({ title: section.short, desc: section.toc || 'KPIs, comparación y mejores anuncios.', icon: section.icon, page: pages.firstSection + index })),
       { title: 'Conclusiones', desc: 'Evolución y prioridades.', icon: 'flag', page: pages.conclusions },
     ];
     return `
@@ -608,11 +638,16 @@
     const { labels, totals, prevTotals, sections, messages, orders } = report;
     // Como en el modelo: las dos campañas de WhatsApp comparten la cuarta tarjeta, porque cuentan
     // cosas distintas (contactos y conversaciones) y sumarlas no diria nada.
-    const fourth = orders && messages
-      ? kpi('WhatsApp', `${num(orders.cur.results)} + ${num(messages.cur.results)}`, note('Contactos + conversaciones'))
-      : orders || messages
-        ? (([one]) => kpi(cap(one.noun), num(one.cur.results), deltaHtml(one.cur.results, one.prev ? one.prev.results : null, labels)))([orders || messages])
-        : kpi('Impresiones', num(totals.impressions), deltaHtml(totals.impressions, prevTotals?.impressions, labels));
+    // Como en el modelo: la inversion, el alcance y el titular de cada objetivo. Los resultados de
+    // objetivos distintos no se suman en una sola cifra, porque un ThruPlay y una conversacion no
+    // son lo mismo; las dos campañas de WhatsApp comparten tarjeta por la misma razon.
+    const juntas = Boolean(orders && messages);
+    const titulares = sections
+      .filter(section => !(juntas && (section.key === 'pedidos' || section.key === 'mensajes')))
+      .map(section => kpi(cap(section.noun), num(section.cur.results), deltaHtml(section.cur.results, section.prev ? section.prev.results : null, labels)));
+    if (juntas) {
+      titulares.push(kpi('WhatsApp', `${num(orders.cur.results)} + ${num(messages.cur.results)}`, note('Contactos + conversaciones')));
+    }
     const ranked = sections.filter(section => section.resultChange != null);
     const leader = ranked.length > 1 ? ranked.reduce((best, section) => (section.resultChange > best.resultChange ? section : best)) : null;
     const rows = sections.map(section => `
@@ -628,15 +663,15 @@
         ${labels.prevTag ? `<td>${esc(causeOf(section))}</td>` : ''}
       </tr>`).join('');
     const lectura = notes.lectura != null ? notes.lectura : suggestLectura(report);
+    const destacado = notes.destacado != null ? notes.destacado : suggestDestacadoTotal(report);
     return `
       <section class="rp-page">
         ${head(labels.compTitle, labels.compSub)}
         <div class="rp-body">
-          <div class="rp-grid-4">
-            ${kpi('Inversión', money(totals.spend), deltaHtml(totals.spend, prevTotals?.spend, labels))}
-            ${kpi('Resultados', num(totals.results), deltaHtml(totals.results, prevTotals?.results, labels))}
-            ${kpi('Alcance', num(totals.reach), deltaHtml(totals.reach, prevTotals?.reach, labels))}
-            ${fourth}
+          <div class="rp-grid-kpis">
+            ${kpi('Inversión total', money(totals.spend), deltaHtml(totals.spend, prevTotals?.spend, labels))}
+            ${kpi('Alcance sumado', num(totals.reach), note('Suma de los días · no son personas únicas'))}
+            ${titulares.join('')}
           </div>
           <div class="rp-card rp-table-card">
             <div class="rp-card-title">Resultados por objetivo · ${esc(labels.versus)}</div>
@@ -656,7 +691,8 @@
             </table>
             <div class="rp-table-foot">Inversión total: ${money(totals.spend)} (${esc(labels.curTag)})${prevTotals ? ` vs ${money(prevTotals.spend)} (${esc(labels.prevTag)})` : ''}.</div>
           </div>
-          ${insight('Lectura', 'lectura', lectura)}
+          ${destacado ? insight('Destacado', 'destacado', destacado) : ''}
+          ${insight('Análisis', 'lectura', lectura)}
         </div>
         ${footer(labels.source, report, page, total)}
       </section>`;
@@ -667,6 +703,8 @@
     const { cur, prev } = section;
     const key = `analisis:${section.key}`;
     const analysis = notes[key] != null ? notes[key] : suggestAnalysis(section, labels);
+    const destacadoKey = `destacado:${section.key}`;
+    const destacado = notes[destacadoKey] != null ? notes[destacadoKey] : suggestDestacado(section, report.span);
     return `
       <section class="rp-page">
         ${head(section.title, labels.sectionSub)}
@@ -676,8 +714,8 @@
             ${kpi(cap(section.noun), num(cur.results), deltaHtml(cur.results, prev?.results, labels))}
             ${kpi(`Costo/${section.one || 'result.'}`, cost(cur.costPerResult), deltaHtml(cur.costPerResult, prev?.costPerResult, labels, { inverse: true }))}
             ${kpi('CPM', money2(cur.cpm), deltaHtml(cur.cpm, prev?.cpm, labels, { inverse: true }))}
-            ${kpi('Alcance', num(cur.reach), note('Personas únicas'))}
-            ${kpi('Frecuencia', finite(cur.frequency) ? cur.frequency.toFixed(2) : '—', note('Impr. ÷ alcance'))}
+            ${kpi('Alcance sumado', num(cur.reach), note('Suma de los días · no son personas únicas'))}
+            ${kpi('Impresiones', num(cur.impressions), deltaHtml(cur.impressions, prev?.impressions, labels))}
           </div>
           <div class="rp-split">
             <div class="rp-card rp-chart-card">
@@ -688,6 +726,7 @@
               ${adsTable(section)}
             </div>
           </div>
+          ${destacado ? insight('Destacado', destacadoKey, destacado) : ''}
           ${insight('Análisis', key, analysis)}
         </div>
         ${footer(labels.source, report, page, total)}

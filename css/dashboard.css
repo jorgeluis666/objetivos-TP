@@ -3454,9 +3454,17 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
 
 /* Indicadores */
 .rp-grid-4,
-.rp-grid-3 {
+.rp-grid-3,
+.rp-grid-kpis {
   display: grid;
   gap: 13px;
+}
+
+/* La comparativa lleva un titular por objetivo, asi que su numero cambia con la cuenta: todos en
+   una fila, repartiendose el ancho de la lamina. */
+.rp-grid-kpis {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 .rp-grid-4 {
