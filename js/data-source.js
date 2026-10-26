@@ -304,6 +304,28 @@
     };
   }
 
+  // El alcance unico que Meta da sin duplicar, por ventana ("2026-10-01..2026-10-25") y ambito. No
+  // se puede sumar ni recortar, asi que solo sirve para la ventana exacta que trae.
+  function normalizeAlcance(raw) {
+    const origen = raw?.ventanas && typeof raw.ventanas === 'object' ? raw.ventanas : {};
+    const dato = valor => {
+      const alcance = Number(valor?.alcance);
+      if (!Number.isFinite(alcance) || alcance <= 0) return null;
+      const frecuencia = Number(valor?.frecuencia);
+      return { alcance, frecuencia: Number.isFinite(frecuencia) && frecuencia > 0 ? frecuencia : null };
+    };
+    const ventanas = {};
+    Object.keys(origen).forEach(clave => {
+      const campanas = {};
+      Object.entries(origen[clave]?.campanas || {}).forEach(([nombre, valor]) => {
+        const limpio = dato(valor);
+        if (limpio) campanas[nombre] = limpio;
+      });
+      ventanas[clave] = { cuenta: dato(origen[clave]?.cuenta), campanas };
+    });
+    return { ventanas, error: raw?.error ? String(raw.error) : '' };
+  }
+
   function normalizeReports(raw) {
     const files = Array.isArray(raw?.files) ? raw.files : [];
     return {
@@ -364,6 +386,7 @@
       ignored: Array.isArray(payload.ignored) ? payload.ignored.map(item => ({ fileName: String(item?.fileName || ''), reason: String(item?.reason || '') })) : [],
       reports: normalizeReports(payload.reports),
       artes: normalizeArtes(payload.artes),
+      alcance: normalizeAlcance(payload.alcance),
     };
   }
 

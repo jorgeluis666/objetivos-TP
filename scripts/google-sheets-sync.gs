@@ -119,7 +119,15 @@ function sweep_(origin) {
       console.error(error);
       artes = Object.assign({}, previous ? previous.artes : { folder: null, piezas: {} }, { error: 'No se pudo leer la carpeta de artes.' });
     }
-    const snapshot = { version: SWEEP_VERSION, sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports, artes };
+    // El alcance unico tampoco tumba el barrido: sin el, el tablero muestra el sumado y lo advierte.
+    let alcance;
+    try {
+      alcance = readReach_();
+    } catch (error) {
+      console.error(error);
+      alcance = { ventanas: {}, error: 'No se pudo leer la hoja de alcance unico.' };
+    }
+    const snapshot = { version: SWEEP_VERSION, sweptAt: new Date().toISOString(), origin, months: data.months, ignored: data.ignored, reports, artes, alcance };
     writeSnapshot_(snapshot);
     return snapshot;
   } finally {
@@ -277,6 +285,37 @@ function readReports_() {
     });
   }
   return { folder: { id: folder.getId(), name: folder.getName(), url: folder.getUrl() }, files: list };
+}
+
+// ── Alcance unico ────────────────────────────────────────────────────────────
+// El export no lo trae: viene partido por dia, edad y sexo, y sumar esa columna cuenta varias veces
+// a la misma persona (octubre: 388,322 sumado frente a 248,027 reales). Meta solo lo da sin duplicar
+// por ventana completa, asi que se guarda en una hoja aparte, una fila por ventana y ambito, y el
+// tablero la usa cuando encuentra la ventana exacta. Tampoco se puede recortar: el alcance del 1 al
+// 11 no sale del alcance del 1 al 25.
+//
+// El id de esa hoja va en las propiedades del script (REACH_SHEET_ID), no aqui: este repositorio es
+// publico. Sin la propiedad, el tablero sigue con el alcance sumado y lo dice.
+// Columnas: Desde | Hasta | Ambito | Alcance | Frecuencia. Ambito es "(cuenta)" o el nombre exacto
+// de la campaña.
+function readReach_() {
+  const id = PropertiesService.getScriptProperties().getProperty('REACH_SHEET_ID');
+  if (!id) return { ventanas: {} };
+  const values = SpreadsheetApp.openById(id).getSheets()[0].getDataRange().getValues();
+  const ventanas = {};
+  for (let fila = 1; fila < values.length; fila += 1) {
+    const desde = toDay_(values[fila][0], TIMEZONE);
+    const hasta = toDay_(values[fila][1], TIMEZONE);
+    const ambito = String(values[fila][2] || '').trim();
+    const alcance = toNumber_(values[fila][3]);
+    if (!desde || !hasta || !ambito || !alcance) continue;
+    const clave = desde + '..' + hasta;
+    if (!ventanas[clave]) ventanas[clave] = { cuenta: null, campanas: {} };
+    const dato = { alcance: alcance, frecuencia: toNumber_(values[fila][4]) || null };
+    if (ambito === '(cuenta)') ventanas[clave].cuenta = dato;
+    else ventanas[clave].campanas[ambito] = dato;
+  }
+  return { ventanas: ventanas };
 }
 
 // ── Artes: la pieza de cada anuncio ──────────────────────────────────────────

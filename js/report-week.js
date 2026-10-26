@@ -134,6 +134,9 @@
     return cuts;
   }
 
+  const diaIso = (month, day) => `${month.year}-${String(month.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const ventanaIso = (month, from, to) => `${diaIso(month, from)}..${diaIso(month, to)}`;
+
   function cutPeriod(month, period, from, to) {
     const rows = month.rows.filter(row => row.d >= from && row.d <= to);
     if (!rows.some(activity)) return null;
@@ -160,6 +163,9 @@
         prevRows: prev ? prevRows : null,
         // Los dias del corte y los del tramo equivalente del mes anterior, para el acumulado diario.
         span: { from, to, prevFrom: prev ? prevFrom : null, prevTo: prev ? prevTo : null },
+        // La ventana en fechas, que es como la hoja de alcance unico identifica cada medicion.
+        ventana: ventanaIso(month, from, to),
+        ventanaPrev: prev ? ventanaIso(prev.month, prevFrom, prevTo) : '',
           labels: {
             cover: prev ? `${cur} (${range}) vs ${before} (${prevRange})` : `${cur} (${range})`,
             compTitle: 'Comparativa mes a mes',
@@ -245,6 +251,35 @@
       .slice(0, MAX_ADS);
   }
 
+  // ── Alcance unico ──────────────────────────────────────────────────────
+  // Meta lo da sin duplicar solo por ventana completa y vive en su propia hoja (ver readReach_ del
+  // Apps Script). Si no hay fila para esta ventana exacta, se usa el alcance sumado y se dice.
+  function alcanceDe(ventana, ambito) {
+    if (!ventana) return null;
+    const datos = api().snapshot()?.alcance?.ventanas?.[ventana];
+    if (!datos) return null;
+    return (ambito === '(cuenta)' ? datos.cuenta : datos.campanas?.[ambito]) || null;
+  }
+
+  // Una seccion solo puede usarlo si es una sola campaña: el alcance de dos no se suma, las mismas
+  // personas pueden haber visto las dos.
+  function alcanceSeccion(section, ventana) {
+    return section.campaigns && section.campaigns.length === 1 ? alcanceDe(ventana, section.campaigns[0]) : null;
+  }
+
+  // Las dos tarjetas de alcance y frecuencia, con el dato real si lo hay.
+  function alcanceKpis(unico, unicoPrev, cur, prev, labels) {
+    if (!unico) {
+      return `${kpi('Alcance sumado', num(cur.reach), note('Suma de los días · no son personas únicas'))}
+        ${kpi('Impresiones', num(cur.impressions), deltaHtml(cur.impressions, prev?.impressions, labels))}`;
+    }
+    const pie = unicoPrev && unicoPrev.frecuencia
+      ? `${labels.prevTag}: ${unicoPrev.frecuencia.toFixed(2)}`
+      : 'Impresiones ÷ personas';
+    return `${kpi('Alcance', num(unico.alcance), unicoPrev ? deltaHtml(unico.alcance, unicoPrev.alcance, labels) : note('Personas únicas'))}
+      ${kpi('Frecuencia', unico.frecuencia ? unico.frecuencia.toFixed(2) : '—', note(pie))}`;
+  }
+
   // ── La pieza de cada anuncio ("06 Artes", del barrido) ─────────────────
   // Misma clave que el resto del tablero: sin extension, sin "(Carrusel)", sin tildes ni signos.
   const arteKey = name => normalize(name)
@@ -275,7 +310,8 @@
         const prevRows = previous.get(section.key)?.rows || [];
         const prev = period.prevRows && prevRows.some(activity) ? metrics.summarize(prevRows) : null;
         const noun = section.noun || (metrics.objectives(rows)[0]?.resultLabel || 'resultados').toLowerCase();
-        return { ...section, noun, rows, prevRows, cur, prev, ads: bestAds(rows), resultChange: prev ? change(cur.results, prev.results) : null };
+        const campaigns = [...new Set(rows.map(row => row.campaign).filter(Boolean))];
+        return { ...section, noun, rows, prevRows, campaigns, cur, prev, ads: bestAds(rows), resultChange: prev ? change(cur.results, prev.results) : null };
       })
       .filter(section => activity(section.cur))
       .sort((left, right) => order(left.key) - order(right.key) || right.cur.spend - left.cur.spend);
@@ -670,7 +706,14 @@
         <div class="rp-body">
           <div class="rp-grid-kpis">
             ${kpi('Inversión total', money(totals.spend), deltaHtml(totals.spend, prevTotals?.spend, labels))}
-            ${kpi('Alcance sumado', num(totals.reach), note('Suma de los días · no son personas únicas'))}
+            ${(() => {
+              const unico = alcanceDe(report.period.ventana, '(cuenta)');
+              const unicoPrev = alcanceDe(report.period.ventanaPrev, '(cuenta)');
+              if (!unico) return kpi('Alcance sumado', num(totals.reach), note('Suma de los días · no son personas únicas'));
+              return kpi('Alcance', num(unico.alcance), unicoPrev
+                ? deltaHtml(unico.alcance, unicoPrev.alcance, labels)
+                : note(`Personas únicas · frec. ${unico.frecuencia ? unico.frecuencia.toFixed(2) : '—'}`));
+            })()}
             ${titulares.join('')}
           </div>
           <div class="rp-card rp-table-card">
@@ -714,8 +757,7 @@
             ${kpi(cap(section.noun), num(cur.results), deltaHtml(cur.results, prev?.results, labels))}
             ${kpi(`Costo/${section.one || 'result.'}`, cost(cur.costPerResult), deltaHtml(cur.costPerResult, prev?.costPerResult, labels, { inverse: true }))}
             ${kpi('CPM', money2(cur.cpm), deltaHtml(cur.cpm, prev?.cpm, labels, { inverse: true }))}
-            ${kpi('Alcance sumado', num(cur.reach), note('Suma de los días · no son personas únicas'))}
-            ${kpi('Impresiones', num(cur.impressions), deltaHtml(cur.impressions, prev?.impressions, labels))}
+            ${alcanceKpis(alcanceSeccion(section, report.period.ventana), alcanceSeccion(section, report.period.ventanaPrev), cur, prev, labels)}
           </div>
           <div class="rp-split">
             <div class="rp-card rp-chart-card">
