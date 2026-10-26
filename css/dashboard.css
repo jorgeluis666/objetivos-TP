@@ -1897,10 +1897,15 @@ body.modal-open {
   gap: 10px 18px;
 }
 
+/* El color del objetivo se queda en el punto del radio, que es lo que lo une con su linea del
+   grafico; la pildora elegida se marca con el borde, sin tiñe de fondo ni texto de color. */
 .series-toggle.campaign-chip.active {
-  color: var(--campaign-color);
-  border-color: var(--campaign-color);
-  background: color-mix(in srgb, var(--campaign-color) 9%, #fff);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.series-toggle.campaign-chip input {
+  accent-color: var(--campaign-color);
 }
 
 .projection-kpis .projection-campaign-card {
@@ -1913,13 +1918,12 @@ body.modal-open {
   border-color: #94a3b8;
 }
 
+/* Sobrio: la cifra en tinta como en el resto del tablero y el objetivo elegido marcado con el borde,
+   no con color de fondo. El unico color de la tarjeta es el punto que la une con su linea del
+   grafico. */
 .projection-kpis .projection-campaign-card.active {
-  border-color: var(--campaign-color);
-  background: color-mix(in srgb, var(--campaign-color) 4%, #fff);
-}
-
-.projection-kpis .projection-campaign-card strong {
-  color: var(--campaign-color);
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
 }
 
 .projection-kpis .kpi-pill.is-adjusted small::after {
