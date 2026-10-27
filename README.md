@@ -86,6 +86,11 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
 - Nombre de cada archivo: `Terminal Pesquero - <Mes> <Ano>` (por ejemplo `Terminal Pesquero - Octubre 2026`).
   Tiene que ser un Google Sheet (no `.xlsx`) y debe haber uno solo por mes; si hay dos, se usa el editado
   mas recientemente y la validacion lo avisa.
+- Desde octubre de 2026 esas hojas **ya no se suben a mano**: las escribe desde la API de Meta un
+  Apps Script aparte, con el perfil `terminal-pesquero` (11 columnas, sin desglose por edad y sexo,
+  porque este barrido ya las suma). El codigo es comun a las tres marcas que leen Meta desde Drive y
+  vive en [`scripts/meta-api-sync.gs` del repositorio de Royal Baby](https://github.com/jorgeluis666/objetivo-ventas-RB/blob/main/scripts/meta-api-sync.gs);
+  los ids de cuenta y de carpeta van en las propiedades del proyecto, nunca en el codigo.
 - El Web App de `scripts/google-sheets-sync.gs` lee esa carpeta y la de reportes, suma edad y sexo y
   guarda el barrido en un JSON de Drive. `js/data-source.js` (`window.TPData`) lo pide al abrir el
   tablero, cada hora y al volver a la pestana, y lo reparte a todos los modulos con el evento
