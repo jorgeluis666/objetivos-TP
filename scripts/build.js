@@ -59,9 +59,12 @@ const SNAPSHOT_FILE = path.join(ROOT, 'data', 'tp-meta-2026.json');
 const RETRY_DELAY_MS = 15000;
 
 // Baja el ultimo barrido del Web App y lo guarda en data/. Devuelve null (con aviso) si Google falla.
-async function fetchSnapshot(endpoint) {
+// Con fresh el Web App rehace el barrido en vez de devolver la instantanea del barrido diario; sin eso,
+// una hoja corregida despues de esa hora no llega al tablero hasta el dia siguiente.
+async function fetchSnapshot(endpoint, fresh = false) {
   try {
-    const response = await fetch(`${endpoint}?action=data`, { signal: AbortSignal.timeout(120000) });
+    const url = `${endpoint}?action=data${fresh ? '&fresh=1' : ''}`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(120000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     if (!payload || payload.ok === false || !Array.isArray(payload.months)) throw new Error('respuesta sin meses');
@@ -79,7 +82,7 @@ async function fetchSnapshot(endpoint) {
 // dist/, que se sirve con clave. El build baja el ultimo barrido y lo incrusta como copia de respaldo; si
 // Google no responde usa la copia local de data/ (gitignored) de un build anterior.
 async function loadSnapshot(endpoint) {
-  const text = endpoint ? await fetchSnapshot(endpoint) : null;
+  const text = endpoint ? await fetchSnapshot(endpoint, true) : null;
   if (text) return text;
   if (fs.existsSync(SNAPSHOT_FILE)) {
     if (endpoint) console.warn('[build] se usa la copia local de data/');
@@ -90,6 +93,8 @@ async function loadSnapshot(endpoint) {
   if (process.env.GITHUB_ACTIONS === 'true') {
     if (endpoint) {
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      // Sin fresh: el barrido en vivo puede pasarse del tiempo de espera, y vale mas publicar la
+      // instantanea del ultimo barrido diario que no publicar nada.
       const retry = await fetchSnapshot(endpoint);
       if (retry) return retry;
     }
