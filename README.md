@@ -129,6 +129,16 @@ El modulo Proyecciones usa los mismos datos (`window.TPData`) y proyecta el ulti
   clics al boton de WhatsApp). Los resultados no se suman entre objetivos; solo el gasto tiene total del mes.
 - Ritmo diario = acumulado al ultimo dia con datos / dias transcurridos desde el primer dia con datos; la
   proyeccion mantiene ese ritmo hasta el ultimo dia del mes.
+- **Acciones sugeridas**, al pie de la vista (`js/acciones.js`): la lista de lo que toca hacer en Meta
+  Ads este mes, con casilla para marcar. El Ciclo Mensual de Analisis y Optimizacion dice en que semana
+  vamos —calibracion, desgaste del arte, formato, escalar y repetir— y las cifras reales dicen que hacer;
+  cada accion lleva el numero exacto, el porque y la ruta del Administrador de anuncios donde se toca.
+  Las palancas son las de Meta (arte, formato, inversion de campana), no las de Google. El hito de la
+  semana pone sus acciones primero, pero no se esconde ninguna: una pieza que gasta sin resultados no
+  puede esperar a la semana que le toque. El id de cada accion es estable (tipo + objetivo o anuncio,
+  nunca la cifra), asi que lo marcado sigue marcado aunque los numeros cambien. El estado es por mes y
+  **vive solo en el navegador** (`tp_acciones_v1`): lo que marca una persona no lo ven las demas, y la
+  tarjeta lo dice. Compartirlo pediria hoja y Web App propios, como el CRM de Tierra Films.
 - La linea de tiempo muestra el acumulado real de cada dia (resultados en el eje izquierdo y gasto en el
   derecho) del objetivo elegido. El punto actual queda fijo en el ultimo dia con datos y solo se arrastra
   en vertical, o se escribe en los campos bajo el grafico, para simular un escenario; tarjetas y tabla se

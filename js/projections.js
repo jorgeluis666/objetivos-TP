@@ -509,6 +509,7 @@
     const projection = recompute();
     if (!projection) {
       renderEmpty();
+      window.TPAcciones?.render();
       return;
     }
     setPanelEmpty(false);
@@ -520,6 +521,8 @@
     renderChart(projection);
     renderScenarioBar(projection, campaign);
     renderTable(projection);
+    // Las acciones sugeridas viven en esta misma vista y salen de las mismas cifras.
+    window.TPAcciones?.render();
   }
 
   function selectCampaign(key) {

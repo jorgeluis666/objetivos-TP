@@ -14,7 +14,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar">
-    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.39.0</span></div></div>
+    <div class="s-brand"><div class="s-title">Terminal Pesquero</div><div class="s-sub">BI Agencia Lima Retail <span class="app-version">v1.40.0</span></div></div>
     <div class="s-group-lbl">Módulos activos</div>
     <button title="Gasto publicitario" class="s-item active" type="button" data-view-target="view-obj">
       <div class="s-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -156,6 +156,17 @@
               <tbody id="projection-body"><tr><td class="table-empty" colspan="10">Cargando proyección...</td></tr></tbody>
             </table>
           </div>
+        </div>
+        <div class="panel projection-table-panel acciones-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Acciones sugeridas</div>
+              <div class="panel-sub" id="acciones-sub">Lo que toca hacer en Meta Ads, con las cifras del mes.</div>
+            </div>
+            <div class="acciones-estado" id="acciones-estado"></div>
+          </div>
+          <div class="acciones-lista" id="acciones-lista"></div>
+          <p class="acciones-nota" id="acciones-nota"></p>
         </div>
       </section>
 
@@ -404,6 +415,7 @@
 <script src="js/report-week.js"></script>
 <script src="js/draft-store.js"></script>
 <script src="js/bitacora.js"></script>
+<script src="js/acciones.js"></script>
 <script src="js/projections.js"></script>
 <script src="js/navigation.js"></script>
 <script src="js/sidebar.js"></script>
