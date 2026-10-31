@@ -91,6 +91,16 @@ anuncio), guardadas como un Google Sheet por mes en la carpeta de Drive
   porque este barrido ya las suma). El codigo es comun a las tres marcas que leen Meta desde Drive y
   vive en [`scripts/meta-api-sync.gs` del repositorio de Royal Baby](https://github.com/jorgeluis666/objetivo-ventas-RB/blob/main/scripts/meta-api-sync.gs);
   los ids de cuenta y de carpeta van en las propiedades del proyecto, nunca en el codigo.
+- Desde el 31 de octubre de 2026 la hoja del mes puede traer **dos origenes**: esa exportacion y la
+  pestana `Nexus Meta`, que Nexus escribe tres veces al dia con el contrato `NEXUS_META_V1` (fila 1 con
+  contrato, captura, cuenta, moneda, mes y corte; fila 2 con las columnas, en ingles). El barrido usa la
+  pestana de Nexus **solo para los dias que la exportacion todavia no trae**: un dia ya exportado manda
+  siempre, porque mezclar los dos origenes en el mismo dia duplicaria el gasto. Por lo mismo solo cuentan
+  sus filas de nivel `ad`: los tres niveles (`campaign`, `adset`, `ad`) son el mismo gasto repetido.
+  La pestana se **ignora entera** si no trae `reach` y `results`, que solo llegan cuando el destino de la
+  cuenta en Nexus tiene activado `extended_fields`; sin ellas esos dias saldrian con alcance y resultados
+  en cero, que en pantalla se lee como una caida real. El indicador crudo de Meta se traduce al nombre de
+  la exportacion (`video_thruplay_watched_actions` pasa a `ThruPlay`).
 - El Web App de `scripts/google-sheets-sync.gs` lee esa carpeta y la de reportes, suma edad y sexo y
   guarda el barrido en un JSON de Drive. `js/data-source.js` (`window.TPData`) lo pide al abrir el
   tablero, cada hora y al volver a la pestana, y lo reparte a todos los modulos con el evento

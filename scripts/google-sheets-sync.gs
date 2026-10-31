@@ -23,9 +23,10 @@ const SWEEP_HOUR = 10;
 const SWEEP_HANDLER = 'sweepScheduled';
 const SNAPSHOT_PROPERTY = 'SNAPSHOT_FILE_ID';
 const SNAPSHOT_NAME = 'Terminal Pesquero - barrido del tablero.json';
-// Subirla al cambiar aggregateRaw_, toDay_, toNumber_, RAW_COLUMNS, OUTPUT_COLUMNS o TIMEZONE: los meses
-// guardados con otra version se vuelven a leer aunque su archivo no haya cambiado.
-const SWEEP_VERSION = 1;
+// Subirla al cambiar aggregateRaw_, monthRows_, toDay_, toNumber_, RAW_COLUMNS, NEXUS_COLUMNS,
+// OUTPUT_COLUMNS o TIMEZONE: los meses guardados con otra version se vuelven a leer aunque su archivo no
+// haya cambiado.
+const SWEEP_VERSION = 2;
 const MANUAL_THROTTLE_MS = 60 * 1000;
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTH_PATTERNS = [
@@ -48,6 +49,17 @@ const RAW_COLUMNS = {
   preview: ['enlace de vista previa'],
 };
 const REQUIRED_RAW = ['day', 'ad', 'spend', 'impressions', 'reach', 'results', 'campaign'];
+// Pestana que escribe Nexus en la misma hoja del mes. Su cabecera va en ingles y en la fila 2; la fila 1
+// identifica el contrato. Se traduce a las palabras de la exportacion para no duplicar el agregador.
+const NEXUS_MARK = 'nexus_meta_v1';
+const NEXUS_COLUMNS = {
+  day: 'day', ad: 'name', campaign: 'campaign', adSet: 'adset', spend: 'spend', impressions: 'impressions',
+  reach: 'reach', clicks: 'inline_link_clicks', results: 'results', resultType: 'result_type',
+};
+const NEXUS_RESULTS = [
+  ['thruplay', 'ThruPlay'], ['messaging_conversation', 'Conversaciones con mensajes iniciadas'],
+  ['profile_visit', 'Visitas al perfil de Instagram'], ['purchase', 'Compras en el sitio web'],
+];
 const SUM_FIELDS = ['spend', 'impressions', 'reach', 'clicks', 'results'];
 // Filas que devuelve el Web App: una por dia x campana x conjunto x anuncio (se suman edad y sexo).
 const OUTPUT_COLUMNS = ['day', 'campaign', 'adSet', 'ad', 'resultType'].concat(SUM_FIELDS, ['preview']);
@@ -230,7 +242,7 @@ function readMonths_(previous) {
     }
     try {
       const spreadsheet = SpreadsheetApp.openById(file.getId());
-      entry.rows = aggregateRaw_(rawValues_(spreadsheet), spreadsheet.getSpreadsheetTimeZone());
+      entry.rows = monthRows_(spreadsheet, spreadsheet.getSpreadsheetTimeZone());
     } catch (error) {
       if (unchanged && old.rows.length) {
         // El archivo no cambio desde el barrido anterior: un fallo pasajero de Google no borra sus filas.
@@ -250,6 +262,66 @@ function readMonths_(previous) {
 function previousMonthKey_() {
   const [year, month] = Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-M').split('-').map(Number);
   return month === 1 ? (year - 1) + '-12' : year + '-' + String(month - 1).padStart(2, '0');
+}
+
+// La hoja del mes puede tener dos origenes: la exportacion manual de Meta y la pestana "Nexus Meta" que
+// escribe Nexus tres veces al dia. La exportacion manda; Nexus solo completa los dias que ella no trae,
+// porque mezclar los dos en el mismo dia duplicaria el gasto.
+function monthRows_(spreadsheet, timeZone) {
+  let rows = [];
+  try {
+    rows = aggregateRaw_(rawValues_(spreadsheet), timeZone);
+  } catch (error) {
+    // Un mes recien creado puede tener solo la pestana de Nexus; si tampoco esta, el error es el de siempre.
+    if (!nexusValues_(spreadsheet)) throw error;
+  }
+  const values = nexusValues_(spreadsheet);
+  if (!values) return rows;
+  const dayAt = OUTPUT_COLUMNS.indexOf('day');
+  const exported = {};
+  rows.forEach(row => { exported[row[dayAt]] = true; });
+  const extra = aggregateRaw_(values, timeZone).filter(row => !exported[row[dayAt]]);
+  return extra.length ? rows.concat(extra).sort() : rows;
+}
+
+// Pestana de Nexus (contrato NEXUS_META_V1), traducida a la forma de la exportacion para que la lea
+// aggregateRaw_ sin cambios. Devuelve null si no esta o si no trae lo que este tablero necesita.
+function nexusValues_(spreadsheet) {
+  const sheets = spreadsheet.getSheets();
+  for (let i = 0; i < sheets.length; i += 1) {
+    const values = sheets[i].getDataRange().getValues();
+    if (values.length > 2 && normalize_(values[0][0]) === NEXUS_MARK) return translateNexus_(values);
+  }
+  return null;
+}
+
+function translateNexus_(values) {
+  const headers = values[1].map(cell => normalize_(cell));
+  const at = name => headers.indexOf(name);
+  const level = at('level');
+  // Sin alcance ni resultados el tablero mostraria esos dias en cero, que se lee como una caida real:
+  // esas dos columnas solo llegan si el destino de la cuenta en Nexus tiene activado "extended_fields".
+  if (level < 0 || at('day') < 0 || at('spend') < 0 || at('reach') < 0 || at('results') < 0) return null;
+  const map = Object.keys(NEXUS_COLUMNS).map(key => [key, at(NEXUS_COLUMNS[key])]);
+  const out = [map.map(pair => RAW_COLUMNS[pair[0]][0])];
+  values.slice(2).forEach(row => {
+    // Los tres niveles (campaign, adset, ad) son el mismo gasto contado tres veces: solo cuenta el anuncio.
+    if (normalize_(row[level]) !== 'ad') return;
+    out.push(map.map(pair => {
+      const value = pair[1] < 0 ? '' : row[pair[1]];
+      return pair[0] === 'resultType' ? nexusResult_(value) : value;
+    }));
+  });
+  return out.length > 1 ? out : null;
+}
+
+// Nexus guarda el indicador crudo de Meta; la exportacion trae el nombre en espanol que mira el tablero.
+function nexusResult_(indicator) {
+  const text = normalize_(indicator);
+  for (let i = 0; i < NEXUS_RESULTS.length; i += 1) {
+    if (text.indexOf(NEXUS_RESULTS[i][0]) >= 0) return NEXUS_RESULTS[i][1];
+  }
+  return '';
 }
 
 // La pestana con la descarga es la que tiene las cabeceras "Dia" e "Importe gastado (PEN)" (o "Monto gastado").
