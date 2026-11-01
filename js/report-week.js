@@ -752,7 +752,7 @@
       <section class="rp-page">
         ${head(section.title, labels.sectionSub)}
         <div class="rp-body">
-          <div class="rp-grid-3">
+          <div class="rp-grid-3 rp-section-kpis">
             ${kpi('Inversión', money(cur.spend), deltaHtml(cur.spend, prev?.spend, labels))}
             ${kpi(cap(section.noun), num(cur.results), deltaHtml(cur.results, prev?.results, labels))}
             ${kpi(`Costo/${section.one || 'result.'}`, cost(cur.costPerResult), deltaHtml(cur.costPerResult, prev?.costPerResult, labels, { inverse: true }))}
@@ -768,8 +768,10 @@
               ${adsTable(section)}
             </div>
           </div>
-          ${destacado ? insight('Destacado', destacadoKey, destacado) : ''}
-          ${insight('Análisis', key, analysis)}
+          <div class="rp-duo">
+            ${destacado ? insight('Destacado', destacadoKey, destacado) : ''}
+            ${insight('Análisis', key, analysis)}
+          </div>
         </div>
         ${footer(labels.source, report, page, total)}
       </section>`;

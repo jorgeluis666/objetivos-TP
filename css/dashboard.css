@@ -3477,6 +3477,22 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* Los seis indicadores de la lamina de campana iban en 3x2 y se comian 202px de los 569 del cuerpo:
+   al grafico y a los anuncios les quedaban 156, el bloque mas pequeno de la lamina justo donde esta
+   la sustancia. En una fila ocupan 95 y la banda central recupera ese espacio. */
+.rp-section-kpis {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+/* Destacado y analisis uno al lado del otro, como en los demas tableros: apilados sumaban 173px.
+   Con grid-auto-flow la lamina que solo trae analisis sigue ocupando el ancho entero. */
+.rp-duo {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 13px;
+}
+
 .rp-kpi {
   display: flex;
   flex-direction: column;
@@ -3690,7 +3706,13 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 10px;
-  padding: 12px 18px 18px;
+  padding: 10px 18px 10px;
+}
+
+/* Sin subtitulo bajo el rotulo, los 30px de aire de la cabecera salian de las piezas. */
+.rp-table-card .rp-card-title {
+  padding-top: 12px;
+  padding-bottom: 6px;
 }
 
 .rp-ad-card {
@@ -3700,7 +3722,10 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
 .rp-ad-art {
   display: block;
   width: 100%;
+  /* La rejilla es auto-fit: con un solo anuncio la columna se lleva los 510px de la tarjeta y, en
+     4/5, la pieza crecia hasta 637px de alto dentro de una tarjeta de 153. De ahi el recorte. */
   aspect-ratio: 4 / 5;
+  max-height: 110px;
   border: 1px solid var(--rp-line);
   border-radius: 6px;
   object-fit: cover;
