@@ -3725,7 +3725,7 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   /* La rejilla es auto-fit: con un solo anuncio la columna se lleva los 510px de la tarjeta y, en
      4/5, la pieza crecia hasta 637px de alto dentro de una tarjeta de 153. De ahi el recorte. */
   aspect-ratio: 4 / 5;
-  max-height: 110px;
+  max-height: 90px;
   border: 1px solid var(--rp-line);
   border-radius: 6px;
   object-fit: cover;
@@ -3742,8 +3742,15 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   place-items: center;
 }
 
+/* El alto de la ficha no puede depender de lo largo que sea el nombre del anuncio: un nombre de tres
+   lineas empujaba las cifras fuera de la tarjeta. El nombre se queda en dos lineas y el conjunto y el
+   formato en una; el texto entero sigue en el title. */
 .rp-ad-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   margin-top: 7px;
+  overflow: hidden;
   overflow-wrap: anywhere;
   color: var(--rp-ink);
   font-size: 11px;
@@ -3753,9 +3760,12 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
 
 .rp-ad-meta {
   margin-top: 2px;
+  overflow: hidden;
   color: var(--rp-muted);
   font-size: 9.5px;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rp-ad-figures {
@@ -3766,7 +3776,6 @@ button.topbar-pill[aria-expanded="true"] .status-chevron {
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  padding: 1px 0;
   font-size: 10px;
 }
 
