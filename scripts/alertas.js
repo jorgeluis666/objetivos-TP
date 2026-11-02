@@ -105,7 +105,9 @@ const sinTildes = v => String(v || '').toLowerCase().normalize('NFD').replace(/[
 
 function tipoDe(resultType) {
   const texto = sinTildes(resultType);
-  if (!texto) return { nombre: 'Sin resultado registrado', nivel: 4, unidad: 'resultados', singular: 'resultado' };
+  // Hay filas con resultados contados y la columna del tipo vacia. Decir «sin resultado» seria
+  // mentira cuando al lado se leen 42: lo que falta es el nombre, no el resultado.
+  if (!texto) return { nombre: 'Resultados sin tipo', nivel: 4, unidad: 'resultados', singular: 'resultado' };
   const conocido = TIPOS.find(t => texto.indexOf(t.busca) >= 0);
   return conocido
     ? { nombre: String(resultType), nivel: conocido.nivel, unidad: conocido.unidad, singular: conocido.singular }
@@ -194,7 +196,10 @@ function resumir(mes) {
 
   // ── Avisos y nivel ─────────────────────────────────────────
   const avisos = [];
-  avisos.push({ tone: 'blue', titulo: `Semana ${Math.ceil(diaCorte / 7)} del mes`, cuerpo: `Datos al día ${diaCorte} de ${diasMes}. Al ritmo de ahora, ${mes.name} cierra en ${moneyCorto(gastoCierre)}.` });
+  // Proyectar el cierre de un mes que ya cerro no dice nada: entonces el aviso cuenta lo que paso.
+  avisos.push(completo
+    ? { tone: 'blue', titulo: `${mes.name} cerrado`, cuerpo: `Los ${diasMes} días completos: ${money(K.spend)} invertidos.` }
+    : { tone: 'blue', titulo: `Semana ${Math.ceil(diaCorte / 7)} del mes`, cuerpo: `Datos al día ${diaCorte} de ${diasMes}. Al ritmo de ahora, ${mes.name} cierra en ${moneyCorto(gastoCierre)}.` });
 
   if (!principal) {
     avisos.push({ tone: 'red', titulo: 'El mes no registra ningún resultado', cuerpo: `${money(K.spend)} invertidos sin un solo resultado contado por Meta.` });
