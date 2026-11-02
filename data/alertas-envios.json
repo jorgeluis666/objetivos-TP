@@ -1,5 +1,11 @@
 {
-  "enviados": {},
-  "ultimaHuella": null,
-  "ultimoEnvio": null
+  "enviados": {
+    "2026-W44": "2026-11-02T04:44:08.107Z"
+  },
+  "ultimaHuella": "5066e5e94aec832c",
+  "ultimoEnvio": {
+    "fecha": "2026-11-02T04:44:08.107Z",
+    "motivo": "manual",
+    "mes": "Octubre 2026"
+  }
 }
