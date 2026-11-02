@@ -3,7 +3,7 @@
 Dashboard de Agencia Lima Retail para controlar la inversion publicitaria de Terminal Pesquero
 (cevicheria).
 
-Version actual: `v1.32.0`. El tablero comparte codigo base y numeracion de version con los
+Version actual: `v1.41.0`. El tablero comparte codigo base y numeracion de version con los
 demas tableros de la agencia.
 
 ## Versionado
@@ -169,9 +169,9 @@ Terminal Pesquero`): laminas 16:9 con fondo claro, tarjetas blancas de borde fin
 | --- | --- |
 | Portada | Logo de Lima Retail, "Reporte de Publicidad", cliente, periodo comparado y fecha de emision. |
 | Contenido | Una tarjeta por seccion con su icono y su numero de pagina. |
-| Comparativa | Inversion, resultados, alcance y conversaciones con su variacion; tabla de resultados por objetivo (anterior, actual, variacion y costo por resultado) e inversion total; recuadro "Lectura". |
-| Una por objetivo | Reconocimiento, Interaccion, Mensajes WhatsApp (y Trafico si corrio): inversion, resultados, costo por resultado, CPM, alcance y frecuencia; barras anterior vs actual; mejores anuncios (hasta 4, con "Ver »" a la vista previa); recuadro "Analisis". |
-| Conclusiones | Una tarjeta por objetivo (los tres con mas inversion) y, en un mes en curso, la nota de ventanas equivalentes. |
+| Comparativa | Inversion, alcance y el titular de cada objetivo, con su variacion y su diferencia absoluta ("▲ +11% · +S/. 221 vs sep"); tabla por objetivo con inversion, resultados y costo por resultado, anterior y actual, y la variacion de resultados y de costo en porcentaje y en valor ("▼ −36% · −S/. 0.0049"); recuadros "Destacado" y "Analisis" (una linea por objetivo con costo anterior → actual). |
+| Una por objetivo | Reconocimiento, Interaccion, Pedidos y Mensajes WhatsApp (y Trafico si corrio): inversion, resultados, costo por resultado, CPM, alcance e impresiones con variacion y diferencia absoluta; acumulado diario contra el mes anterior; mejores anuncios (hasta 4, con su pieza y "Ver »" a la vista previa) y costo por formato; recuadros "Destacado" y "Analisis". |
+| Conclusiones | Una tarjeta por objetivo (los tres con mas inversion) con que replicar y que descartar y, en un mes en curso, la nota de ventanas equivalentes. |
 | Cierre | Logo y firma de Lima Retail. |
 
 - **Periodo:** se elige el mes y el reporte lo compara con el mismo tramo del mes anterior ("Octubre (1–18) vs
@@ -182,10 +182,35 @@ Terminal Pesquero`): laminas 16:9 con fondo claro, tarjetas blancas de borde fin
   una fuente nueva ni una lectura extra. Cada objetivo mide su propio resultado; como en el modelo, el
   total de "Resultados" y de alcance de la comparativa es la suma de los objetivos. Las dos campanas de
   WhatsApp (pedidos y mensajes) van juntas en "Mensajes", y Notoriedad se llama "Reconocimiento".
+- **Grafico de cada objetivo:** el acumulado por dia del mes contra el mes anterior, con la cifra de las dos
+  lineas al cierre de cada semana (los mismos cortes del selector) y al final; en un tramo de hasta 10 dias,
+  en todos. Debajo, una franja con los resultados de cada dia: los dias pico (hasta tres, los que superan
+  1.3 veces el promedio diario y no estan pegados) van en rojo con su cifra y marcados con un anillo sobre
+  la linea. Cada etiqueta busca lugar arriba o abajo de su punto y, si choca con otra, no se dibuja:
+  ninguna cifra tapa a otra.
+- **Piezas ("06 Artes"):** la miniatura de Drive de cada anuncio, por nombre (la pieza tiene que llamarse
+  como el anuncio en Meta). Se cargan sin `loading="lazy"` y **Descargar PDF** espera a que lleguen (hasta
+  12 s, el boton dice "Preparando PDF…"): antes, las laminas que no se habian visto en pantalla salian con
+  el recuadro oscuro. Si Drive no entrega una, queda "Sin vista previa". El formato sale de la pieza (video,
+  imagen, carrusel); sin pieza es "Sin pieza", salvo en Reconocimiento, donde un ThruPlay solo lo da un video.
+- **Analisis de cada objetivo**, en cuatro lineas:
+  - *Que paso:* inversion, resultados y costo por resultado, anterior → actual, con variacion y diferencia absoluta.
+  - *Que lo ocasiono:* el costo por resultado es el CPM dividido entre los resultados por cada 1,000 impresiones,
+    asi que todo cambio de costo sale de esos dos factores, y se dice cual empujo hacia donde. Despues, el
+    formato mas barato contra el mas caro del periodo.
+  - *Replicar:* las dos piezas mas baratas que el promedio del objetivo (3% o mas por debajo), y una pieza que
+    repite del mes anterior y bajo su costo o convierte mejor.
+  - *Descartar o ajustar:* las dos mas caras (10% o mas sobre el promedio, o sin resultados) y una pieza que
+    repite y encarecio 15% o mas: si convierte menos, renovarla; si el que subio fue el CPM, ampliar el
+    publico o rotarla.
+  Solo se juzgan piezas con al menos 8% de la inversion del objetivo. En las tarjetas de anuncios el costo va
+  en verde o en rojo con el mismo criterio, y al pie esta el costo por formato de todos sus anuncios.
 - **Textos:** la lectura, el analisis de cada objetivo y las conclusiones vienen propuestos con lo que dicen
-  los numeros. Se editan con un clic sobre la lamina (`**texto**` va en negrita) y quedan guardados por
-  mes en el navegador (`tp-report-notes-v2`); no se publican con el tablero. "Restablecer textos" vuelve
-  a los propuestos.
+  los numeros. Se editan con un clic sobre la lamina (`**texto**` va en negrita, cada salto de linea se
+  respeta) y quedan guardados por mes en el navegador (`tp-report-notes-v2`); no se publican con el tablero.
+  "Restablecer textos" vuelve a los propuestos: un periodo editado antes de un cambio de version sigue
+  mostrando su texto guardado hasta restablecerlo. Si un analisis largo no deja entrar la tarjeta de
+  anuncios, la lamina pasa sola a letra compacta.
 - **Descargar PDF** abre el dialogo de impresion con las laminas solas, una por hoja de 13.33 x 7.5 in (el
   tamaño del modelo), y el nombre del archivo ya armado. Activar "Graficos de fondo" si el navegador no lo
   hace solo.
