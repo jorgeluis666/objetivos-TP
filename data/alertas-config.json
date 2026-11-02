@@ -1,0 +1,13 @@
+{
+  "marca": "Terminal Pesquero",
+  "workspace": "Lima Retail · Dashboard Terminal Pesquero",
+  "url_dashboard": "https://terminalpesquero.limaretail.com/",
+  "endpoint_env": "TP_DATA_ENDPOINT",
+  "copia_local": "data/tp-meta-2026.json",
+  "from_name": "Lima Retail Alertas",
+  "from_email": "alertas@limaretail.com",
+  "destinatarios": [
+    { "email": "jorgeluis@limaretail.com", "nombre": "Jorge Luis" },
+    { "email": "diegomachuca@limaretail.com", "nombre": "Diego Machuca" }
+  ]
+}
