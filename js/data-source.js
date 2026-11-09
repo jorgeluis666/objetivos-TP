@@ -1,7 +1,7 @@
 (function () {
   // Web App de scripts/google-sheets-sync.gs (proyecto independiente en script.google.com). Lee la carpeta de
   // Drive con una descarga de Meta Ads por mes y la carpeta de reportes. ?action=data devuelve el ultimo
-  // barrido (todos los dias a las 10:00) y ?action=data&fresh=1 barre en el momento (boton Actualizar).
+  // barrido (06:30, 13:30 y 18:30 Lima, despues de Nexus) y ?action=data&fresh=1 barre en el momento (boton Actualizar).
   // El repo es publico: la URL no se guarda aqui. scripts/build.js la toma del secret TP_DATA_ENDPOINT y la
   // incrusta como window.TP_DATA_ENDPOINT en dist/index.html, que solo se sirve con clave. Nunca se lee de la
   // URL ni de localStorage: un enlace manipulado podria desviar el tablero a otro origen.
@@ -16,9 +16,10 @@
   const POLL_MS = 60 * 60 * 1000;
   const VISIBILITY_REFETCH_MS = 5 * 60 * 1000;
   const TIMEZONE = 'America/Lima';
-  // Lima no tiene horario de verano: 10:00 en Lima son las 15:00 UTC.
+  // Lima no tiene horario de verano: Lima = UTC-5; el barrido ocurre media hora despues de Nexus.
   const LIMA_OFFSET_HOURS = -5;
-  const SWEEP_HOUR = 10;
+  const SWEEP_HOURS = [6, 13, 18];
+  const SWEEP_MINUTE = 30;
   // Pildora en ambar si el ultimo barrido tiene mas de un dia y medio: el automatico corre todos los dias.
   const STALE_MS = 36 * 3600 * 1000;
   const SWEEP_ORIGINS = {
@@ -179,12 +180,14 @@
     }
   }
 
-  // Proximo barrido programado en Apps Script (installSweepTriggers): todos los dias entre 10:00 y 11:00.
+  // Proximo barrido programado en Apps Script (installSweepTriggers): 06:30, 13:30 y 18:30 Lima (Apps Script: margen aproximado de 15 minutos).
   function nextSweep(now = new Date()) {
     const today = limaParts(now);
     for (let offset = 0; offset <= 1; offset += 1) {
-      const slot = new Date(Date.UTC(today.year, today.month, today.day + offset, SWEEP_HOUR - LIMA_OFFSET_HOURS, 0));
-      if (slot > now) return slot;
+      for (const hour of SWEEP_HOURS) {
+        const slot = new Date(Date.UTC(today.year, today.month, today.day + offset, hour - LIMA_OFFSET_HOURS, SWEEP_MINUTE));
+        if (slot > now) return slot;
+      }
     }
     return null;
   }
@@ -824,7 +827,7 @@
     const node = document.getElementById('status-next');
     if (!node) return;
     const next = nextSweep();
-    node.textContent = next ? `${formatStamp(next)} · cada día a las ${SWEEP_HOUR}:00` : '—';
+    node.textContent = next ? `${formatStamp(next)} · 06:30, 13:30 y 18:30 Lima (aprox.). Nexus: 06:00, 13:00 y 18:00` : '—';
   }
 
   function wireStatusCard() {

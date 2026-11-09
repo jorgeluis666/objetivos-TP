@@ -19,7 +19,7 @@
 //
 // GET ?action=data -> ultimo barrido | ?action=data&fresh=1 -> barrido en el momento (boton Actualizar).
 const TIMEZONE = 'America/Lima';
-const SWEEP_HOUR = 10;
+const SWEEP_HOURS = [6, 13, 18];
 const SWEEP_HANDLER = 'sweepScheduled';
 const SNAPSHOT_PROPERTY = 'SNAPSHOT_FILE_ID';
 const SNAPSHOT_NAME = 'Terminal Pesquero - barrido del tablero.json';
@@ -81,7 +81,7 @@ function doGet(event) {
     let snapshot = params.fresh === '1' ? sweep_('manual') : readSnapshot_();
     if (!snapshot) snapshot = sweep_('inicial');
     // Una hoja subida o corregida despues del ultimo barrido se lee al abrir el tablero, sin esperar al
-    // disparador de las 10:00 ni al boton Actualizar.
+    // siguiente disparador ni al boton Actualizar.
     else if (params.fresh !== '1' && changedSafely_(snapshot)) snapshot = sweep_('archivo nuevo');
     return json_(Object.assign({ ok: true }, snapshot));
   } catch (error) {
@@ -116,7 +116,7 @@ function folderChangedSince_(snapshot) {
   return changed || (snapshot.months || []).some(month => month.fileId && !present[month.fileId]);
 }
 
-// Disparador diario.
+// Tres disparadores diarios, despues de Nexus.
 function sweepScheduled() {
   sweep_('automatico');
 }
@@ -126,7 +126,7 @@ function installSweepTriggers() {
   ScriptApp.getProjectTriggers()
     .filter(trigger => trigger.getHandlerFunction() === SWEEP_HANDLER)
     .forEach(trigger => ScriptApp.deleteTrigger(trigger));
-  ScriptApp.newTrigger(SWEEP_HANDLER).timeBased().everyDays(1).atHour(SWEEP_HOUR).inTimezone(TIMEZONE).create();
+  SWEEP_HOURS.forEach(hour => ScriptApp.newTrigger(SWEEP_HANDLER).timeBased().everyDays(1).atHour(hour).nearMinute(30).inTimezone(TIMEZONE).create());
   logSnapshot_(sweep_('instalacion'));
 }
 
@@ -136,7 +136,7 @@ function probarBarrido() {
 }
 
 function logSnapshot_(snapshot) {
-  console.log('Barrido ' + snapshot.origin + ' ' + snapshot.sweptAt + ' | diario ' + SWEEP_HOUR + ':00 (' + TIMEZONE + ')');
+  console.log('Barrido ' + snapshot.origin + ' ' + snapshot.sweptAt + ' | barridos ' + SWEEP_HOURS.join(', ') + ':30 (' + TIMEZONE + ')');
   snapshot.months.forEach(month => {
     if (month.error) {
       console.log(month.name + ' ' + month.year + ': ERROR ' + month.error);

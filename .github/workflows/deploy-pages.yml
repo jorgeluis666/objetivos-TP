@@ -6,10 +6,10 @@ name: Publicar en GitHub Pages
 on:
   push:
     branches: [main]
-  # Todos los dias despues del barrido de las 10:00 (Lima = UTC-5): la copia incrustada del tablero, que se ve
-  # mientras responde el Web App, queda con los datos del dia.
+  # Copia estatica despues de Nexus (:00) y del lector de Drive (:30).
+  # GitHub puede demorar los cron; la lectura en vivo conserva su propio horario.
   schedule:
-    - cron: '30 16 * * *'
+    - cron: '50 11,18,23 * * *'
   workflow_dispatch:
 
 permissions:

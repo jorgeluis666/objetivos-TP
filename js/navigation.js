@@ -6,7 +6,7 @@
       title: 'Gasto publicitario 2026',
       caption: 'Meta Ads por objetivo',
       source: 'Fuente: Meta Ads / descargas mensuales en Google Drive',
-      footer: 'Barrido automático todos los días a las 10:00',
+      footer: 'Barridos de Drive: 06:30, 13:30 y 18:30 Lima, después de Nexus',
     },
     'view-ads': {
       title: 'Anuncios',
