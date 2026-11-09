@@ -38,6 +38,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pdf-original
-          path: native-report-output/
+          path: native-report-output/*.encrypted.json
           retention-days: 3
           if-no-files-found: error

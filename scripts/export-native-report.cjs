@@ -58,6 +58,11 @@ async function main(){
    const pdf=fs.readFileSync(file),commit=cp.execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
    const manifest={generator:'dashboard-native-v1',brand:config.brand,type,from,to:end,pages:proof.pages,commit,sha256:crypto.createHash('sha256').update(pdf).digest('hex'),generated_at:new Date().toISOString(),cover:proof.cover};
    fs.writeFileSync(path.join(output,name+'.json'),JSON.stringify(manifest,null,2));
+   // Public repositories must never expose plaintext customer reports as workflow artifacts.
+   const key=crypto.randomBytes(32),iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv);
+   const encrypted=Buffer.concat([cipher.update(Buffer.from(JSON.stringify({manifest,pdf:pdf.toString('base64')}))),cipher.final()]);
+   const wrapped=crypto.publicEncrypt({key:fs.readFileSync(path.join(root,'scripts/native-preview-public.pem')),oaepHash:'sha256'},key);
+   fs.writeFileSync(path.join(output,name+'.encrypted.json'),JSON.stringify({version:1,key:wrapped.toString('base64'),iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),data:encrypted.toString('base64')}));
    console.log(JSON.stringify(manifest));
    if(process.env.NATIVE_REPORT_TOKEN){
     const response=await fetch('https://nexus.limaretail.com/report-delivery/native-pdf',{method:'POST',headers:{'Content-Type':'application/json','X-Report-Token':process.env.NATIVE_REPORT_TOKEN},body:JSON.stringify({...manifest,pdf:pdf.toString('base64')}),signal:AbortSignal.timeout(120000)});
