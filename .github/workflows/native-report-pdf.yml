@@ -1,5 +1,10 @@
 name: PDF original para Nexus
 on:
+  schedule:
+    - cron: '45 4 * * 1'
+    - cron: '45 4 1 * *'
+    - cron: '35 11 * * 1'
+    - cron: '35 11 1 * *'
   workflow_dispatch:
     inputs:
       fecha:
@@ -21,6 +26,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 200
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
@@ -30,7 +37,8 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
           REPORT_DATE: ${{ inputs.fecha }}
-          NATIVE_REPORT_TOKEN: ${{ inputs.cargar && secrets.NATIVE_REPORT_TOKEN || '' }}
+          NATIVE_REPORT_TOKEN: ${{ (github.event_name == 'schedule' || inputs.cargar) && secrets.NATIVE_REPORT_TOKEN || '' }}
+          NATIVE_SCHEDULED: ${{ github.event_name == 'schedule' && '1' || '0' }}
           TP_DATA_ENDPOINT: ${{ secrets.TP_DATA_ENDPOINT }}
           DATA_ENDPOINT: ${{ secrets.DATA_ENDPOINT }}
         run: node scripts/export-native-report.cjs
