@@ -1,0 +1,8 @@
+{
+  "kind": "tp",
+  "data": "TPData",
+  "module": "ReporteSemanal",
+  "endpoint": "TP_DATA_ENDPOINT",
+  "snapshot": "data/tp-meta-2026.json",
+  "brand": "terminal-pesquero"
+}

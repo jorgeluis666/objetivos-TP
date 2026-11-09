@@ -9,3 +9,6 @@ credentials/
 
 # Copia local del barrido de Meta (datos del cliente): la genera npm run build, nunca va al repo.
 data/tp-meta-*.json
+
+# Private generated PDF attachments
+native-report-output/
